@@ -1,0 +1,16 @@
+{
+  "name": "Duelo de Penales",
+  "short_name": "Penales",
+  "description": "Juego de penales en 3D: ataja, patea o las dos cosas.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f2a17",
+  "theme_color": "#0f2a17",
+  "icons": [
+    {"src": "icono-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icono-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
