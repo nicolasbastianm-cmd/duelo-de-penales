@@ -109,6 +109,17 @@ input[type=text]:focus-visible,input[type=number]:focus-visible{outline:3px soli
 .mode{display:flex;flex-direction:column;align-items:center;gap:1px}
 .mode small{font-family:var(--body);font-size:14px;font-weight:600}
 .minor{display:flex;gap:10px}
+#btnVoces{margin-top:4px;font-size:17px}
+#vozList{display:flex;flex-direction:column;gap:8px;text-align:left}
+.vrow{display:flex;align-items:center;gap:8px;border:2px solid rgba(246,243,232,.35);border-radius:12px;padding:7px 8px}
+.vrow.has{border-color:var(--sun)}
+.vtx{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.vtx b{font-size:15px}.vtx small{font-size:12px;opacity:.8;line-height:1.25}
+.vbt{display:flex;gap:5px;flex:none}
+.vb{font:700 14px/1 var(--body,inherit);color:var(--chalk);background:transparent;border:2px solid var(--chalk);border-radius:10px;min-width:38px;height:38px;padding:0 8px;cursor:pointer}
+.vb.rec{min-width:84px}.vb.rec.on{background:#e63946;border-color:#e63946}
+.vb:disabled{opacity:.35;cursor:not-allowed}
+.vmsg{color:var(--sun)}
 .ghost{flex:1;font-family:var(--display);font-size:18px;color:var(--chalk);background:transparent;border:2px solid var(--chalk);border-radius:12px;padding:8px;cursor:pointer}
 button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
 .link-btn{background:transparent;border:0;color:var(--chalk);font-family:var(--body);font-weight:800;font-size:16px;text-decoration:underline;cursor:pointer;padding:4px}
@@ -215,6 +226,11 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
             <label><input type="radio" name="kickctrl" id="kc-apuntar" value="apuntar"><span>Apuntar y fuerza</span></label>
             <label><input type="radio" name="kickctrl" id="kc-deslizar" value="deslizar"><span>Deslizar</span></label>
           </div></fieldset>
+          <fieldset><legend>Relator</legend><div class="seg" id="vozSeg">
+            <label><input type="radio" name="voz" id="vz-off" value="off"><span>Apagado</span></label>
+            <label><input type="radio" name="voz" id="vz-juego" value="juego"><span>Voz del juego</span></label>
+            <label><input type="radio" name="voz" id="vz-mia" value="mia"><span>Mi voz<small>Grabada aquí</small></span></label>
+          </div><button class="ghost" id="btnVoces" type="button">Grabar mi voz</button></fieldset>
           <fieldset><legend>Calidad gráfica</legend><div class="seg" id="qSeg">
             <label><input type="radio" name="quality" id="q-auto" value="auto"><span>Automática<small>Se ajusta sola</small></span></label>
             <label><input type="radio" name="quality" id="q-alta" value="alta"><span>Alta</span></label>
@@ -224,6 +240,18 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
           <p class="progress" id="progress"></p>
         </div>
         <button class="go" id="lockerDone" type="button">Listo</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="voces" hidden>
+      <div class="card">
+        <h2>Graba tu voz</h2>
+        <p class="small">Graba cada frase con tu voz y el juego la usa como relato. Toca «Grabar», habla y toca de nuevo para terminar (máximo 6 segundos). Se guarda solo en este teléfono.</p>
+        <p class="small" id="vozCount"></p>
+        <div id="vozList"></div>
+        <p class="small vmsg" id="vozMsg" role="status" hidden></p>
+        <p class="small">Con «Mi voz», las frases que no grabes quedan en silencio.</p>
+        <button class="go" id="vocesDone" type="button">Listo</button>
       </div>
     </div>
 
@@ -351,7 +379,7 @@ function buzz(ms){try{navigator.vibrate&&navigator.vibrate(ms);}catch(e){}}
 /* ---------- Sonido sintetizado ---------- */
 let AC=null,master=null,noiseBuf=null,crowd=null;
 function audioInit(){
-  medInit();medUnlock();
+  medInit();medUnlock();vozUnlock();
   if(AC){if(AC.state==='suspended')AC.resume();return;}
   try{const AX=window.AudioContext||window.webkitAudioContext;try{AC=new AX({latencyHint:'playback'});}catch(e2){AC=new AX();}master=AC.createGain();master.gain.value=CFG.muted?0:0.55;master.connect(AC.destination);
     noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
@@ -420,7 +448,7 @@ function medTick(dt){
   if(!MED.ambOn)return;const a=MED.ambCur||MED.el.amb,st=CFG.stage;
   if(!a.paused&&a.duration>3&&a.currentTime>=a.duration-1.5)ambRelay();
   const tense=playing()&&((S.turn==='save'&&(S.phase==='runup'||S.phase==='kick'||S.phase==='flight'))||(S.turn==='kick'&&(S.phase==='aim'||S.phase==='krun'||S.phase==='kflight')));
-  const tg=(st==='barrio'?0.35:1)*(S.mode==='home'||S.mode==='card'?0.5:1)*(tense?(S.press?0.35:0.6):1);
+  const tg=(st==='barrio'?0.35:1)*(S.mode==='home'||S.mode==='card'?0.5:1)*(tense?(S.press?0.35:0.6):1)*(vozBusy()?0.55:1);
   if(Math.abs(a.volume-tg)>0.01){const v=clamp(a.volume+(tg-a.volume)*Math.min(1,dt*2.5),0,1);for(const x of[MED.el.amb,MED.el.amb2]){try{x.volume=v;}catch(e){}}}
 }
 document.addEventListener('visibilitychange',()=>{if(!MED.ambOn)return;if(document.hidden){MED.el.amb.pause();MED.el.amb2.pause();}else if(!CFG.muted)medAmbStart();});
@@ -467,7 +495,7 @@ function hud(){
   $('best').textContent=S.best;$('bestLabel').textContent='Récord '+D().n.toLowerCase();
   lifeEls.forEach((el,i)=>el.classList.toggle('lost',i>=S.lives));
 }
-const OVERLAYS=['home','locker','intro','result'];
+const OVERLAYS=['home','locker','intro','result','voces'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0});S.kDir=0;}
 function renderHome(){
@@ -484,7 +512,7 @@ function renderRoleUI(){
   if(S.mode==='home'){S.turn=CFG.role==='kicker'&&GL.ok?'kick':'save';S.best=getBest();hud();}
 }
 function goHome(){
-  RP=null;REC=null;pressureEnd();
+  RP=null;REC=null;pressureEnd();vozStop();
   ROLE=null;S.role=null;S.kick=null;S.swipe=null;S.turn=CFG.role==='kicker'&&GL.ok?'kick':'save';
   S.mode='home';S.phase='idle';S.tour=null;S.tut=null;S.banner=null;S.msg=null;S.ball={state:'spot',u:0,trail:[]};S.striker=null;
   crowdStop();S.best=getBest();renderHome();show('home');hud();
@@ -498,7 +526,7 @@ function swatches(elId,set,name,cur){
 }
 function renderLocker(){
   if(!isUnlocked(KITS[CFG.kit]))CFG.kit='naranjo';if(!isUnlocked(GLOVES[CFG.glove]))CFG.glove='amarillo';if(!isUnlocked(STAGES[CFG.stage]))CFG.stage='estadio';
-  $('name').value=CFG.name;$('num').value=CFG.num;{const q=$('q-'+CFG.quality);if(q)q.checked=true;const kc=$('kc-'+kickCtrl());if(kc)kc.checked=true;}
+  $('name').value=CFG.name;$('num').value=CFG.num;{const q=$('q-'+CFG.quality);if(q)q.checked=true;const kc=$('kc-'+kickCtrl());if(kc)kc.checked=true;renderVozCfg();}
   swatches('kitSw',KITS,'kit',CFG.kit);swatches('gloveSw',GLOVES,'glove',CFG.glove);
   $('stageSeg').innerHTML=Object.entries(STAGES).map(([k,v])=>{const lk=!isUnlocked(v);
     return `<label><input type="radio" name="stage" id="stage-${k}" value="${k}"${lk?' disabled':''}${k===CFG.stage?' checked':''}><span>${v.n}${lk?`<small>${needText(v.need)}</small>`:''}</span></label>`;}).join('');
@@ -638,7 +666,7 @@ function resolve(){
     b.state='goal';S.shake=reduce?0:0.35;S.ripple={x:p.x,y:p.y,t:0};S.cheer=1;
     say('¡GOL!',C.alarm);ambReact('groan');buzz(120);showTip(keeperTip(b,p));
   }
-  S.phase='after';S.wait=1.0;
+  S.phase='after';S.wait=1.0;vozKeeper(out);
   if(S.mode==='tut')afterTut(out);else if(S.mode==='endless')afterEndless(out);else afterTour(out);
 }
 function afterTut(out){
@@ -672,7 +700,7 @@ function updThemKick(g){
   const o=S.ok;o.t+=g;
   if(!o.done&&o.t>=0.9){o.done=true;S.tour.sh.them.push(o.goal);
     if(o.goal){say('Gol de '+RIVALS[S.tour.round].code,C.alarm);sfx.kick();ambReact('groan');}
-    else{say('¡Atajó tu arquero!',C.sun);sfx.save();ambReact('cheer');S.cheer=1;}hud();}
+    else{say('¡Atajó tu arquero!',C.sun);sfx.save();ambReact('cheer');S.cheer=1;}relator(o.goal?vozGolRival():'atajada',{delay:0.3});hud();}
   if(o.t>=2.2){const w=decided(S.tour.sh);if(w)endMatch(w);else usTurn();}
 }
 function afterTour(out){
@@ -689,7 +717,7 @@ function updOurKick(g){
   if(!o.done&&o.t>=0.9){o.done=true;S.tour.sh.us.push(o.goal);
     if(o.goal){say('¡GOL NUESTRO!',C.sun);sfx.kick();ambReact('roar');S.cheer=1;buzz(30);}
     else{say('¡Tu equipo falló!',C.chalk);if(medUse()||AMB.on)ambReact('uyy');else sfx.aww();}
-    hud();}
+    relator(o.goal?'gol':'fallaequipo',{delay:0.3});hud();}
   if(o.t>=2.2){const w=decided(S.tour.sh);if(w)endMatch(w);else themTurn();}
 }
 /* Tanda: 5 por lado; se corta cuando ya no se puede alcanzar; luego muerte súbita con igual número de tiros */
@@ -706,11 +734,11 @@ function maybeTut(fn){if(!CFG.tutDone&&roleNow()!=='kicker')startTutorial(fn);el
 function startEndless(){
   S.role=roleNow();ROLE=S.role;
   S.xpGain=0;S.lvUp=null;
-  S.mode='endless';S.saves=0;S.lives=3;S.lvlSave=0;S.lvlKick=0;S.tIdx=-1;S.best=getBest();S.tour=null;S.seen=new Set(['rasante','colocado']);S.prizeBase=unlockedIds();
+  S.mode='endless';S.vozVida=false;S.saves=0;S.lives=3;S.lvlSave=0;S.lvlKick=0;S.tIdx=-1;S.best=getBest();S.tour=null;S.seen=new Set(['rasante','colocado']);S.prizeBase=unlockedIds();
   resetKeeper();show(null);crowdStart();hud();nextEndlessTurn();cv.focus({preventScroll:true});
 }
 function endEndless(){
-  S.mode='card';S.phase='idle';sfx.final();crowdStop();S.banner=null;
+  S.mode='card';S.phase='idle';sfx.final();crowdStop();S.banner=null;relator(S.saves>0&&S.saves>=S.best?'record':'findesafio',{delay:1.0});
   const who=CFG.name.trim();
   const rl=S.role,unit=rl==='kicker'?'Goles':rl==='both'?'Puntos':'Atajadas';
   $('rTitle').textContent='¡Fin del desafío!';$('rSub').textContent=rl==='kicker'?(who?who+' metió':'Metiste'):rl==='both'?(who?who+' hizo':'Hiciste'):(who?who+' atajó':'Atajaste');$('rBig').textContent=S.saves;
@@ -730,12 +758,12 @@ function showIntro(){
   show('intro');hud();setTimeout(()=>$('iGo').focus({preventScroll:true}),50);
 }
 function startMatch(){
-  S.mode='tour';S.role=roleNow();ROLE=S.role;S.lvlSave=0;S.tour.sh={us:[],them:[]};Object.assign(S.tour,{hist:[],gkHist:[],toldS:false,toldK:false,st:{saves:0,kicks:0,miss:0}});S.xpGain=0;S.lvUp=null;resetKeeper();show(null);crowdStart();hud();
-  if(GL.ok&&!reduce){const r=RIVALS[S.tour.round];S.phase='intro';S.introT=0;S.banner={title:r.stage,sub:'Tu equipo vs '+r.team,t:0,dur:3.3};ambReact('entrance');}else themTurn();cv.focus({preventScroll:true});
+  S.mode='tour';S.role=roleNow();ROLE=S.role;S.lvlSave=0;S.tour.sh={us:[],them:[]};Object.assign(S.tour,{hist:[],gkHist:[],toldS:false,toldK:false,vozMS:false,st:{saves:0,kicks:0,miss:0}});S.xpGain=0;S.lvUp=null;resetKeeper();show(null);crowdStart();hud();
+  if(GL.ok&&!reduce){const r=RIVALS[S.tour.round];S.phase='intro';S.introT=0;S.banner={title:r.stage,sub:'Tu equipo vs '+r.team,t:0,dur:3.3};ambReact('entrance');}else themTurn();vozIntro();cv.focus({preventScroll:true});
 }
 function endMatch(w){
   const r=RIVALS[S.tour.round],sh=S.tour.sh,score=`${cnt(sh.us)}–${cnt(sh.them)}`;
-  S.mode='card';S.phase='idle';S.banner=null;sfx.final();crowdStop();
+  S.mode='card';S.phase='idle';S.banner=null;sfx.final();crowdStop();vozEnd(w);
   $('rBig').textContent=score;
   const rs=$('rStars');rs.hidden=true;let extra='';
   if(w==='us'){const ms=matchStars();lsSet('arquerito-estrellas',String(getStars()+ms.s));
@@ -2178,7 +2206,7 @@ function kickResolve(){
   }else if(out==='post'||out==='bar'){b.vx=out==='bar'?b.vx*0.3:Math.sign(s.tx)*rand(3,6);b.vy=out==='bar'?rand(3,5):rand(1,3);b.vz=rand(4,8);say(out==='bar'?'¡Al travesaño!':'¡Al palo!',C.chalk);sfx.post();ambReact('uyy');}
   else{say(s.ty>Hh?'¡Por arriba!':'¡Afuera!',C.chalk);if(medUse()||AMB.on)ambReact('uyy');else sfx.aww();}
   if(out!=='goal'&&out!=='postin')showTip(kickTip(out,s,k));
-  S.phase='kafter';S.wait=1.7;const goal=out==='goal'||out==='postin';
+  vozKicker(out,s);S.phase='kafter';S.wait=1.7;const goal=out==='goal'||out==='postin';
   if(S.mode==='endless')afterKickEndless(goal);else afterKickTour(goal);
 }
 function updKick(g){
@@ -2487,7 +2515,7 @@ function decisiveInfo(){
   return sh.us.length>=5&&sh.them.length>=5?'Muerte súbita':null;
 }
 function pressureStart(){
-  const t=decisiveInfo();S.press=!!t;if(!t)return;
+  const t=decisiveInfo();S.press=!!t;vozPress(t);if(!t)return;
   S.banner={title:t,sub:S.turn==='kick'?'Respira y apunta.':'Concéntrate en el pateador.',t:0,dur:2.2};
   const a=MED.el&&MED.el.latido;if(a&&medUse()&&!CFG.muted){a.loop=true;try{a.currentTime=0;a.volume=1;}catch(e){}try{const p=a.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}}
 }
@@ -2590,6 +2618,160 @@ function renderProgress(){
     <div class="lvsub">${b>a?`${x-a}/${b-a} para el nivel ${l+1}`:'Nivel máximo'} · ${perkText(l)}</div>
     <div class="daily${c.done?' ok':''}"><span>Desafío de hoy</span><b>${dd.txt}</b><em>${c.done?'✓ Listo':c.n+'/'+dd.goal}</em></div>`;
 }
+
+/* ---------- Relator ----------
+   Frases cortas en cada momento del partido. Dos fuentes: la voz del juego (archivos voz/clave_n.mp3)
+   o «Mi voz»: frases grabadas en el mismo teléfono (se guardan en el navegador, no salen del equipo).
+   Se toca con un solo reproductor de audio del sistema, igual que el público, para que no se trabe. */
+const VOZ_N={"inicio":3,"semi":1,"final":1,"prepara":4,"gol":5,"golazo":2,"paloadentro":1,"atajada":5,"golrival":3,"atajrival":3,"fallaequipo":2,"palo":2,"travesano":1,"afuera":2,"arriba":1,"dec_metewin":1,"dec_metelose":1,"dec_atajawin":1,"dec_atajalose":1,"dec_muerte":1,"dec_vida":1,"ganamos":2,"alafinal":1,"campeon":2,"perdimos":3,"findesafio":2,"record":1,"rival_PUM":1,"golr_PUM":1,"gkr_PUM":1,"rival_HAL":1,"golr_HAL":1,"gkr_HAL":1,"rival_TIB":1,"golr_TIB":1,"gkr_TIB":1,"rival_CON":1,"golr_CON":1,"gkr_CON":1,"rival_TOR":1,"golr_TOR":1,"gkr_TOR":1,"rival_DEL":1,"golr_DEL":1,"gkr_DEL":1,"rival_LOB":1,"golr_LOB":1,"gkr_LOB":1};
+const VOZ={el:null,q:[],last:{},urls:{},blob:{},tm:0};
+const vozMode=()=>CFG.voz==='off'||CFG.voz==='mia'?CFG.voz:'juego';
+const VSLOTS=[
+  {id:'inicio',n:'Empieza el partido',ej:()=>'¡Comienza la tanda de penales!'},
+  {id:'gol',n:'Gol nuestro',ej:()=>`¡Goooool de ${CFG.name.trim()||'nuestro equipo'}!`},
+  {id:'atajada',n:'Atajada nuestra',ej:()=>'¡Qué atajada! ¡Qué manos!'},
+  {id:'golrival',n:'Gol del rival',ej:()=>'Uy… gol de ellos.'},
+  {id:'atajrival',n:'Nos atajan el penal',ej:()=>'¡Lo atajó el arquero!'},
+  {id:'fallo',n:'Palo o afuera',ej:()=>'¡Uyyy, por poquito!'},
+  {id:'decisivo',n:'Penal decisivo',ej:()=>'¡Atención, este penal define todo!'},
+  {id:'ganamos',n:'Ganamos el partido',ej:()=>'¡Ganamos! ¡A la siguiente ronda!'},
+  {id:'campeon',n:'Campeones',ej:()=>'¡Campeones! ¡La copa es nuestra!'},
+  {id:'perdimos',n:'Se terminó / perdimos',ej:()=>'¡Otra vez será! ¡Vamos de nuevo!'}];
+function slotOf(k){
+  if(k==='gol'||k==='golazo'||k==='paloadentro')return'gol';if(k==='atajada')return'atajada';
+  if(k==='golrival'||k.startsWith('golr_'))return'golrival';if(k==='atajrival'||k.startsWith('gkr_'))return'atajrival';
+  if(['palo','travesano','afuera','arriba','fallaequipo'].includes(k))return'fallo';if(k.startsWith('dec_'))return'decisivo';
+  if(['inicio','semi','final'].includes(k))return'inicio';if(k==='ganamos'||k==='alafinal')return'ganamos';
+  if(k==='campeon')return'campeon';if(k==='perdimos'||k==='findesafio')return'perdimos';return null;
+}
+function vozEl(){
+  if(VOZ.el)return VOZ.el;
+  try{const a=new Audio();a.preload='auto';a.addEventListener('ended',()=>{const n=VOZ.q.shift();if(n)vozPlay(n);});VOZ.el=a;}catch(e){VOZ.el=null;}
+  return VOZ.el;
+}
+const vozBusy=()=>!!(VOZ.el&&!VOZ.el.paused&&!VOZ.el.ended&&VOZ.el.currentTime>0);
+/* El primer toque de la pantalla habilita el reproductor (requisito del iPhone) y precarga las frases en memoria */
+function vozUnlock(){
+  const a=vozEl();if(!a||VOZ.unl)return;VOZ.unl=true;
+  a.src='voz/prepara_0.mp3';a.muted=true;
+  try{const p=a.play();if(p&&p.then)p.then(()=>{a.pause();a.muted=CFG.muted;}).catch(()=>{a.muted=CFG.muted;});}catch(e){a.muted=CFG.muted;}
+  vozWarm();vozLoad();
+}
+function vozWarm(){
+  if(VOZ.warm||typeof fetch!=='function')return;VOZ.warm=true;
+  for(const[k,n]of Object.entries(VOZ_N))for(let i=0;i<n;i++){const s=`voz/${k}_${i}.mp3`;
+    fetch(s).then(r=>r.ok?r.blob():null).then(b=>{if(b&&b.size)VOZ.blob[s]=URL.createObjectURL(b);}).catch(()=>{});}
+}
+function vozPlay(src){
+  const a=vozEl();if(!a||CFG.muted)return;
+  try{a.pause();}catch(e){}a.src=VOZ.blob[src]||src;a.muted=false;
+  try{a.currentTime=0;}catch(e){}try{a.volume=1;}catch(e){}
+  try{const p=a.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}
+}
+/* relator('gol') o relator(['inicio','rival_TIB']): elige una variante sin repetir la anterior.
+   o.delay en segundos; o.chance para frases de relleno; o.low = no interrumpe si ya está hablando. */
+function relator(keys,o={}){
+  const m=vozMode();if(m==='off'||CFG.muted||S.mode==='tut')return;
+  if(o.chance!=null&&Math.random()>o.chance)return;
+  if(o.low&&vozBusy())return;
+  keys=[].concat(keys).filter(Boolean);let srcs=[];
+  if(m==='mia'){const seen=new Set();for(const k of keys){const s=slotOf(k);if(s&&VOZ.urls[s]&&!seen.has(s)){seen.add(s);srcs.push(VOZ.urls[s]);}}}
+  else srcs=keys.filter(k=>VOZ_N[k]).map(k=>{const n=VOZ_N[k];let i=Math.floor(Math.random()*n);if(n>1&&i===VOZ.last[k])i=(i+1)%n;VOZ.last[k]=i;return`voz/${k}_${i}.mp3`;});
+  if(!srcs.length)return;
+  clearTimeout(VOZ.tm);
+  VOZ.tm=setTimeout(()=>{if(o.low&&vozBusy())return;VOZ.q=srcs.slice(1);vozPlay(srcs[0]);},(o.delay||0)*1000);
+}
+function vozStop(){clearTimeout(VOZ.tm);VOZ.q=[];if(VOZ.el)try{VOZ.el.pause();}catch(e){}}
+const vozTeam=()=>S.mode==='tour'&&S.tour?RIVALS[S.tour.round]:null;
+function vozGolRival(){const r=vozTeam();return r&&Math.random()<0.5?'golr_'+r.code:'golrival';}
+function vozAtajRival(){const r=vozTeam();return r&&Math.random()<0.5?'gkr_'+r.code:'atajrival';}
+/* Momentos del partido */
+function vozIntro(){const r=vozTeam();if(!r)return;relator([['inicio','semi','final'][S.tour.round]||'inicio','rival_'+r.code],{delay:0.9});}
+function vozPress(t){
+  if(!t){if(S.turn==='save'&&S.mode!=='tut')relator('prepara',{delay:0.55,chance:0.3,low:true});return;}
+  if(t==='¡Última vida!'){if(S.vozVida)return;S.vozVida=true;}
+  if(t==='Muerte súbita'){if(!S.tour||S.tour.vozMS)return;S.tour.vozMS=true;}
+  const k={'¡Si la metes, ganan!':'dec_metewin','¡Si fallas, pierden!':'dec_metelose','¡Si atajas, ganan!':'dec_atajawin','¡Si te hacen gol, pierden!':'dec_atajalose','Muerte súbita':'dec_muerte','¡Última vida!':'dec_vida'}[t];
+  if(k)relator(k,{delay:0.3});
+}
+function vozKeeper(out){relator(out==='save'?'atajada':out==='post'?'palo':out==='bar'?'travesano':out==='out'?'afuera':vozGolRival(),{delay:out==='goal'?0.55:0.2});}
+function vozKicker(out,s){
+  const k=out==='goal'?(s.ty>1.6&&Math.abs(s.tx)>2.2?'golazo':'gol'):out==='postin'?'paloadentro':out==='save'||out==='catch'?vozAtajRival():out==='post'?'palo':out==='bar'?'travesano':s.ty>2.44?'arriba':'afuera';
+  relator(k,{delay:0.15});
+}
+function vozEnd(w){
+  const last=RIVALS.length-1,r=S.tour.round;
+  relator(w==='us'?(r===last?'campeon':r===last-1?'alafinal':'ganamos'):'perdimos',{delay:1.0});
+}
+
+/* ---------- Mi voz: grabar las frases en el teléfono ---------- */
+const VDB={db:null},VREC={on:false};
+function vdb(){return new Promise((res,rej)=>{if(VDB.db)return res(VDB.db);try{const r=indexedDB.open('penales-voz',1);r.onupgradeneeded=()=>r.result.createObjectStore('clips');r.onsuccess=()=>{VDB.db=r.result;res(r.result);};r.onerror=()=>rej(r.error);}catch(e){rej(e);}});}
+function vdbDo(mode,fn){return vdb().then(db=>new Promise((res,rej)=>{const tx=db.transaction('clips',mode),st=tx.objectStore('clips');const out=fn(st);tx.oncomplete=()=>res(out&&out.result);tx.onerror=()=>rej(tx.error);}));}
+function vozSetUrl(id,buf,type){if(VOZ.urls[id])try{URL.revokeObjectURL(VOZ.urls[id]);}catch(e){}VOZ.urls[id]=buf?URL.createObjectURL(new Blob([buf],{type})):undefined;if(!buf)delete VOZ.urls[id];}
+function vozLoad(){
+  if(VOZ.loaded||!window.indexedDB)return Promise.resolve();VOZ.loaded=true;
+  return Promise.all(VSLOTS.map(s=>vdbDo('readonly',st=>st.get(s.id)).then(v=>{if(v&&v.buf)vozSetUrl(s.id,v.buf,v.type);}).catch(()=>{}))).then(()=>{if(!$('voces').hidden)renderVoces();});
+}
+/* Limpia la grabación: quita el silencio del inicio y del final, la deja a buen volumen y la guarda como WAV (suena en cualquier teléfono) */
+function vozClean(blob){
+  return blob.arrayBuffer().then(ab=>new Promise((res,rej)=>{if(!AC)return rej('sin audio');const p=AC.decodeAudioData(ab.slice(0),res,rej);if(p&&p.then)p.then(res,rej);})).then(buf=>{
+    const sr=buf.sampleRate,n=buf.length,C=buf.numberOfChannels,d=new Float32Array(n);
+    for(let c=0;c<C;c++){const x=buf.getChannelData(c);for(let i=0;i<n;i++)d[i]+=x[i]/C;}
+    let pk=0;for(let i=0;i<n;i++)pk=Math.max(pk,Math.abs(d[i]));if(pk<0.004)return null;
+    const th=Math.max(0.015,pk*0.1);let a=0,b=n-1;while(a<n&&Math.abs(d[a])<th)a++;while(b>a&&Math.abs(d[b])<th)b--;
+    a=Math.max(0,a-Math.round(sr*0.05));b=Math.min(n,b+Math.round(sr*0.3));
+    const f=Math.max(1,Math.floor(sr/22050)),osr=Math.round(sr/f),m=Math.floor((b-a)/f),g=Math.min(10,0.92/pk),fade=Math.round(osr*0.012);
+    const dv=new DataView(new ArrayBuffer(44+m*2)),ws=(o,s)=>{for(let i=0;i<s.length;i++)dv.setUint8(o+i,s.charCodeAt(i));};
+    ws(0,'RIFF');dv.setUint32(4,36+m*2,true);ws(8,'WAVE');ws(12,'fmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);
+    dv.setUint32(24,osr,true);dv.setUint32(28,osr*2,true);dv.setUint16(32,2,true);dv.setUint16(34,16,true);ws(36,'data');dv.setUint32(40,m*2,true);
+    for(let i=0;i<m;i++){let s=0;for(let j=0;j<f;j++)s+=d[a+i*f+j];s=s/f*g;if(i<fade)s*=i/fade;else if(i>m-fade)s*=(m-i)/fade;dv.setInt16(44+i*2,Math.max(-1,Math.min(1,s))*32767,true);}
+    return{buf:dv.buffer,type:'audio/wav'};
+  }).catch(()=>blob.arrayBuffer().then(buf=>({buf,type:blob.type||'audio/mp4'})));
+}
+function vozMsg(t){const el=$('vozMsg');el.textContent=t||'';el.hidden=!t;}
+function ambHold(on){
+  if(!MED.ok)return;MED.hold=on;
+  if(on){try{MED.el.amb.pause();MED.el.amb2.pause();}catch(e){}if(MED.cur)try{MED.cur.pause();}catch(e){}}
+  else if(MED.ambOn&&!CFG.muted)medAmbStart();
+}
+function vozRec(id){
+  if(VREC.on){if(VREC.id===id)VREC.mr.stop();return;}
+  if(VREC.wait)return;vozStop();vozMsg('');audioInit();
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){vozMsg('Este navegador no permite grabar. Abre el juego en Safari o Chrome actualizado.');return;}
+  VREC.wait=true;navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}).then(st=>{VREC.wait=false;
+    const mt=['audio/mp4','audio/webm;codecs=opus','audio/webm'].find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t));
+    let mr;try{mr=mt?new MediaRecorder(st,{mimeType:mt}):new MediaRecorder(st);}catch(e){st.getTracks().forEach(t=>t.stop());vozMsg('No se pudo empezar a grabar en este teléfono.');return;}
+    const ch=[];mr.ondataavailable=e=>{if(e.data&&e.data.size)ch.push(e.data);};
+    mr.onstop=()=>{clearInterval(VREC.iv);clearTimeout(VREC.to);st.getTracks().forEach(t=>t.stop());VREC.on=false;
+      const raw=new Blob(ch,{type:mr.mimeType||mt||'audio/mp4'});
+      vozClean(raw).then(c=>{if(!c){vozMsg('No se escuchó nada. Acerca el teléfono y habla más fuerte.');renderVoces();return;}
+        return vdbDo('readwrite',s=>s.put(c,id)).catch(()=>{vozMsg('Se grabó, pero no se pudo guardar en este teléfono (quizás estás en modo privado).');}).then(()=>{vozSetUrl(id,c.buf,c.type);renderVoces();vozPlay(VOZ.urls[id]);});});};
+    VREC.on=true;VREC.id=id;VREC.mr=mr;VREC.t=6;mr.start();renderVoces();
+    VREC.iv=setInterval(()=>{VREC.t--;const b=document.querySelector(`#vozList [data-a=rec][data-id=${id}]`);if(b)b.textContent='■ '+Math.max(0,VREC.t);},1000);VREC.to=setTimeout(()=>{if(mr.state!=='inactive')mr.stop();},6000);
+  }).catch(()=>{VREC.wait=false;vozMsg('No se pudo usar el micrófono. Dale permiso al micrófono para esta página y prueba de nuevo.');});
+}
+function vozDel(id){vdbDo('readwrite',s=>s.delete(id)).catch(()=>{});vozSetUrl(id,null);renderVoces();}
+function renderVoces(){
+  const n=VSLOTS.filter(s=>VOZ.urls[s.id]).length;
+  $('vozCount').textContent=`${n} de ${VSLOTS.length} frases grabadas`;
+  $('vozList').innerHTML=VSLOTS.map(s=>{const has=!!VOZ.urls[s.id],rec=VREC.on&&VREC.id===s.id;
+    return`<div class="vrow${has?' has':''}"><div class="vtx"><b>${has?'✓ ':''}${s.n}</b><small>Ej.: «${s.ej()}»</small></div><div class="vbt">
+      <button type="button" class="vb rec${rec?' on':''}" data-a="rec" data-id="${s.id}"${VREC.on&&!rec?' disabled':''}>${rec?'■ '+Math.max(0,VREC.t):'● Grabar'}</button>
+      <button type="button" class="vb" data-a="play" data-id="${s.id}" aria-label="Escuchar"${has&&!VREC.on?'':' disabled'}>▶</button>
+      <button type="button" class="vb" data-a="del" data-id="${s.id}" aria-label="Borrar"${has&&!VREC.on?'':' disabled'}>✕</button></div></div>`;}).join('');
+}
+$('vozList').addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;const id=b.dataset.id;
+  if(b.dataset.a==='rec')vozRec(id);else if(b.dataset.a==='play'){audioInit();vozPlay(VOZ.urls[id]);}else if(b.dataset.a==='del')vozDel(id);});
+$('btnVoces').addEventListener('click',()=>{audioInit();ambHold(true);vozLoad();vozMsg('');renderVoces();show('voces');});
+$('vocesDone').addEventListener('click',()=>{if(VREC.on)VREC.mr.stop();ambHold(false);
+  if(VSLOTS.some(s=>VOZ.urls[s.id])&&CFG.voz!=='mia'){CFG.voz='mia';saveCfg();}renderVozCfg();show('locker');});
+function renderVozCfg(){const el=$('vz-'+vozMode());if(el)el.checked=true;}
+$('locker').addEventListener('change',e=>{if(e.target.name!=='voz')return;CFG.voz=e.target.value;saveCfg();audioInit();
+  if(CFG.voz==='mia'&&!VSLOTS.some(s=>VOZ.urls[s.id])){vozLoad().then(()=>{if(!VSLOTS.some(s=>VOZ.urls[s.id]))$('btnVoces').click();else relator('gol');});return;}
+  relator('gol');});
+$('mute').addEventListener('click',()=>{if(CFG.muted)vozStop();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)vozStop();});
 
 /* ---------- Bucle ---------- */
 let last=performance.now();
