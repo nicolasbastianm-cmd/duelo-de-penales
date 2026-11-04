@@ -1,5 +1,5 @@
 /* Duelo de Penales: guarda los archivos del juego para jugar sin internet.
-   La página principal busca primero la versión nueva en internet; el resto (modelo, sonidos, motor 3D, letras) sale de la memoria. */
+   La página principal busca primero la versión nueva en internet (sin usar la copia guardada por el navegador); el resto (modelo, sonidos, motor 3D, letras) sale de la memoria. */
 const CACHE='penales-v3';
 const BASE=['./','index.html','jugador.js','manifest.webmanifest','icono-192.png','icono-512.png','apple-touch-icon.png',
   'sonido_amb.mp3','sonido_gol.mp3','sonido_atajada.mp3','sonido_entrada.mp3','sonido_alivio.mp3','sonido_uy.mp3','sonido_lamento.mp3','sonido_pifia.mp3','sonido_latido.mp3',
@@ -13,6 +13,6 @@ self.addEventListener('fetch',e=>{
   const page=req.mode==='navigate'||(url.origin===location.origin&&/\/(index\.html)?$/.test(url.pathname));
   const ok=url.origin===location.origin||/cdn\.jsdelivr\.net|fonts\.(googleapis|gstatic)\.com/.test(url.host);
   if(!ok)return;
-  if(page){e.respondWith(fetch(req).then(r=>{const cp=r.clone();caches.open(CACHE).then(c=>c.put(req,cp));return r;}).catch(()=>caches.match(req).then(m=>m||caches.match('./'))));return;}
+  if(page){e.respondWith(fetch(new Request(req.url,{cache:'no-cache',credentials:'same-origin'})).then(r=>{const cp=r.clone();caches.open(CACHE).then(c=>c.put(req,cp));return r;}).catch(()=>caches.match(req).then(m=>m||caches.match('./'))));return;}
   e.respondWith(caches.match(req).then(m=>m||fetch(req).then(r=>{if(r.ok||r.type==='opaque'){const cp=r.clone();caches.open(CACHE).then(c=>c.put(req,cp));}return r;})));
 });
