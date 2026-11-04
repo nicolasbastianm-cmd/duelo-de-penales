@@ -120,6 +120,7 @@ input[type=text]:focus-visible,input[type=number]:focus-visible{outline:3px soli
 .vb.rec{min-width:84px}.vb.rec.on{background:#e63946;border-color:#e63946}
 .vb:disabled{opacity:.35;cursor:not-allowed}
 .vmsg{color:var(--sun)}
+.diag{font-size:11px!important;opacity:.6!important;line-height:1.35}
 .ghost{flex:1;font-family:var(--display);font-size:18px;color:var(--chalk);background:transparent;border:2px solid var(--chalk);border-radius:12px;padding:8px;cursor:pointer}
 button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
 .link-btn{background:transparent;border:0;color:var(--chalk);font-family:var(--body);font-weight:800;font-size:16px;text-decoration:underline;cursor:pointer;padding:4px}
@@ -242,6 +243,7 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
             <label><input type="radio" name="quality" id="q-baja" value="baja"><span>Baja<small>Más fluida</small></span></label>
           </div></fieldset>
           <p class="progress" id="progress"></p>
+          <p class="small diag" id="diag"></p>
         </div>
         <button class="go" id="lockerDone" type="button">Listo</button>
       </div>
@@ -390,6 +392,7 @@ function audioInit(){
     noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
   catch(e){AC=null;}
   if(AC&&sonNew())sonInit();
+  if(AC)AC.addEventListener('statechange',()=>{if(AC.state!=='running'&&!document.hidden&&playing())DIAG.st++;});
   vozUnlock();
 }
 function env(g,t0,a,dur,vol){g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol,t0+a);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);}
@@ -470,8 +473,13 @@ $('mute').addEventListener('click',()=>{CFG.muted=!CFG.muted;saveCfg();paintMute
 
 /* ---------- Geometría y perspectiva ---------- */
 function persp(X,d){const s=1/(1+d*2.2);return{x:W/2+X*W*0.55*s,y:G.hz+(G.lineY-G.hz)*s,s};}
+/* Cámara del arquero: como la cámara de televisión detrás del arco, en la tribuna (20 m detrás de la línea y 8 m de alto).
+   Así, igual que al patear, se ve la tribuna del fondo grande y llena, y el pateador más cerca.
+   Todo el juego (movimiento, tiros, atajadas) se calcula con esta misma perspectiva, así que la jugabilidad no cambia. */
+const KCAM={dist:20,alto:8};
 function geom(){
-  G.hz=H*0.15;G.lineY=H*0.80;G.spotY=H*0.42;
+  G.lineY=H*0.80;{const pxm=0.55*W*0.78/3.66,span=Math.min(KCAM.alto*pxm,G.lineY-H*0.06),s0=KCAM.dist/(KCAM.dist+11);
+    G.hz=G.lineY-span;G.spotY=G.hz+s0*span;}
   const s=(G.spotY-G.hz)/(G.lineY-G.hz);
   G.dSpot=(1/s-1)/2.2;G.spotX=W/2;G.spotS=s;
   G.m=G.dSpot/11;G.mx=0.78/3.66;            // 1 m de profundidad y de ancho (arco de 7,32 m, penal a 11 m)
@@ -543,6 +551,7 @@ function renderLocker(){
   txt+=next?`Próximo premio: ${next.p.toLowerCase()} a las ${next.need.saves}.`:'Ya tienes todos los premios por atajadas.';
   if(!anyTrophy())txt+=' Gana un torneo para la camiseta dorada y el estadio de la final.';
   $('progress').textContent=txt;
+  $('diag').textContent=diagText();
 }
 $('name').addEventListener('input',e=>{CFG.name=e.target.value.slice(0,10);saveCfg();});
 $('num').addEventListener('input',e=>{const n=parseInt(e.target.value,10);if(n>=1&&n<=99){CFG.num=n;saveCfg();}});
@@ -1767,7 +1776,8 @@ function glSync(dt){
   placeBall();rippleNet();confettiStep(dt);flaresStep(dt);poseExtras(dt);
   if(GL.crowdMesh){const ck=CFG.kit+'|'+curRival().code;if(GL.crowdKey!==ck){GL.crowdKey=ck;recolorCrowd();}
     const tense=playing()&&((S.turn==='save'&&S.phase==='runup')||(S.turn==='kick'&&(S.phase==='aim'||S.phase==='krun')));
-    const tg=(S.joy||0)>0?Math.min(1.2,0.3+S.joy):(tense?0:0.05);GL.crowdU.excite.value+=(tg-GL.crowdU.excite.value)*Math.min(1,dt*5);GL.crowdU.time.value=S.time;}
+    const tg=(S.joy||0)>0?Math.min(1.2,0.3+S.joy):(tense?0:0.05);GL.crowdU.excite.value+=(tg-GL.crowdU.excite.value)*Math.min(1,dt*5);GL.crowdU.time.value=S.time;GL.crowdU.hideZ.value=GL.rp.camera===GL.cam?-9.3:-1e5;}
+  if(GL.backBoard){const v=GL.rp.camera!==GL.cam;GL.backBoard.forEach(m=>m.visible=v);}
   if(GL.adTex)GL.adTex.offset.x=(S.time*0.02)%1;
   updateScreens();
   if(GL.crowdMats.length){const m=S.cheer>0&&!reduce&&Math.floor(S.time*8)%2===0?GL.crowdTex[1]:GL.crowdTex[0];
@@ -1785,8 +1795,9 @@ function drawTrail3(){
 
 /* ---------- Estadio 3D: tribunas escalonadas, hinchada, techo, pantallas y carteles LED ---------- */
 const CROWD_VS=`attribute vec3 offset;attribute vec3 tint;attribute vec4 prm;attribute float shade;
-uniform float time,excite;varying vec2 vUv;varying vec3 vTint;varying float vShade,vDepth;
+uniform float time,excite,hideZ;varying vec2 vUv;varying vec3 vTint;varying float vShade,vDepth;
 void main(){
+  if(offset.z<hideZ){gl_Position=vec4(2.0,2.0,2.0,1.0);return;}
   float ph=prm.x,ex=excite*prm.z,rnd=fract(sin(ph*91.7)*43758.5453);
   float up=step(1.0-clamp(ex*1.1,0.0,1.0),rnd);
   float idle=step(0.993,fract(sin(floor(time*0.35+ph*13.0)*12.9898+ph*7.0)*43758.5453))*step(excite,0.25);
@@ -1893,13 +1904,13 @@ function stadium(grp,st){
   g.setAttribute('offset',new T.InstancedBufferAttribute(off,3));g.setAttribute('tint',new T.InstancedBufferAttribute(tnt,3));g.setAttribute('prm',new T.InstancedBufferAttribute(prm,4));g.setAttribute('shade',new T.InstancedBufferAttribute(sh,1));
   g.instanceCount=n;g.userData.n=n;
   const[at,amk]=crowdAtlas(),fog=GL.scene.fog;
-  GL.crowdU={time:{value:0},excite:{value:0.05},map:{value:at},mask:{value:amk},fogColor:{value:fog.color.clone()},fogDensity:{value:fog.density||0},light:{value:night?0.82:fin?0.98:1}};
+  GL.crowdU={time:{value:0},excite:{value:0.05},hideZ:{value:-1e5},map:{value:at},mask:{value:amk},fogColor:{value:fog.color.clone()},fogDensity:{value:fog.density||0},light:{value:night?0.82:fin?0.98:1}};
   const cm=new T.ShaderMaterial({uniforms:GL.crowdU,vertexShader:CROWD_VS,fragmentShader:CROWD_FS});
   const cmesh=new T.Mesh(g,cm);cmesh.frustumCulled=false;grp.add(cmesh);GL.crowdMesh=cmesh;GL.crowdData=crowd;GL.crowdKey=null;applyCrowdTier();
   // carteles LED alrededor de la cancha (con movimiento)
   GL.adTex=adTexture();GL.adTex.repeat.set(3,1);const ad=new T.MeshBasicMaterial({map:GL.adTex,toneMapped:false});ad.color.setScalar(night?1.5:1.15);
-  const board=(w,x,z,ry)=>{const b=new T.Mesh(new T.PlaneGeometry(w,0.95),ad);b.position.set(x,0.48,z);b.rotation.y=ry;grp.add(b);const bk=mesh(new T.BoxGeometry(w,0.95,0.2),M('#101318'),false);bk.position.set(x-Math.sin(ry)*0.11,0.48,z-Math.cos(ry)*0.11);bk.rotation.y=ry;grp.add(bk);};
-  board(44,0,-4.7,0);board(90,0,109.7,Math.PI);board(110,38.6,52.5,-Math.PI/2);board(110,-38.6,52.5,Math.PI/2);
+  const board=(w,x,z,ry)=>{const b=new T.Mesh(new T.PlaneGeometry(w,0.95),ad);b.position.set(x,0.48,z);b.rotation.y=ry;grp.add(b);const bk=mesh(new T.BoxGeometry(w,0.95,0.2),M('#101318'),false);bk.position.set(x-Math.sin(ry)*0.11,0.48,z-Math.cos(ry)*0.11);bk.rotation.y=ry;grp.add(bk);return[b,bk];};
+  GL.backBoard=board(44,0,-4.7,0);board(90,0,109.7,Math.PI);board(110,38.6,52.5,-Math.PI/2);board(110,-38.6,52.5,Math.PI/2);
   // sombra del techo sobre un costado de la cancha (de día)
   if(!night){const c2=cnv(64,8),x2=c2.getContext('2d'),gr=x2.createLinearGradient(0,0,64,0);gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(0.3,'rgba(255,255,255,1)');gr.addColorStop(1,'rgba(255,255,255,1)');x2.fillStyle=gr;x2.fillRect(0,0,64,8);
     const shm=new T.MeshBasicMaterial({color:'#000',transparent:true,opacity:0.28,alphaMap:tex(c2,{lin:true}),depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2});
@@ -2341,10 +2352,11 @@ function flaresInit(grp,spots){
 }
 function flaresStep(dt){
   if(!GL.flares)return;const always=CFG.stage==='final';GL.flareT=Math.max(0,(GL.flareT||0)-dt);const on=always||GL.flareT>0;
-  for(const f of GL.flares){f.core.visible=on;const fl=0.75+0.25*Math.sin(S.time*23+f.ph)*Math.sin(S.time*7.3+f.ph*2);f.core.scale.setScalar(1.3+fl*0.9);
+  const nearHide=GL.rp&&GL.rp.camera===GL.cam;
+  for(const f of GL.flares){const fon=on&&!(nearHide&&f.base.z<-9);f.core.visible=fon;const fl=0.75+0.25*Math.sin(S.time*23+f.ph)*Math.sin(S.time*7.3+f.ph*2);f.core.scale.setScalar(1.3+fl*0.9);
     if(GL.tier>=2)continue;
     for(const p of f.puffs){p.age+=dt;if(p.age>4)p.age-=4;const a=p.age/4;p.sp.position.set(f.base.x+Math.sin(p.age*0.8+f.ph)*0.8*a,f.base.y+a*7,f.base.z+a*1.5);
-      p.sp.scale.setScalar(1+a*6);p.sp.material.opacity=on?0.32*Math.sin(Math.PI*a):Math.max(0,p.sp.material.opacity-dt*0.3);p.sp.visible=p.sp.material.opacity>0.005;}}
+      p.sp.scale.setScalar(1+a*6);p.sp.material.opacity=fon?0.32*Math.sin(Math.PI*a):Math.max(0,p.sp.material.opacity-dt*0.3);p.sp.visible=p.sp.material.opacity>0.005;}}
 }
 
 /* ---------- Ayuda para patear ---------- */
@@ -2972,15 +2984,32 @@ $('locker').addEventListener('change',e=>{if(e.target.name==='sonido'){CFG.sonid
 $('mute').addEventListener('click',()=>{if(CFG.muted)vozStop();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)vozStop();});
 
+/* ---------- Diagnóstico de sonido e imagen ----------
+   Cuenta, mientras se juega: veces que el reloj del audio se atrasó respecto del reloj real (señal de corte),
+   pausas del audio por el sistema y cuadros muy lentos de la imagen. Se ve al final del vestuario para enviárselo a Claude. */
+const DIAG={a:0,st:0,img:0,lw:0,la:0,fw:0,fn:0,fps:0};
+function diagFrame(now,raw){
+  if(!playing()||document.hidden){DIAG.lw=0;DIAG.fw=0;return;}
+  if(raw>120)DIAG.img++;
+  if(!DIAG.fw){DIAG.fw=now;DIAG.fn=0;}else if(now-DIAG.fw>=2000){DIAG.fps=Math.round(DIAG.fn*1000/(now-DIAG.fw));DIAG.fw=now;DIAG.fn=0;}
+  if(AC&&sonNew()){if(AC.state!=='running'){DIAG.lw=0;return;}
+    if(!DIAG.lw){DIAG.lw=now;DIAG.la=AC.currentTime;}else if(now-DIAG.lw>=1000){const w=now-DIAG.lw,a=(AC.currentTime-DIAG.la)*1000;if(w-a>45)DIAG.a++;DIAG.lw=now;DIAG.la=AC.currentTime;}}
+}
+function diagText(){
+  const ios=(navigator.userAgent.match(/OS (\d+)_(\d+)/)||[]).slice(1).join('.'),q=['alta','media','baja'][GL.tier]||'-';
+  return`Diagnóstico (mándale una captura a Claude): sonido ${sonNew()?'normal':'alternativo'} · audio atrasado ${sonNew()?DIAG.a+' veces':'no se mide'} · pausas del sistema ${DIAG.st} · tirones de imagen ${DIAG.img} · ${DIAG.fps||'-'} cuadros/s · calidad ${q}${GL.phoneCap?' (30 cuadros/s)':''}${ios?' · iOS '+ios:''} · pantalla ${Math.round(W)}×${Math.round(H)} ×${window.devicePixelRatio||1}`;
+}
+
 /* ---------- Bucle ---------- */
 let last=performance.now();
-function frame(now){const raw=now-last,dt=Math.min(0.1,raw/1000);last=now;
+function frame(now){const raw=now-last,dt=Math.min(0.1,raw/1000);last=now;diagFrame(now,raw);
   S.lastDt=Math.min(dt,0.05);
   const nst=Math.max(1,Math.ceil(dt/0.034));for(let i=0;i<nst;i++)update(dt/nst);if(!RP)recFrame();
   // en el celular se dibuja a 30 cuadros por segundo: deja tiempo para más resolución y bordes suaves
   if(GL.ok&&!GL.capTested&&playing()&&!RP&&S.phase!=='intro'){GL.cn=(GL.cn||0)+1;if(raw>21)GL.cs=(GL.cs||0)+1;if(GL.cn>=120){GL.capTested=true;GL.cap30=GL.cs/GL.cn>0.3;}}
-  const cap=GL.ok&&GL.cap30?31:0;
-  if(!cap||now-(GL.lastDraw||0)>=cap){const di=now-(GL.lastDraw||now);GL.lastDraw=now;draw();
+  if(GL.phoneCap==null)GL.phoneCap=matchMedia('(pointer: coarse)').matches;
+  const cap=GL.ok&&(GL.cap30||GL.phoneCap)?31:0;
+  if(!cap||now-(GL.lastDraw||0)>=cap){const di=now-(GL.lastDraw||now);GL.lastDraw=now;draw();DIAG.fn++;
     // calidad automática: baja un nivel solo si el juego anda bajo ~22 cuadros por segundo de forma sostenida
     if(GL.ok&&CFG.quality==='auto'&&playing()&&!RP&&S.phase!=='intro'&&now>(GL.cool||0)){GL.n=(GL.n||0)+1;if(di>46)GL.slow=(GL.slow||0)+1;
       if(GL.n>=90){if(GL.slow/GL.n>0.4&&GL.tier<2){GL.tier++;glApplyTier();}else{GL.n=0;GL.slow=0;}}}}
