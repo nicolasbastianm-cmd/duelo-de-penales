@@ -94,7 +94,7 @@ input[type=text]:focus-visible,input[type=number]:focus-visible{outline:3px soli
 .seg{display:grid;grid-template-columns:repeat(3,1fr);border:2px solid var(--chalk);border-radius:12px;overflow:hidden}
 .seg label{position:relative;font-size:15px;font-weight:800}
 .seg span{display:flex;flex-direction:column;justify-content:center;height:100%;box-sizing:border-box;text-align:center;padding:7px 4px;cursor:pointer;line-height:1.15}
-#ctrlSeg{grid-template-columns:repeat(2,1fr)}#stageSeg,#qSeg{grid-template-columns:repeat(2,1fr)}#stageSeg label:nth-child(odd) span,#qSeg label:nth-child(odd) span{border-left:0}#stageSeg label:nth-child(n+3) span,#qSeg label:nth-child(n+3) span{border-top:2px solid var(--chalk)}
+#ctrlSeg,#sonSeg{grid-template-columns:repeat(2,1fr)}#stageSeg,#qSeg{grid-template-columns:repeat(2,1fr)}#stageSeg label:nth-child(odd) span,#qSeg label:nth-child(odd) span{border-left:0}#stageSeg label:nth-child(n+3) span,#qSeg label:nth-child(n+3) span{border-top:2px solid var(--chalk)}
 .seg span small{font-size:11px;font-weight:600;opacity:.85}
 .seg label+label span{border-left:2px solid var(--chalk)}
 .seg input:checked+span{background:var(--chalk);color:var(--ink)}
@@ -231,6 +231,10 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
             <label><input type="radio" name="voz" id="vz-juego" value="juego"><span>Voz del juego</span></label>
             <label><input type="radio" name="voz" id="vz-mia" value="mia"><span>Mi voz<small>Grabada aquí</small></span></label>
           </div><button class="ghost" id="btnVoces" type="button">Grabar mi voz</button></fieldset>
+          <fieldset><legend>Sonido</legend><div class="seg" id="sonSeg">
+            <label><input type="radio" name="sonido" id="so-nuevo" value="nuevo"><span>Normal</span></label>
+            <label><input type="radio" name="sonido" id="so-anterior" value="anterior"><span>Alternativo<small>Si se corta, prueba este</small></span></label>
+          </div></fieldset>
           <fieldset><legend>Calidad gráfica</legend><div class="seg" id="qSeg">
             <label><input type="radio" name="quality" id="q-auto" value="auto"><span>Automática<small>Se ajusta sola</small></span></label>
             <label><input type="radio" name="quality" id="q-alta" value="alta"><span>Alta</span></label>
@@ -379,11 +383,14 @@ function buzz(ms){try{navigator.vibrate&&navigator.vibrate(ms);}catch(e){}}
 /* ---------- Sonido sintetizado ---------- */
 let AC=null,master=null,noiseBuf=null,crowd=null;
 function audioInit(){
-  medInit();medUnlock();vozUnlock();
-  if(AC){if(AC.state==='suspended')AC.resume();return;}
+  if(!sonNew()){medInit();medUnlock();}
+  if(AC){if(AC.state!=='running')try{AC.resume();}catch(e){}vozUnlock();return;}
+  try{if(sonNew()&&navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
   try{const AX=window.AudioContext||window.webkitAudioContext;try{AC=new AX({latencyHint:'playback'});}catch(e2){AC=new AX();}master=AC.createGain();master.gain.value=CFG.muted?0:0.55;master.connect(AC.destination);
     noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
   catch(e){AC=null;}
+  if(AC&&sonNew())sonInit();
+  vozUnlock();
 }
 function env(g,t0,a,dur,vol){g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol,t0+a);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);}
 function tone(f,dur,{type='sine',vol=0.4,at=0,to=null,a=0.005}={}){
@@ -409,7 +416,7 @@ const sfx={
   fanfare:()=>{[523,659,784,1047].forEach((f,i)=>tone(f,i===3?0.7:0.22,{type:'square',vol:0.09,at:i*0.15}));},
   chime:()=>{tone(880,0.25,{vol:0.2});tone(1320,0.4,{vol:0.18,at:0.12});},
 };
-function crowdStart(){medInit();if(medUse()){if(!MED.ambOn)medAmbStart();return;}ambStart();}
+function crowdStart(){if(sonNew()){sonStart();return;}medInit();if(medUse()){if(!MED.ambOn)medAmbStart();return;}ambStart();}
 /* ---------- Sonido de estadio con el reproductor de audio del sistema ----------
    El ambiente y las reacciones del público se tocan como archivos normales (como una canción):
    el celular los reproduce con su propio búfer y no se traban aunque el juego esté exigido. */
@@ -700,7 +707,7 @@ function updThemKick(g){
   const o=S.ok;o.t+=g;
   if(!o.done&&o.t>=0.9){o.done=true;S.tour.sh.them.push(o.goal);
     if(o.goal){say('Gol de '+RIVALS[S.tour.round].code,C.alarm);sfx.kick();ambReact('groan');}
-    else{say('¡Atajó tu arquero!',C.sun);sfx.save();ambReact('cheer');S.cheer=1;}relator(o.goal?vozGolRival():'atajada',{delay:0.3});hud();}
+    else{say('¡Atajó tu arquero!',C.sun);sfx.save();ambReact('cheer');S.cheer=1;}vozAutoThem(o.goal);hud();}
   if(o.t>=2.2){const w=decided(S.tour.sh);if(w)endMatch(w);else usTurn();}
 }
 function afterTour(out){
@@ -716,8 +723,8 @@ function updOurKick(g){
   const o=S.ok;o.t+=g;
   if(!o.done&&o.t>=0.9){o.done=true;S.tour.sh.us.push(o.goal);
     if(o.goal){say('¡GOL NUESTRO!',C.sun);sfx.kick();ambReact('roar');S.cheer=1;buzz(30);}
-    else{say('¡Tu equipo falló!',C.chalk);if(medUse()||AMB.on)ambReact('uyy');else sfx.aww();}
-    relator(o.goal?'gol':'fallaequipo',{delay:0.3});hud();}
+    else{say('¡Tu equipo falló!',C.chalk);if(sonNew()||medUse()||AMB.on)ambReact('uyy');else sfx.aww();}
+    vozAutoUs(o.goal);hud();}
   if(o.t>=2.2){const w=decided(S.tour.sh);if(w)endMatch(w);else themTurn();}
 }
 /* Tanda: 5 por lado; se corta cuando ya no se puede alcanzar; luego muerte súbita con igual número de tiros */
@@ -1993,7 +2000,7 @@ function roar(dur,vol,v='a',o={}){
   out.gain.setValueAtTime(0.0001,t0);out.gain.linearRampToValueAtTime(vol,t0+(o.att||0.15));out.gain.setValueAtTime(vol,t0+dur*0.45);out.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
   s.connect(f1);s.connect(f2);f1.connect(out);f2.connect(g2);g2.connect(out);out.connect(o.dest||AMB.bus);s.start(t0,Math.random()*1.5);s.stop(t0+dur+0.1);
 }
-function ambWhistles(){if(medUse()){if(ambBig())medReact('pifia');return;}if(!AMB.on||CFG.muted||!ambBig())return;if(SND.buf.pifia){playS('pifia',{gain:0.55});return;}for(let i=0;i<9;i++){const at=Math.random()*1.4,d=0.35+Math.random()*0.9,f=2100+Math.random()*1300;
+function ambWhistles(){if(sonNew()){sonReact('pifia');return;}if(medUse()){if(ambBig())medReact('pifia');return;}if(!AMB.on||CFG.muted||!ambBig())return;if(SND.buf.pifia){playS('pifia',{gain:0.55});return;}for(let i=0;i<9;i++){const at=Math.random()*1.4,d=0.35+Math.random()*0.9,f=2100+Math.random()*1300;
   const t0=AC.currentTime+at,o=AC.createOscillator(),l=AC.createOscillator(),lg=AC.createGain(),g=AC.createGain();o.frequency.value=f;l.frequency.value=5+Math.random()*25;lg.gain.value=f*0.02;l.connect(lg);lg.connect(o.frequency);
   g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(0.028,t0+0.05);g.gain.exponentialRampToValueAtTime(0.0001,t0+d);o.connect(g);g.connect(AMB.bus);o.start(t0);l.start(t0);o.stop(t0+d+0.05);l.stop(t0+d+0.05);}}
 function drumsFrenzy(sec){if(!ambBig())return;const bt=0.23;for(let i=0;i*bt<sec;i++){if([1,0,1,1,0,1,1,1][i%8])drumAt(i*bt,0.5,AMB.bus);if(i%4===2)clapAt(i*bt,0.35,AMB.bus);}}
@@ -2001,6 +2008,7 @@ function ambReact(k){
   S.joy=({roar:1.4,cheer:1.0,relief:0.7,entrance:1.1})[k]||0;
   if({roar:1,cheer:1,relief:1}[k])S.teamCel={who:'us',t:S.time};else if(k==='groan'||k==='uyy')S.teamCel={who:'them',t:S.time};
   if(k==='roar'){confettiBurst(900);GL.flareT=9;}else if(k==='entrance'){confettiBurst(500);GL.flareT=6;}else if(k==='cheer')confettiBurst(250);
+  if(sonNew()){sonReact(k);return;}
   if(medUse()){const mk={roar:'gol',cheer:'atajada',relief:'alivio',uyy:'uy',groan:'lamento',entrance:'entrada'}[k];if(mk)medReact(mk);return;}
   if(!AMB.on)return;const big=ambBig(),V=big?1.3:0.45;
   if(SND.buf.gol&&SND.buf.uy){stopReactions();
@@ -2025,6 +2033,7 @@ function ambPattern(){
   else{choir('o',196,3.5,1.1,{to:1.25,att:1.2,dest,n:16});for(let i=0;i<12;i++)drumAt(i*0.3,0.3+i*0.03,dest);}
 }
 function ambTick(dt){
+  if(sonNew()){sonTick(dt);return;}
   medTick(dt);
   if(!AMB.on)return;const t=AC.currentTime,st=CFG.stage;
   const tense=playing()&&((S.turn==='save'&&(S.phase==='runup'||S.phase==='kick'||S.phase==='flight'))||(S.turn==='kick'&&(S.phase==='aim'||S.phase==='krun'||S.phase==='kflight')));
@@ -2204,7 +2213,7 @@ function kickResolve(){
     else{b.vx=Math.sign(b.x-(k.ai.x+(k.ai.dir||0)*1.5))*rand(2,5);b.vy=rand(2,5);b.vz=rand(5,9);say('¡Atajó el arquero!',C.alarm);}
     sfx.save();ambReact('uyy');
   }else if(out==='post'||out==='bar'){b.vx=out==='bar'?b.vx*0.3:Math.sign(s.tx)*rand(3,6);b.vy=out==='bar'?rand(3,5):rand(1,3);b.vz=rand(4,8);say(out==='bar'?'¡Al travesaño!':'¡Al palo!',C.chalk);sfx.post();ambReact('uyy');}
-  else{say(s.ty>Hh?'¡Por arriba!':'¡Afuera!',C.chalk);if(medUse()||AMB.on)ambReact('uyy');else sfx.aww();}
+  else{say(s.ty>Hh?'¡Por arriba!':'¡Afuera!',C.chalk);if(sonNew()||medUse()||AMB.on)ambReact('uyy');else sfx.aww();}
   if(out!=='goal'&&out!=='postin')showTip(kickTip(out,s,k));
   vozKicker(out,s);S.phase='kafter';S.wait=1.7;const goal=out==='goal'||out==='postin';
   if(S.mode==='endless')afterKickEndless(goal);else afterKickTour(goal);
@@ -2517,9 +2526,10 @@ function decisiveInfo(){
 function pressureStart(){
   const t=decisiveInfo();S.press=!!t;vozPress(t);if(!t)return;
   S.banner={title:t,sub:S.turn==='kick'?'Respira y apunta.':'Concéntrate en el pateador.',t:0,dur:2.2};
+  if(sonNew())sonLatido(true);
   const a=MED.el&&MED.el.latido;if(a&&medUse()&&!CFG.muted){a.loop=true;try{a.currentTime=0;a.volume=1;}catch(e){}try{const p=a.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}}
 }
-function pressureEnd(){S.press=false;const a=MED.el&&MED.el.latido;if(a&&!a.paused)medFade(a);}
+function pressureEnd(){S.press=false;if(SON.ok)sonLatido(false);const a=MED.el&&MED.el.latido;if(a&&!a.paused)medFade(a);}
 function drawPressure(){
   if(!S.press||RP)return;const live=(S.turn==='save'&&(S.phase==='runup'||S.phase==='kick'||S.phase==='flight'))||(S.turn==='kick'&&(S.phase==='aim'||S.phase==='krun'||S.phase==='kflight'));if(!live)return;
   const beat=Math.pow(Math.max(0,Math.sin(S.time*Math.PI/0.6)),8),g=ctx.createRadialGradient(W/2,H*0.5,Math.min(W,H)*0.18,W/2,H*0.5,Math.max(W,H)*0.55);
@@ -2619,12 +2629,140 @@ function renderProgress(){
     <div class="daily${c.done?' ok':''}"><span>Desafío de hoy</span><b>${dd.txt}</b><em>${c.done?'✓ Listo':c.n+'/'+dd.goal}</em></div>`;
 }
 
+/* ---------- Motor de sonido único ----------
+   En iPhone, mezclar el reproductor del sistema (público y relator) con Web Audio (pito y golpes) hacía que uno
+   cortara al otro. Ahora todo pasa por un solo motor (Web Audio): ambiente, reacciones, relator, latido y efectos,
+   con fundidos de volumen reales (en iPhone el reproductor del sistema no deja cambiar el volumen, solo cortar).
+   Variedad: cada reacción del público se arma al azar con varias grabaciones, tono, volumen y lado del estadio;
+   el ambiente son dos capas de distinto largo que se desfasan, así el conjunto casi nunca se repite igual.
+   En el vestuario queda la opción «Alternativo» que vuelve al sistema anterior. */
+const SON={init:false,ok:false,buf:{},cur:[],vdec:new Map(),vtok:0,vEnd:0,ev:0,lv:-1};
+const sonNew=()=>CFG.sonido!=='anterior';
+const SFILES={amb:'sonido_amb.mp3',amb2:'sonido_amb2.mp3',gol:'sonido_gol.mp3',gol2:'sonido_gol2.mp3',gol3:'sonido_gol3.mp3',
+  atajada:'sonido_atajada.mp3',atajada2:'sonido_atajada2.mp3',atajada3:'sonido_atajada3.mp3',entrada:'sonido_entrada.mp3',entrada2:'sonido_entrada2.mp3',
+  alivio:'sonido_alivio.mp3',uy:'sonido_uy.mp3',lamento:'sonido_lamento.mp3',pifia:'sonido_pifia.mp3',latido:'sonido_latido.mp3'};
+const R=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)];
+function sonGain(dest,v){const g=AC.createGain();g.gain.value=v;g.connect(dest);return g;}
+function decodeAB(ab){return new Promise((res,rej)=>{try{const p=AC.decodeAudioData(ab,res,rej);if(p&&p.then)p.then(res,rej);}catch(e){rej(e);}});}
+function sonInit(){
+  if(SON.init||!AC)return;SON.init=true;
+  try{
+    const out=AC.createGain();out.gain.value=CFG.muted?0:1;
+    const comp=AC.createDynamicsCompressor();comp.threshold.value=-9;comp.knee.value=8;comp.ratio.value=6;comp.attack.value=0.005;comp.release.value=0.3;
+    out.connect(comp);comp.connect(AC.destination);SON.out=out;
+    try{master.disconnect();}catch(e){}master.connect(out);
+    SON.crowd=sonGain(out,0.0001);SON.swell=sonGain(SON.crowd,1);SON.react=sonGain(out,1);SON.voz=sonGain(out,1);SON.hb=sonGain(out,0.0001);
+    SON.ok=true;
+  }catch(e){SON.ok=false;return;}
+  // primero el ambiente (se nota si falta), después el resto, de a uno para no exigir al teléfono
+  (async()=>{for(const[k,f]of Object.entries(SFILES)){try{const r=await fetch(f);if(!r.ok)throw 0;SON.buf[k]=await decodeAB(await r.arrayBuffer());
+    if(k==='amb'||k==='amb2')sonBed(k);}catch(e){console.warn('Sin sonido',f);}}})();
+}
+/* Convierte una grabación en un loop sin costura: recorta los bordes y funde el final sobre el inicio */
+function loopBuf(b,trim,xf){
+  const sr=b.sampleRate,a=Math.floor(trim*sr),e=b.length-Math.floor(trim*sr),X=Math.floor(xf*sr),L=e-a-X;if(L<sr)return b;
+  const o=AC.createBuffer(b.numberOfChannels,L,sr);
+  for(let c=0;c<b.numberOfChannels;c++){const s=b.getChannelData(c),d=o.getChannelData(c);
+    for(let i=0;i<L;i++)d[i]=s[a+i];
+    for(let i=0;i<X;i++){const t=i/X;d[i]=s[a+i]*Math.sin(t*Math.PI/2)+s[a+L+i]*Math.cos(t*Math.PI/2);}}
+  return o;
+}
+function sonBed(k){
+  if(!SON.ok||SON['bed_'+k])return;const b=SON.buf[k];if(!b)return;
+  const lb=k==='amb'?loopBuf(b,1.7,2.2):loopBuf(b,0.35,1.6),src=AC.createBufferSource();src.buffer=lb;src.loop=true;
+  let node=src;const g=AC.createGain();g.gain.value=k==='amb'?1:0.6;
+  if(k==='amb2'){src.playbackRate.value=0.97;const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=3200;src.connect(f);node=f;}
+  node.connect(g);g.connect(SON.swell);src.start(AC.currentTime,Math.random()*lb.duration*0.8);SON['bed_'+k]=src;
+}
+function sonStart(){audioInit();SON.ambOn=true;}
+function sonPlay(k,o={}){
+  const b=SON.buf[k];if(!b||!SON.ok)return null;
+  const rate=o.rate||1,t0=AC.currentTime+(o.at||0),off=Math.min(o.off||0,b.duration-0.1),src=AC.createBufferSource();src.buffer=b;src.playbackRate.value=rate;
+  let node=src;
+  if(o.lp){const f=AC.createBiquadFilter();f.type='lowpass';f.frequency.value=o.lp;node.connect(f);node=f;}
+  if(o.pan&&AC.createStereoPanner){const p=AC.createStereoPanner();p.pan.value=Math.max(-1,Math.min(1,o.pan));node.connect(p);node=p;}
+  const g=AC.createGain(),G=o.gain==null?1:o.gain;node.connect(g);g.connect(o.dest||SON.react);
+  const dur=o.dur!=null?Math.min(o.dur,(b.duration-off)/rate):(b.duration-off)/rate;
+  g.gain.setValueAtTime(0.0001,t0);g.gain.linearRampToValueAtTime(G,t0+(o.fin||0.03));
+  if(o.dur!=null){const fl=Math.min(o.fout||1,dur*0.6);g.gain.setValueAtTime(G,t0+dur-fl);g.gain.linearRampToValueAtTime(0.0001,t0+dur);}
+  src.start(t0,off);src.stop(t0+dur+0.05);
+  const h={g,src};if(!o.keep)SON.cur.push(h);src.onended=()=>{const i=SON.cur.indexOf(h);if(i>=0)SON.cur.splice(i,1);};return h;
+}
+function sonFadeCur(tc){const t=AC.currentTime;for(const h of SON.cur){try{h.g.gain.cancelScheduledValues(t);h.g.gain.setValueAtTime(h.g.gain.value,t);h.g.gain.setTargetAtTime(0.0001,t,tc);h.src.stop(t+tc*7);}catch(e){}}SON.cur=[];}
+const have=ks=>ks.filter(x=>SON.buf[x]);
+/* Reacciones del público: siempre distintas */
+function sonReact(k){
+  if(!SON.ok||CFG.muted)return;const V=ambBig()?1:0.4;SON.lastReact=S.time;
+  if(k!=='pifia')sonFadeCur(0.12);
+  const P=(list,o)=>{const ks=have(list);return ks.length?sonPlay(pick(ks),o):null;};
+  if(k==='roar'){
+    const a=pick(have(['gol','gol2','gol3']));if(!a)return;sonPlay(a,{gain:V*R(0.92,1.05),rate:R(0.96,1.04)});
+    if(Math.random()<0.65){const b=pick(have(['gol','gol2','gol3','atajada2']).filter(x=>x!==a));if(b)sonPlay(b,{gain:V*R(0.3,0.45),rate:R(0.93,1.07),at:R(0.1,0.4),pan:R(-0.8,0.8),lp:4200});}
+  }else if(k==='cheer'){
+    if(Math.random()<0.7)P(['atajada','atajada2','atajada3'],{gain:V*R(0.85,1),rate:R(0.95,1.05)});
+    else P(['gol','gol2'],{gain:V*0.8,off:0.15,dur:R(3,4),fout:1.4,rate:R(0.96,1.04)});
+    if(Math.random()<0.35)P(['atajada2','atajada3','gol3'],{gain:V*0.3,at:R(0.2,0.5),pan:R(-0.8,0.8),lp:3000,rate:R(0.94,1.06)});
+  }else if(k==='relief'){
+    if(Math.random()<0.55)P(['alivio'],{gain:V*R(0.75,0.9),rate:R(0.95,1.05)});
+    else{P(['uy'],{gain:V*0.6,rate:R(0.95,1.05)});P(['gol','gol3','atajada2'],{gain:V*0.5,at:0.75,off:0.4,dur:2.6,fout:1.2,rate:R(0.95,1.05)});}
+  }else if(k==='uyy'){
+    P(['uy'],{gain:V*R(0.85,1),rate:R(0.9,1.08)});
+    if(Math.random()<0.4)P(['lamento'],{gain:V*0.4,at:R(0.1,0.3),rate:R(0.92,1.02),pan:R(-0.6,0.6)});
+  }else if(k==='groan'){
+    P(Math.random()<0.6?['lamento']:['uy'],{gain:V*R(0.7,0.85),rate:R(0.84,0.95)});
+    if(ambBig()&&Math.random()<0.55){const side=Math.random()<0.5?-1:1;P(['gol2','gol3','atajada3'],{gain:R(0.28,0.4),at:R(0.25,0.5),dur:3.2,fout:1.4,pan:side*R(0.6,0.9),lp:1700,rate:R(0.95,1.05)});}
+  }else if(k==='entrance'){
+    P(['entrada','entrada2','gol'],{gain:V*0.8,dur:4.4,fout:1.5,rate:R(0.97,1.03)});
+  }else if(k==='pifia'){
+    if(ambBig()&&Math.random()<0.75)P(['pifia'],{gain:R(0.45,0.65),rate:R(0.9,1.1),pan:R(-0.5,0.5),keep:true});
+  }
+}
+/* Ambiente vivo: volumen que respira y, entre penal y penal, sectores lejanos que aplauden o murmuran */
+function sonTick(dt){
+  if(!SON.ok||!SON.ambOn)return;const t=AC.currentTime;
+  const tense=playing()&&((S.turn==='save'&&(S.phase==='runup'||S.phase==='kick'||S.phase==='flight'))||(S.turn==='kick'&&(S.phase==='aim'||S.phase==='krun'||S.phase==='kflight')));
+  const tg=(CFG.stage==='barrio'?0.35:1)*(S.mode==='home'||S.mode==='card'?0.5:1)*(tense?(S.press?0.35:0.6):1)*(vozBusy()?0.6:1)*(SON.hold?0:1);
+  if(Math.abs(SON.lv-tg)>0.01){SON.crowd.gain.cancelScheduledValues(t);SON.crowd.gain.setTargetAtTime(Math.max(0.0001,tg),t,0.35);SON.lv=tg;}
+  if(t>(SON.sw||0)){SON.sw=t+R(3,7);SON.swell.gain.setTargetAtTime(R(0.8,1.15),t,R(0.8,1.6));}
+  if(!SON.hold&&!tense&&ambBig()&&S.time>SON.ev&&S.time-(SON.lastReact||-9)>4){SON.ev=S.time+R(9,17);
+    const r=Math.random(),side=Math.random()<0.5?-1:1;
+    if(r<0.5)sonPlay(pick(have(['atajada2','atajada3','gol3'])),{gain:R(0.12,0.22),dur:R(2,3.2),fout:1.2,pan:side*R(0.4,0.9),lp:2400,rate:R(0.92,1.06),dest:SON.crowd,keep:true});
+    else if(r<0.75)sonPlay('uy',{gain:R(0.1,0.16),pan:side*R(0.4,0.9),lp:2000,rate:R(0.9,1.1),dest:SON.crowd,keep:true});
+    else if(r<0.9)sonPlay('pifia',{gain:R(0.08,0.14),pan:side*R(0.5,0.9),lp:2600,rate:R(0.9,1.1),dest:SON.crowd,keep:true});
+  }
+}
+function sonLatido(on){
+  if(!SON.ok)return;const t=AC.currentTime;
+  if(on){if(CFG.muted||!SON.buf.latido)return;if(!SON.hbSrc){const s=AC.createBufferSource();s.buffer=SON.buf.latido;s.loop=true;s.connect(SON.hb);s.start(t);SON.hbSrc=s;}
+    SON.hb.gain.cancelScheduledValues(t);SON.hb.gain.setTargetAtTime(0.9,t,0.15);}
+  else if(SON.hbSrc){const s=SON.hbSrc;SON.hbSrc=null;SON.hb.gain.cancelScheduledValues(t);SON.hb.gain.setTargetAtTime(0.0001,t,0.12);try{s.stop(t+0.8);}catch(e){}}
+}
+/* Relator por el mismo motor: la frase se decodifica al vuelo (y se guarda en memoria las últimas 40) */
+function sonVoz(url,onend){
+  if(!SON.ok||CFG.muted)return;const tok=++SON.vtok;
+  const get=SON.vdec.get(url);
+  const go=buf=>{if(tok!==SON.vtok)return;SON.vdec.delete(url);SON.vdec.set(url,buf);if(SON.vdec.size>40)SON.vdec.delete(SON.vdec.keys().next().value);
+    sonVozStop(0.04);const s=AC.createBufferSource(),g=AC.createGain();s.buffer=buf;s.connect(g);g.connect(SON.voz);g.gain.value=1;s.start();
+    SON.vsrc={s,g};SON.vEnd=AC.currentTime+buf.duration;s.onended=()=>{if(SON.vsrc&&SON.vsrc.s===s){SON.vsrc=null;if(onend)onend();}};};
+  if(get){go(get);return;}
+  const ab=VOZ.ab&&VOZ.ab[url];
+  (ab?Promise.resolve(ab.slice(0)):fetch(url).then(r=>r.arrayBuffer())).then(decodeAB).then(go).catch(()=>{});
+}
+function sonVozStop(tc=0.06){SON.vtok++;const v=SON.vsrc;SON.vsrc=null;SON.vEnd=0;if(!v)return;const t=AC.currentTime;try{v.g.gain.setTargetAtTime(0.0001,t,tc);v.s.stop(t+tc*6);}catch(e){}}
+const sonVozBusy=()=>!!(SON.vsrc&&AC&&AC.currentTime<SON.vEnd);
+/* El iPhone puede pausar el audio (llamada, otra app, bloqueo): se retoma al volver o al tocar la pantalla */
+function sonWake(){if(sonNew()&&AC&&AC.state!=='running'&&!document.hidden){try{AC.resume();}catch(e){}}}
+document.addEventListener('visibilitychange',()=>{if(!sonNew()||!AC)return;if(document.hidden){try{AC.suspend();}catch(e){}}else sonWake();});
+['pointerdown','touchend','keydown'].forEach(ev=>document.addEventListener(ev,sonWake,{passive:true}));
+$('mute').addEventListener('click',()=>{if(SON.out)SON.out.gain.setTargetAtTime(CFG.muted?0:1,AC.currentTime,0.03);if(CFG.muted)sonLatido(false);});
+
 /* ---------- Relator ----------
    Frases cortas en cada momento del partido. Dos fuentes: la voz del juego (archivos voz/clave_n.mp3)
    o «Mi voz»: frases grabadas en el mismo teléfono (se guardan en el navegador, no salen del equipo).
-   Se toca con un solo reproductor de audio del sistema, igual que el público, para que no se trabe. */
-const VOZ_N={"inicio":3,"semi":1,"final":1,"prepara":4,"gol":5,"golazo":2,"paloadentro":1,"atajada":5,"golrival":3,"atajrival":3,"fallaequipo":2,"palo":2,"travesano":1,"afuera":2,"arriba":1,"dec_metewin":1,"dec_metelose":1,"dec_atajawin":1,"dec_atajalose":1,"dec_muerte":1,"dec_vida":1,"ganamos":2,"alafinal":1,"campeon":2,"perdimos":3,"findesafio":2,"record":1,"rival_PUM":1,"golr_PUM":1,"gkr_PUM":1,"rival_HAL":1,"golr_HAL":1,"gkr_HAL":1,"rival_TIB":1,"golr_TIB":1,"gkr_TIB":1,"rival_CON":1,"golr_CON":1,"gkr_CON":1,"rival_TOR":1,"golr_TOR":1,"gkr_TOR":1,"rival_DEL":1,"golr_DEL":1,"gkr_DEL":1,"rival_LOB":1,"golr_LOB":1,"gkr_LOB":1};
-const VOZ={el:null,q:[],last:{},urls:{},blob:{},tm:0};
+   Cada clave tiene varias variantes y se sacan como de una bolsa: no se repite una hasta usar las demás.
+   Según la jugada elige frases más precisas (al ángulo, engañó al arquero, voló, racha, marcador). */
+const VOZ_N={"inicio":6,"semi":3,"final":3,"prepara":10,"preparak":5,"primer":2,"gol":12,"golazo":5,"golengano":4,"golmedio":2,"golrasante":2,"golfuerte":3,"paloadentro":3,"golequipo":4,"atajada":10,"atajvuelo":5,"atajparado":3,"golrival":8,"golrivalengano":3,"golrivalpicada":2,"atajrival":6,"atajrivalcatch":2,"fallaequipo":4,"palo":4,"travesano":3,"afuera":4,"arriba":3,"palorival":3,"afuerarival":3,"racha2":2,"racha3":2,"rachag3":2,"dec_metewin":2,"dec_metelose":2,"dec_atajawin":2,"dec_atajalose":2,"dec_muerte":2,"dec_vida":2,"ganamos":5,"alafinal":3,"campeon":4,"perdimos":5,"findesafio":4,"record":2,"rival_PUM":2,"golr_PUM":2,"gkr_PUM":2,"rival_HAL":2,"golr_HAL":2,"gkr_HAL":2,"rival_TIB":2,"golr_TIB":2,"gkr_TIB":2,"rival_CON":2,"golr_CON":2,"gkr_CON":2,"rival_TOR":2,"golr_TOR":2,"gkr_TOR":2,"rival_DEL":2,"golr_DEL":2,"gkr_DEL":2,"rival_LOB":2,"golr_LOB":2,"gkr_LOB":2,"m_0_1":1,"m_0_2":1,"m_0_3":1,"m_1_0":1,"m_1_1":1,"m_1_2":1,"m_1_3":1,"m_1_4":1,"m_2_0":1,"m_2_1":1,"m_2_2":1,"m_2_3":1,"m_2_4":1,"m_2_5":1,"m_3_0":1,"m_3_1":1,"m_3_2":1,"m_3_3":1,"m_3_4":1,"m_3_5":1,"m_3_6":1,"m_4_1":1,"m_4_2":1,"m_4_3":1,"m_4_4":1,"m_4_5":1,"m_4_6":1,"m_4_7":1,"m_5_2":1,"m_5_3":1,"m_5_4":1,"m_5_5":1,"m_5_6":1,"m_5_7":1,"m_6_3":1,"m_6_4":1,"m_6_5":1,"m_6_6":1,"m_6_7":1,"m_7_4":1,"m_7_5":1,"m_7_6":1,"m_7_7":1};
+const VOZ={el:null,q:[],last:{},bag:{},urls:{},blob:{},ab:{},tm:0};
 const vozMode=()=>CFG.voz==='off'||CFG.voz==='mia'?CFG.voz:'juego';
 const VSLOTS=[
   {id:'inicio',n:'Empieza el partido',ej:()=>'¡Comienza la tanda de penales!'},
@@ -2638,67 +2776,126 @@ const VSLOTS=[
   {id:'campeon',n:'Campeones',ej:()=>'¡Campeones! ¡La copa es nuestra!'},
   {id:'perdimos',n:'Se terminó / perdimos',ej:()=>'¡Otra vez será! ¡Vamos de nuevo!'}];
 function slotOf(k){
-  if(k==='gol'||k==='golazo'||k==='paloadentro')return'gol';if(k==='atajada')return'atajada';
-  if(k==='golrival'||k.startsWith('golr_'))return'golrival';if(k==='atajrival'||k.startsWith('gkr_'))return'atajrival';
-  if(['palo','travesano','afuera','arriba','fallaequipo'].includes(k))return'fallo';if(k.startsWith('dec_'))return'decisivo';
+  if(['gol','golazo','paloadentro','golengano','golmedio','golrasante','golfuerte','golequipo'].includes(k))return'gol';
+  if(['atajada','atajvuelo','atajparado'].includes(k))return'atajada';
+  if(k==='golrival'||k==='golrivalengano'||k==='golrivalpicada'||k.startsWith('golr_'))return'golrival';
+  if(k==='atajrival'||k==='atajrivalcatch'||k.startsWith('gkr_'))return'atajrival';
+  if(['palo','travesano','afuera','arriba','fallaequipo','palorival','afuerarival'].includes(k))return'fallo';if(k.startsWith('dec_'))return'decisivo';
   if(['inicio','semi','final'].includes(k))return'inicio';if(k==='ganamos'||k==='alafinal')return'ganamos';
   if(k==='campeon')return'campeon';if(k==='perdimos'||k==='findesafio')return'perdimos';return null;
 }
 function vozEl(){
   if(VOZ.el)return VOZ.el;
-  try{const a=new Audio();a.preload='auto';a.addEventListener('ended',()=>{const n=VOZ.q.shift();if(n)vozPlay(n);});VOZ.el=a;}catch(e){VOZ.el=null;}
+  try{const a=new Audio();a.preload='auto';a.addEventListener('ended',vozNext);VOZ.el=a;}catch(e){VOZ.el=null;}
   return VOZ.el;
 }
-const vozBusy=()=>!!(VOZ.el&&!VOZ.el.paused&&!VOZ.el.ended&&VOZ.el.currentTime>0);
-/* El primer toque de la pantalla habilita el reproductor (requisito del iPhone) y precarga las frases en memoria */
+function vozNext(){const n=VOZ.q.shift();if(n)vozPlay(n);}
+const vozBusy=()=>sonNew()?sonVozBusy():!!(VOZ.el&&!VOZ.el.paused&&!VOZ.el.ended&&VOZ.el.currentTime>0);
+/* El primer toque de la pantalla habilita el audio (requisito del iPhone) y precarga las frases en memoria */
 function vozUnlock(){
-  const a=vozEl();if(!a||VOZ.unl)return;VOZ.unl=true;
+  if(VOZ.unl)return;VOZ.unl=true;vozWarm();vozLoad();
+  if(sonNew())return; // con el motor único no se usa el reproductor del sistema
+  const a=vozEl();if(!a)return;
   a.src='voz/prepara_0.mp3';a.muted=true;
   try{const p=a.play();if(p&&p.then)p.then(()=>{a.pause();a.muted=CFG.muted;}).catch(()=>{a.muted=CFG.muted;});}catch(e){a.muted=CFG.muted;}
-  vozWarm();vozLoad();
 }
 function vozWarm(){
   if(VOZ.warm||typeof fetch!=='function')return;VOZ.warm=true;
-  for(const[k,n]of Object.entries(VOZ_N))for(let i=0;i<n;i++){const s=`voz/${k}_${i}.mp3`;
-    fetch(s).then(r=>r.ok?r.blob():null).then(b=>{if(b&&b.size)VOZ.blob[s]=URL.createObjectURL(b);}).catch(()=>{});}
+  const list=[];for(const[k,n]of Object.entries(VOZ_N))for(let i=0;i<n;i++)list.push(`voz/${k}_${i}.mp3`);
+  let i=0;const next=()=>{const s=list[i++];if(!s)return;
+    fetch(s).then(r=>r.ok?r.arrayBuffer():null).then(ab=>{if(ab&&ab.byteLength){VOZ.ab[s]=ab;if(!sonNew())VOZ.blob[s]=URL.createObjectURL(new Blob([ab],{type:'audio/mpeg'}));}}).catch(()=>{}).then(next);};
+  for(let j=0;j<6;j++)next(); // 6 descargas a la vez
 }
 function vozPlay(src){
-  const a=vozEl();if(!a||CFG.muted)return;
+  if(CFG.muted)return;
+  if(sonNew()){sonVoz(src,vozNext);return;}
+  const a=vozEl();if(!a)return;
   try{a.pause();}catch(e){}a.src=VOZ.blob[src]||src;a.muted=false;
   try{a.currentTime=0;}catch(e){}try{a.volume=1;}catch(e){}
   try{const p=a.play();if(p&&p.catch)p.catch(()=>{});}catch(e){}
 }
-/* relator('gol') o relator(['inicio','rival_TIB']): elige una variante sin repetir la anterior.
-   o.delay en segundos; o.chance para frases de relleno; o.low = no interrumpe si ya está hablando. */
+function vozPick(k){
+  const n=VOZ_N[k];if(!n)return null;let bag=VOZ.bag[k];
+  if(!bag||!bag.length){bag=[...Array(n).keys()];for(let i=n-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]];}
+    if(n>1&&bag[0]===VOZ.last[k])bag.push(bag.shift());VOZ.bag[k]=bag;}
+  const i=bag.shift();VOZ.last[k]=i;return`voz/${k}_${i}.mp3`;
+}
+/* relator('gol') o relator(['inicio','rival_TIB']): o.delay en segundos; o.chance para frases de relleno;
+   o.low = no interrumpe si ya está hablando. */
 function relator(keys,o={}){
   const m=vozMode();if(m==='off'||CFG.muted||S.mode==='tut')return;
   if(o.chance!=null&&Math.random()>o.chance)return;
   if(o.low&&vozBusy())return;
   keys=[].concat(keys).filter(Boolean);let srcs=[];
   if(m==='mia'){const seen=new Set();for(const k of keys){const s=slotOf(k);if(s&&VOZ.urls[s]&&!seen.has(s)){seen.add(s);srcs.push(VOZ.urls[s]);}}}
-  else srcs=keys.filter(k=>VOZ_N[k]).map(k=>{const n=VOZ_N[k];let i=Math.floor(Math.random()*n);if(n>1&&i===VOZ.last[k])i=(i+1)%n;VOZ.last[k]=i;return`voz/${k}_${i}.mp3`;});
+  else srcs=keys.map(vozPick).filter(Boolean);
   if(!srcs.length)return;
   clearTimeout(VOZ.tm);
   VOZ.tm=setTimeout(()=>{if(o.low&&vozBusy())return;VOZ.q=srcs.slice(1);vozPlay(srcs[0]);},(o.delay||0)*1000);
 }
-function vozStop(){clearTimeout(VOZ.tm);VOZ.q=[];if(VOZ.el)try{VOZ.el.pause();}catch(e){}}
+function vozStop(){clearTimeout(VOZ.tm);VOZ.q=[];if(VOZ.el)try{VOZ.el.pause();}catch(e){}if(AC&&SON.ok)sonVozStop();}
 const vozTeam=()=>S.mode==='tour'&&S.tour?RIVALS[S.tour.round]:null;
-function vozGolRival(){const r=vozTeam();return r&&Math.random()<0.5?'golr_'+r.code:'golrival';}
-function vozAtajRival(){const r=vozTeam();return r&&Math.random()<0.5?'gkr_'+r.code:'atajrival';}
+const azar=p=>Math.random()<p;
+function vozGolRival(){const r=vozTeam();return r&&azar(0.4)?'golr_'+r.code:'golrival';}
+function vozAtajRival(){const r=vozTeam();return r&&azar(0.4)?'gkr_'+r.code:'atajrival';}
+/* Marcador y rachas: frases que se encadenan a veces después de la principal */
+function vozScore(us,them){
+  if(!S.tour||!S.tour.sh)return null;const a=cnt(us),b=cnt(them);
+  if(us.length!==them.length||!us.length||decided({us,them}))return null;
+  const k=`m_${a}_${b}`;return VOZ_N[k]&&azar(0.4)?k:null;
+}
+function vozRacha(kind,ok){
+  const r=S.vozR||(S.vozR={s:0,g:0});
+  if(kind==='s'){r.s=ok?r.s+1:0;if(ok&&r.s>=3&&azar(0.7))return'racha3';if(ok&&r.s===2&&azar(0.5))return'racha2';}
+  else{r.g=ok?r.g+1:0;if(ok&&r.g>=3&&azar(0.6))return'rachag3';}
+  return null;
+}
 /* Momentos del partido */
-function vozIntro(){const r=vozTeam();if(!r)return;relator([['inicio','semi','final'][S.tour.round]||'inicio','rival_'+r.code],{delay:0.9});}
+function vozIntro(){S.vozR={s:0,g:0};const r=vozTeam();if(!r)return;relator([['inicio','semi','final'][S.tour.round]||'inicio','rival_'+r.code],{delay:0.9});}
 function vozPress(t){
-  if(!t){if(S.turn==='save'&&S.mode!=='tut')relator('prepara',{delay:0.55,chance:0.3,low:true});return;}
+  if(!t){
+    if(S.mode==='tour'&&S.tour&&S.tour.sh&&!S.tour.sh.us.length&&!S.tour.sh.them.length){relator('primer',{delay:0.5,low:true});return;}
+    if(S.turn==='save'&&S.mode!=='tut')relator('prepara',{delay:0.55,chance:0.35,low:true});
+    else if(S.turn==='kick'&&S.mode!=='tut')relator('preparak',{delay:0.6,chance:0.22,low:true});
+    return;}
   if(t==='¡Última vida!'){if(S.vozVida)return;S.vozVida=true;}
   if(t==='Muerte súbita'){if(!S.tour||S.tour.vozMS)return;S.tour.vozMS=true;}
   const k={'¡Si la metes, ganan!':'dec_metewin','¡Si fallas, pierden!':'dec_metelose','¡Si atajas, ganan!':'dec_atajawin','¡Si te hacen gol, pierden!':'dec_atajalose','Muerte súbita':'dec_muerte','¡Última vida!':'dec_vida'}[t];
   if(k)relator(k,{delay:0.3});
 }
-function vozKeeper(out){relator(out==='save'?'atajada':out==='post'?'palo':out==='bar'?'travesano':out==='out'?'afuera':vozGolRival(),{delay:out==='goal'?0.55:0.2});}
-function vozKicker(out,s){
-  const k=out==='goal'?(s.ty>1.6&&Math.abs(s.tx)>2.2?'golazo':'gol'):out==='postin'?'paloadentro':out==='save'||out==='catch'?vozAtajRival():out==='post'?'palo':out==='bar'?'travesano':s.ty>2.44?'arriba':'afuera';
-  relator(k,{delay:0.15});
+/* Atajas tú: el rival patea */
+function vozKeeper(out){
+  const k=S.keeper,b=S.ball,bx=b&&b.txf!=null?b.txf*W:W/2,side=Math.sign(bx-k.x)||1,wrong=(k.dive&&k.dive.dir&&k.dive.dir!==side)||(k.rec>0&&k.lastDir&&k.lastDir!==side);
+  let key;
+  if(out==='save')key=k.dive&&k.dive.dir&&azar(0.55)?'atajvuelo':!k.dive&&k.rec<=0&&azar(0.4)?'atajparado':'atajada';
+  else if(out==='post')key='palorival';else if(out==='bar')key='travesano';
+  else if(out==='out')key=azar(0.6)?'afuerarival':'afuera';
+  else key=b&&b.type==='picadita'&&azar(0.6)?'golrivalpicada':wrong&&azar(0.5)?'golrivalengano':vozGolRival();
+  const extra=vozRacha('s',out==='save'),sh=S.tour&&S.tour.sh;
+  relator([key,extra],{delay:out==='goal'?0.55:0.2});
 }
+/* Pateas tú */
+function vozKicker(out,s){
+  const ai=S.kick&&S.kick.ai,dir=ai&&ai.dir,tdir=Math.abs(s.tx)<0.9?0:Math.sign(s.tx),goal=out==='goal'||out==='postin';let key;
+  if(out==='goal'){
+    if(s.ty>1.6&&Math.abs(s.tx)>2.2)key='golazo';
+    else if(dir!=null&&dir!==0&&tdir!==0&&dir!==tdir&&azar(0.6))key='golengano';
+    else if(tdir===0&&dir&&azar(0.6))key='golmedio';
+    else if(s.ty<0.5&&azar(0.4))key='golrasante';
+    else if(s.p>1.0&&azar(0.45))key='golfuerte';
+    else key='gol';}
+  else if(out==='postin')key='paloadentro';
+  else if(out==='catch')key=azar(0.6)?'atajrivalcatch':vozAtajRival();
+  else if(out==='save')key=vozAtajRival();
+  else if(out==='post')key='palo';else if(out==='bar')key='travesano';
+  else key=s.ty>2.44?'arriba':'afuera';
+  let extra=vozRacha('g',goal);
+  if(!extra&&S.mode==='tour'&&S.tour&&S.tour.sh){const sh=S.tour.sh;extra=vozScore([...sh.us,goal],sh.them);}
+  relator([key,extra],{delay:0.15});
+}
+/* Patea solo tu equipo o el rival (cuando juegas un solo rol) */
+function vozAutoUs(goal){const sh=S.tour.sh;relator([goal?(azar(0.5)?'golequipo':'gol'):'fallaequipo',vozScore(sh.us,sh.them)],{delay:0.3});}
+function vozAutoThem(goal){relator(goal?vozGolRival():'atajada',{delay:0.3});}
 function vozEnd(w){
   const last=RIVALS.length-1,r=S.tour.round;
   relator(w==='us'?(r===last?'campeon':r===last-1?'alafinal':'ganamos'):'perdimos',{delay:1.0});
@@ -2729,8 +2926,10 @@ function vozClean(blob){
     return{buf:dv.buffer,type:'audio/wav'};
   }).catch(()=>blob.arrayBuffer().then(buf=>({buf,type:blob.type||'audio/mp4'})));
 }
+function vozSesion(){try{if(navigator.audioSession)navigator.audioSession.type=sonNew()?'playback':'auto';}catch(e){}setTimeout(sonWake,300);}
 function vozMsg(t){const el=$('vozMsg');el.textContent=t||'';el.hidden=!t;}
 function ambHold(on){
+  if(sonNew()){SON.hold=on;if(on&&SON.ok){sonFadeCur(0.1);sonLatido(false);}return;}
   if(!MED.ok)return;MED.hold=on;
   if(on){try{MED.el.amb.pause();MED.el.amb2.pause();}catch(e){}if(MED.cur)try{MED.cur.pause();}catch(e){}}
   else if(MED.ambOn&&!CFG.muted)medAmbStart();
@@ -2739,17 +2938,17 @@ function vozRec(id){
   if(VREC.on){if(VREC.id===id)VREC.mr.stop();return;}
   if(VREC.wait)return;vozStop();vozMsg('');audioInit();
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){vozMsg('Este navegador no permite grabar. Abre el juego en Safari o Chrome actualizado.');return;}
-  VREC.wait=true;navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}).then(st=>{VREC.wait=false;
+  VREC.wait=true;try{if(navigator.audioSession)navigator.audioSession.type='play-and-record';}catch(e){}navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true}}).then(st=>{VREC.wait=false;
     const mt=['audio/mp4','audio/webm;codecs=opus','audio/webm'].find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t));
     let mr;try{mr=mt?new MediaRecorder(st,{mimeType:mt}):new MediaRecorder(st);}catch(e){st.getTracks().forEach(t=>t.stop());vozMsg('No se pudo empezar a grabar en este teléfono.');return;}
     const ch=[];mr.ondataavailable=e=>{if(e.data&&e.data.size)ch.push(e.data);};
-    mr.onstop=()=>{clearInterval(VREC.iv);clearTimeout(VREC.to);st.getTracks().forEach(t=>t.stop());VREC.on=false;
+    mr.onstop=()=>{clearInterval(VREC.iv);clearTimeout(VREC.to);st.getTracks().forEach(t=>t.stop());VREC.on=false;vozSesion();
       const raw=new Blob(ch,{type:mr.mimeType||mt||'audio/mp4'});
       vozClean(raw).then(c=>{if(!c){vozMsg('No se escuchó nada. Acerca el teléfono y habla más fuerte.');renderVoces();return;}
         return vdbDo('readwrite',s=>s.put(c,id)).catch(()=>{vozMsg('Se grabó, pero no se pudo guardar en este teléfono (quizás estás en modo privado).');}).then(()=>{vozSetUrl(id,c.buf,c.type);renderVoces();vozPlay(VOZ.urls[id]);});});};
     VREC.on=true;VREC.id=id;VREC.mr=mr;VREC.t=6;mr.start();renderVoces();
     VREC.iv=setInterval(()=>{VREC.t--;const b=document.querySelector(`#vozList [data-a=rec][data-id=${id}]`);if(b)b.textContent='■ '+Math.max(0,VREC.t);},1000);VREC.to=setTimeout(()=>{if(mr.state!=='inactive')mr.stop();},6000);
-  }).catch(()=>{VREC.wait=false;vozMsg('No se pudo usar el micrófono. Dale permiso al micrófono para esta página y prueba de nuevo.');});
+  }).catch(()=>{VREC.wait=false;vozSesion();vozMsg('No se pudo usar el micrófono. Dale permiso al micrófono para esta página y prueba de nuevo.');});
 }
 function vozDel(id){vdbDo('readwrite',s=>s.delete(id)).catch(()=>{});vozSetUrl(id,null);renderVoces();}
 function renderVoces(){
@@ -2766,8 +2965,8 @@ $('vozList').addEventListener('click',e=>{const b=e.target.closest('button');if(
 $('btnVoces').addEventListener('click',()=>{audioInit();ambHold(true);vozLoad();vozMsg('');renderVoces();show('voces');});
 $('vocesDone').addEventListener('click',()=>{if(VREC.on)VREC.mr.stop();ambHold(false);
   if(VSLOTS.some(s=>VOZ.urls[s.id])&&CFG.voz!=='mia'){CFG.voz='mia';saveCfg();}renderVozCfg();show('locker');});
-function renderVozCfg(){const el=$('vz-'+vozMode());if(el)el.checked=true;}
-$('locker').addEventListener('change',e=>{if(e.target.name!=='voz')return;CFG.voz=e.target.value;saveCfg();audioInit();
+function renderVozCfg(){{const so=$('so-'+(sonNew()?'nuevo':'anterior'));if(so)so.checked=true;}const el=$('vz-'+vozMode());if(el)el.checked=true;}
+$('locker').addEventListener('change',e=>{if(e.target.name==='sonido'){CFG.sonido=e.target.value;saveCfg();setTimeout(()=>location.reload(),150);return;}if(e.target.name!=='voz')return;CFG.voz=e.target.value;saveCfg();audioInit();
   if(CFG.voz==='mia'&&!VSLOTS.some(s=>VOZ.urls[s.id])){vozLoad().then(()=>{if(!VSLOTS.some(s=>VOZ.urls[s.id]))$('btnVoces').click();else relator('gol');});return;}
   relator('gol');});
 $('mute').addEventListener('click',()=>{if(CFG.muted)vozStop();});
