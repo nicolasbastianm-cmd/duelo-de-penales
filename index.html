@@ -1325,7 +1325,15 @@ function glComposer(){
   GL.bloom=new m.UnrealBloomPass(new T.Vector2(W||1,H||1),0.2,0.45,0.88);GL.bloom.enabled=GL.tier===0;if(GL.tier===0)c.addPass(GL.bloom);
   c.addPass(new m.OutputPass());GL.grade=new m.ShaderPass(GRADE);c.addPass(GL.grade);GL.composer=c;
 }
-const glPR=()=>{const d=window.devicePixelRatio||1,ph=matchMedia('(pointer: coarse)').matches;return GL.tier===0?Math.min(d,ph?2.4:2):GL.tier===1?Math.min(d,ph?2.0:1.6):Math.min(d,ph?1.4:1.2);};
+/* Resolución: la misma que funcionaba sin cortes de audio. Si el reloj del audio se atrasa durante el juego
+   (señal de que el teléfono no da abasto), se baja un poco la resolución y se recuerda para la próxima vez. */
+GL.prK=parseFloat(lsGet('penales-prk','1'))||1;
+const glPR=()=>{const d=window.devicePixelRatio||1;return Math.max(1,(GL.tier===0?Math.min(d,2):GL.tier===1?Math.min(d,1.6):Math.min(d,1.2))*GL.prK);};
+function audioLagged(){
+  if(CFG.quality!=='auto'||!matchMedia('(pointer: coarse)').matches||GL.prK<=0.76)return;
+  const now=performance.now();if(now<(GL.prCool||0))return;GL.prCool=now+8000;
+  GL.prK=Math.max(0.75,+(GL.prK-0.08).toFixed(2));lsSet('penales-prk',String(GL.prK));glResize();
+}
 const isPhone=()=>matchMedia('(pointer: coarse)').matches;
 const QT={alta:0,media:1,baja:2};
 function initialTier(){
@@ -3144,11 +3152,11 @@ function diagFrame(now,raw){
   if(raw>120)DIAG.img++;
   if(!DIAG.fw){DIAG.fw=now;DIAG.fn=0;}else if(now-DIAG.fw>=2000){DIAG.fps=Math.round(DIAG.fn*1000/(now-DIAG.fw));DIAG.fw=now;DIAG.fn=0;}
   if(AC&&sonNew()){if(AC.state!=='running'){DIAG.lw=0;return;}
-    if(!DIAG.lw){DIAG.lw=now;DIAG.la=AC.currentTime;}else if(now-DIAG.lw>=1000){const w=now-DIAG.lw,a=(AC.currentTime-DIAG.la)*1000;if(w-a>45)DIAG.a++;DIAG.lw=now;DIAG.la=AC.currentTime;}}
+    if(!DIAG.lw){DIAG.lw=now;DIAG.la=AC.currentTime;}else if(now-DIAG.lw>=1000){const w=now-DIAG.lw,a=(AC.currentTime-DIAG.la)*1000;if(w-a>45){DIAG.a++;audioLagged();}DIAG.lw=now;DIAG.la=AC.currentTime;}}
 }
 function diagText(){
   const ios=(navigator.userAgent.match(/OS (\d+)_(\d+)/)||[]).slice(1).join('.'),q=['alta','media','baja'][GL.tier]||'-';
-  return`Diagnóstico (mándale una captura a Claude): sonido ${sonNew()?'normal':'alternativo'} · audio atrasado ${sonNew()?DIAG.a+' veces':'no se mide'} · pausas del sistema ${DIAG.st} · tirones de imagen ${DIAG.img} · ${DIAG.fps||'-'} cuadros/s · calidad ${q}${GL.phoneCap?' (30 cuadros/s)':''}${ios?' · iOS '+ios:''} · pantalla ${Math.round(W)}×${Math.round(H)} ×${window.devicePixelRatio||1}`;
+  return`Diagnóstico (mándale una captura a Claude): sonido ${sonNew()?'normal':'alternativo'} · audio atrasado ${sonNew()?DIAG.a+' veces':'no se mide'} · pausas del sistema ${DIAG.st} · tirones de imagen ${DIAG.img} · ${DIAG.fps||'-'} cuadros/s · resolución ×${glPR().toFixed(2)} · calidad ${q}${GL.phoneCap?' (30 cuadros/s)':''}${ios?' · iOS '+ios:''} · pantalla ${Math.round(W)}×${Math.round(H)} ×${window.devicePixelRatio||1}`;
 }
 
 /* ---------- Bucle ---------- */
