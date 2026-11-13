@@ -120,6 +120,7 @@ input[type=text]:focus-visible,input[type=number]:focus-visible{outline:3px soli
 .vb.rec{min-width:84px}.vb.rec.on{background:#e63946;border-color:#e63946}
 .vb:disabled{opacity:.35;cursor:not-allowed}
 .vmsg{color:var(--sun)}
+.ver{font-size:11px!important;opacity:.55!important;margin:2px 0 0}
 .diag{font-size:11px!important;opacity:.6!important;line-height:1.35}
 .ghost{flex:1;font-family:var(--display);font-size:18px;color:var(--chalk);background:transparent;border:2px solid var(--chalk);border-radius:12px;padding:8px;cursor:pointer}
 button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
@@ -209,6 +210,7 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
           <button class="ghost" id="btnLocker" type="button">Vestuario</button>
           <button class="ghost" id="btnTut" type="button">Tutorial</button>
         </div>
+        <p class="small ver" id="ver"></p>
       </div>
     </div>
 
@@ -232,10 +234,6 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
             <label><input type="radio" name="voz" id="vz-juego" value="juego"><span>Voz del juego</span></label>
             <label><input type="radio" name="voz" id="vz-mia" value="mia"><span>Mi voz<small>Grabada aquí</small></span></label>
           </div><button class="ghost" id="btnVoces" type="button">Grabar mi voz</button></fieldset>
-          <fieldset><legend>Sonido</legend><div class="seg" id="sonSeg">
-            <label><input type="radio" name="sonido" id="so-nuevo" value="nuevo"><span>Normal</span></label>
-            <label><input type="radio" name="sonido" id="so-anterior" value="anterior"><span>Alternativo<small>Si se corta, prueba este</small></span></label>
-          </div></fieldset>
           <fieldset><legend>Calidad gráfica</legend><div class="seg" id="qSeg">
             <label><input type="radio" name="quality" id="q-auto" value="auto"><span>Automática<small>Se ajusta sola</small></span></label>
             <label><input type="radio" name="quality" id="q-alta" value="alta"><span>Alta</span></label>
@@ -513,7 +511,9 @@ function hud(){
 const OVERLAYS=['home','locker','intro','result','voces'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0});S.kDir=0;}
-function renderHome(){
+/* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
+const VERSION='1.9 · 13 nov 2026';
+function renderHome(){$('ver').textContent='Versión '+VERSION;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
   document.querySelector(`#d-${CFG.diff}`).checked=true;renderRoleUI();renderProgress();
 }
@@ -775,10 +775,12 @@ function showIntro(){
   show('intro');hud();setTimeout(()=>$('iGo').focus({preventScroll:true}),50);
 }
 function startMatch(){
+  DIAG.t0=performance.now();
   S.mode='tour';S.role=roleNow();ROLE=S.role;S.lvlSave=0;S.tour.sh={us:[],them:[]};Object.assign(S.tour,{hist:[],gkHist:[],toldS:false,toldK:false,vozMS:false,st:{saves:0,kicks:0,miss:0}});S.xpGain=0;S.lvUp=null;resetKeeper();show(null);crowdStart();hud();
   if(GL.ok&&!reduce){const r=RIVALS[S.tour.round];S.phase='intro';S.introT=0;S.banner={title:r.stage,sub:'Tu equipo vs '+r.team,t:0,dur:3.3};ambReact('entrance');}else themTurn();vozIntro();cv.focus({preventScroll:true});
 }
 function endMatch(w){
+  if(DIAG.t0){DIAG.dur=(performance.now()-DIAG.t0)/1000;DIAG.shots=S.tour.sh.us.length+S.tour.sh.them.length;DIAG.t0=0;}
   const r=RIVALS[S.tour.round],sh=S.tour.sh,score=`${cnt(sh.us)}–${cnt(sh.them)}`;
   S.mode='card';S.phase='idle';S.banner=null;sfx.final();crowdStop();vozEnd(w);
   $('rBig').textContent=score;
@@ -1274,7 +1276,7 @@ function draw(){
     if(!playing()&&((GL.mf=(GL.mf||0)+1)%3))return;
     try{glSync(S.lastDt||0.016);GL.composer.render();}
     catch(e){console.error(e);GL.ok=false;GL.failed=true;$('gl').hidden=true;if(S.turn==='kick'||S.role&&S.role!=='keeper')goHome();renderRoleUI();}
-    if(GL.ok){ctx.clearRect(0,0,W,H);drawTrail3();drawKickOverlay();drawKickAid();drawAimControl();drawParts();drawTutHint();drawPressure();drawRivalChip();if(!RP)drawMsg();drawReplayOverlay();
+    if(GL.ok){ctx.clearRect(0,0,W,H);drawTrail3();drawKickOverlay();drawKickAid();drawAimControl();drawParts();drawTutHint();drawPressure();drawRivalChip();drawCelHint();if(!RP)drawMsg();drawReplayOverlay();
       const fa=S.phase==='intro'?smooth(3.1,3.6,S.introT):(S.fadeIn||0)/0.35;if(fa>0){ctx.fillStyle=`rgba(0,0,0,${fa})`;ctx.fillRect(0,0,W,H);}drawBanner();return;}
   }
   bake();
@@ -2664,7 +2666,7 @@ function renderProgress(){
    el ambiente son dos capas de distinto largo que se desfasan, así el conjunto casi nunca se repite igual.
    En el vestuario queda la opción «Alternativo» que vuelve al sistema anterior. */
 const SON={init:false,ok:false,buf:{},cur:[],vdec:new Map(),vtok:0,vEnd:0,ev:0,lv:-1};
-const sonNew=()=>CFG.sonido!=='anterior';
+const sonNew=()=>true; // un solo sistema de sonido (el anterior queda sin uso)
 const SFILES={amb:'sonido_amb.mp3',amb2:'sonido_amb2.mp3',gol:'sonido_gol.mp3',gol2:'sonido_gol2.mp3',gol3:'sonido_gol3.mp3',
   atajada:'sonido_atajada.mp3',atajada2:'sonido_atajada2.mp3',atajada3:'sonido_atajada3.mp3',entrada:'sonido_entrada.mp3',entrada2:'sonido_entrada2.mp3',
   alivio:'sonido_alivio.mp3',uy:'sonido_uy.mp3',lamento:'sonido_lamento.mp3',pifia:'sonido_pifia.mp3',latido:'sonido_latido.mp3'};
@@ -2993,7 +2995,7 @@ $('btnVoces').addEventListener('click',()=>{audioInit();ambHold(true);vozLoad();
 $('vocesDone').addEventListener('click',()=>{if(VREC.on)VREC.mr.stop();ambHold(false);
   if(VSLOTS.some(s=>VOZ.urls[s.id])&&CFG.voz!=='mia'){CFG.voz='mia';saveCfg();}renderVozCfg();show('locker');});
 function renderVozCfg(){{const so=$('so-'+(sonNew()?'nuevo':'anterior'));if(so)so.checked=true;}const el=$('vz-'+vozMode());if(el)el.checked=true;}
-$('locker').addEventListener('change',e=>{if(e.target.name==='sonido'){CFG.sonido=e.target.value;saveCfg();setTimeout(()=>location.reload(),150);return;}if(e.target.name!=='voz')return;CFG.voz=e.target.value;saveCfg();audioInit();
+$('locker').addEventListener('change',e=>{if(e.target.name!=='voz')return;CFG.voz=e.target.value;saveCfg();audioInit();
   if(CFG.voz==='mia'&&!VSLOTS.some(s=>VOZ.urls[s.id])){vozLoad().then(()=>{if(!VSLOTS.some(s=>VOZ.urls[s.id]))$('btnVoces').click();else relator('gol');});return;}
   relator('gol');});
 $('mute').addEventListener('click',()=>{if(CFG.muted)vozStop();});
@@ -3129,6 +3131,7 @@ function celRoot(model,style,t){
   else if(style==='avion'){model.rotation.y+=t*1.1;model.rotation.z=Math.sin(t*2.6)*0.26*smooth(0,0.4,t);}
   else if(style==='rodillas'){const d=3.0*(1-Math.exp(-t*2.4)),F=new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(0,1,0),model.rotation.y);model.position.addScaledVector(F,d);}
 }
+function drawCelHint(){if(!GL.celOn||RP)return;ctx.save();ctx.textAlign='right';ctx.font=`600 ${Math.round(clamp(G.unit*0.035,12,14))}px ${BODY}`;ctx.fillStyle='rgba(246,243,232,.8)';ctx.fillText('Toca para seguir',W-16,H-18);ctx.restore();}
 /* Cámara de festejo */
 function celCam(){
   if(!GL.camC){GL.camC=new THREE.PerspectiveCamera(42,1,0.1,6000);}
@@ -3156,7 +3159,7 @@ function diagFrame(now,raw){
 }
 function diagText(){
   const ios=(navigator.userAgent.match(/OS (\d+)_(\d+)/)||[]).slice(1).join('.'),q=['alta','media','baja'][GL.tier]||'-';
-  return`Diagnóstico (mándale una captura a Claude): sonido ${sonNew()?'normal':'alternativo'} · audio atrasado ${sonNew()?DIAG.a+' veces':'no se mide'} · pausas del sistema ${DIAG.st} · tirones de imagen ${DIAG.img} · ${DIAG.fps||'-'} cuadros/s · resolución ×${glPR().toFixed(2)} · calidad ${q}${GL.phoneCap?' (30 cuadros/s)':''}${ios?' · iOS '+ios:''} · pantalla ${Math.round(W)}×${Math.round(H)} ×${window.devicePixelRatio||1}`;
+  return`Diagnóstico (mándale una captura a Claude): versión ${VERSION} · último partido ${DIAG.dur?Math.round(DIAG.dur)+' s ('+DIAG.shots+' penales)':'-'} · audio atrasado ${DIAG.a} veces · pausas del sistema ${DIAG.st} · tirones de imagen ${DIAG.img} · ${DIAG.fps||'-'} cuadros/s · resolución ×${glPR().toFixed(2)} · calidad ${q}${GL.phoneCap?' (30 cuadros/s)':''}${ios?' · iOS '+ios:''} · pantalla ${Math.round(W)}×${Math.round(H)} ×${window.devicePixelRatio||1}`;
 }
 
 /* ---------- Bucle ---------- */
@@ -3183,6 +3186,7 @@ const px=e=>e.clientX-cv.getBoundingClientRect().left;
 cv.addEventListener('pointerdown',e=>{
   if(!playing())return;
   if(RP){RP.skip=true;return;}
+  if(GL.celOn&&(S.phase==='kafter'||S.phase==='after')){S.wait=0;return;}
   if(S.phase==='intro'){S.introT=Math.max(S.introT,3.1);return;}
   if(S.turn==='kick'){if(S.phase!=='aim')return;S.input=e.pointerType==='mouse'?'mouse':'touch';const r=cv.getBoundingClientRect();
     if(kickCtrl()==='apuntar'){const k=S.kick;if(k.step==='power'){powerShot();return;}const a=aimFromScreen(e.clientX,e.clientY);if(a)k.aim=a;k.drag=e.pointerId;try{cv.setPointerCapture(e.pointerId);}catch(err){}return;}
