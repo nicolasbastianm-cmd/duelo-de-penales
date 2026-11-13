@@ -120,6 +120,16 @@ input[type=text]:focus-visible,input[type=number]:focus-visible{outline:3px soli
 .vb.rec{min-width:84px}.vb.rec.on{background:#e63946;border-color:#e63946}
 .vb:disabled{opacity:.35;cursor:not-allowed}
 .vmsg{color:var(--sun)}
+.bal{color:var(--sun);margin-left:8px}
+#shopList h3{margin:12px 0 6px;font-size:15px;text-align:left;opacity:.85}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tile{display:flex;flex-direction:column;align-items:center;gap:5px;padding:9px 4px;border:2px solid rgba(246,243,232,.35);border-radius:14px;background:transparent;color:var(--chalk);font:inherit;cursor:pointer}
+.tile b{font-size:13px}.tile span{font-size:13px;font-weight:700;color:var(--sun)}
+.tile.own{border-color:var(--chalk)}.tile.on{border-color:var(--sun);background:rgba(255,210,63,.12)}
+.tile.poor span{opacity:.55}
+.tv{display:grid;place-items:center;width:46px;height:46px;border-radius:12px;font-style:normal;font-size:28px;box-shadow:0 0 0 2px rgba(246,243,232,.3)}
+.tv.ball{border-radius:50%}.tv.emo{box-shadow:none}
+.minor .ghost{padding-left:6px;padding-right:6px;font-size:16px}
 .ver{font-size:11px!important;opacity:.55!important;margin:2px 0 0}
 .diag{font-size:11px!important;opacity:.6!important;line-height:1.35}
 .ghost{flex:1;font-family:var(--display);font-size:18px;color:var(--chalk);background:transparent;border:2px solid var(--chalk);border-radius:12px;padding:8px;cursor:pointer}
@@ -208,6 +218,7 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
         <button class="go alt mode" id="btnEndless" type="button"><span>Desafío infinito</span><small id="endlessSub">¿Cuántas atajas con 3 vidas?</small></button>
         <div class="minor">
           <button class="ghost" id="btnLocker" type="button">Vestuario</button>
+          <button class="ghost" id="btnShop" type="button">Tienda</button>
           <button class="ghost" id="btnTut" type="button">Tutorial</button>
         </div>
         <p class="small ver" id="ver"></p>
@@ -244,6 +255,15 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
           <p class="small diag" id="diag"></p>
         </div>
         <button class="go" id="lockerDone" type="button">Listo</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="shop" hidden>
+      <div class="card">
+        <h2>Tienda <span id="shopBal" class="bal"></span></h2>
+        <p class="small" id="shopMsg" role="status"></p>
+        <div id="shopList"></div>
+        <button class="go" id="shopDone" type="button">Listo</button>
       </div>
     </div>
 
@@ -307,7 +327,11 @@ const KITS={
   morado:{c:'#8a5cf6',t:'#ffffff',n:'Morada',p:'Camiseta morada',need:{saves:10}},
   rosado:{c:'#ff5fa2',t:'#0f2a17',n:'Rosada',p:'Camiseta rosada',need:{saves:25}},
   negro:{c:'#23262d',t:'#ffd23f',n:'Negra',p:'Camiseta negra',need:{saves:50}},
-  dorado:{c:'#e2b33c',t:'#0f2a17',n:'Dorada',p:'Camiseta dorada',need:{trophy:1}}};
+  dorado:{c:'#e2b33c',t:'#0f2a17',n:'Dorada',p:'Camiseta dorada',need:{trophy:1}},
+  verde:{c:'#2fbf71',t:'#ffffff',n:'Verde',p:'Camiseta verde',need:{buy:3}},
+  azul:{c:'#1f5fb5',t:'#ffffff',n:'Azul',p:'Camiseta azul',need:{buy:5}},
+  amarillo:{c:'#ffd23f',t:'#0f2a17',n:'Amarilla',p:'Camiseta amarilla',need:{buy:7}},
+  blanco:{c:'#f6f3e8',t:'#0f2a17',n:'Blanca',p:'Camiseta blanca',need:{buy:9}}};
 const GLOVES={
   amarillo:{c:'#ffd23f',n:'Amarillos',p:'Guantes amarillos'},
   blanco:{c:'#f6f3e8',n:'Blancos',p:'Guantes blancos',need:{saves:15}},
@@ -369,8 +393,8 @@ const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);};
 const pickW=(list,wf)=>{const tot=list.reduce((s,x)=>s+wf(x),0);let r=Math.random()*tot;for(const x of list){r-=wf(x);if(r<=0)return x;}return list[list.length-1];};
 const D=()=>DIFF[CFG.diff];
 const anyTrophy=()=>Object.values(TROPHIES).some(Boolean);
-function isUnlocked(it){if(!it.need)return true;if(it.need.saves)return S.total>=it.need.saves;if(it.need.trophy)return anyTrophy();return false;}
-const needText=n=>n.saves?`${n.saves} puntos`:'Ganar un torneo';
+function isUnlocked(it){if(!it.need)return true;if(it.need.buy){const o=owned();for(const[k,v]of Object.entries(KITS))if(v===it)return o.includes('kit:'+k);return false;}if(it.need.saves)return S.total>=it.need.saves;if(it.need.trophy)return anyTrophy();return false;}
+const needText=n=>n.buy?`${n.buy} ★ en la tienda`:n.saves?`${n.saves} puntos`:'Ganar un torneo';
 function unlockedIds(){const o=[];for(const[k,v]of Object.entries(KITS))if(isUnlocked(v))o.push('kit:'+k);
   for(const[k,v]of Object.entries(GLOVES))if(isUnlocked(v))o.push('glove:'+k);for(const[k,v]of Object.entries(STAGES))if(isUnlocked(v))o.push('stage:'+k);return o;}
 function prizeName(id){const[t,k]=id.split(':');return({kit:KITS,glove:GLOVES,stage:STAGES})[t][k].p;}
@@ -508,12 +532,12 @@ function hud(){
   $('best').textContent=S.best;$('bestLabel').textContent='Récord '+D().n.toLowerCase();
   lifeEls.forEach((el,i)=>el.classList.toggle('lost',i>=S.lives));
 }
-const OVERLAYS=['home','locker','intro','result','voces'];
+const OVERLAYS=['home','locker','intro','result','voces','shop'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='1.9 · 13 nov 2026';
-function renderHome(){$('ver').textContent='Versión '+VERSION;
+const VERSION='2.0 · 13 nov 2026';
+function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
   document.querySelector(`#d-${CFG.diff}`).checked=true;renderRoleUI();renderProgress();
 }
@@ -761,6 +785,7 @@ function endEndless(){
   $('rTitle').textContent='¡Fin del desafío!';$('rSub').textContent=rl==='kicker'?(who?who+' metió':'Metiste'):rl==='both'?(who?who+' hizo':'Hiciste'):(who?who+' atajó':'Atajaste');$('rBig').textContent=S.saves;
   $('rStars').hidden=true;
   $('rNote').textContent=unit+'. '+(S.saves>0&&S.saves>=S.best?`¡Nuevo récord en ${D().n.toLowerCase()}!`:`Récord en ${D().n.toLowerCase()}: ${S.best}`)+(S.xpGain?` +${S.xpGain} de experiencia.`:'')+(S.lvUp?` ¡Subiste a nivel ${S.lvUp}!`:'');
+  {const st=Math.floor(S.saves/5);if(st>0){addStars(st);$('rStars').hidden=false;$('rStars').innerHTML=`<b>+${st} ★</b><span>1 estrella cada 5 ${unit.toLowerCase()}</span>`;}}
   showPrizes(newPrizes());
   setButtons([{t:'Otra vez',f:startEndless},{t:'Volver al menú',f:goHome}]);show('result');hud();
 }
@@ -1413,13 +1438,14 @@ function pitchTexture(st){
   return tex(c);
 }
 function ballTexture(){
+  const BP=BALLS[CFG.ball]||BALLS.clasico;
   const w=1024,h=512,c=cnv(w,h),x=c.getContext('2d'),id=x.createImageData(w,h),d=id.data;
   for(let py=0;py<h;py++){const th=(py+0.5)/h*Math.PI;for(let px=0;px<w;px++){const ph=(px+0.5)/w*Math.PI*2;
     const vx=-Math.cos(ph)*Math.sin(th),vy=Math.cos(th),vz=Math.sin(ph)*Math.sin(th);let best=-2,bi=0;
     for(let k=0;k<ICO.length;k++){const v=ICO[k],dd=vx*v[0]+vy*v[1]+vz*v[2];if(dd>best){best=dd;bi=k;}}
     const ang=Math.acos(Math.min(1,best)),t=clamp((ang-0.3)/0.02,0,1),i=(py*w+px)*4;
-    let r=255,g=255,b=252;
-    if(t<1){const acc=bi%3===0?[230,40,50]:bi%3===1?[25,60,160]:[20,22,26];r=acc[0]+(r-acc[0])*t;g=acc[1]+(g-acc[1])*t;b=acc[2]+(b-acc[2])*t;}
+    let r=BP.base[0],g=BP.base[1],b=BP.base[2];
+    if(t<1){const acc=BP.acc[bi%BP.acc.length];r=acc[0]+(r-acc[0])*t;g=acc[1]+(g-acc[1])*t;b=acc[2]+(b-acc[2])*t;}
     else if(Math.abs(ang-0.55)<0.008){r=g=b=200;}
     d[i]=r;d[i+1]=g;d[i+2]=b;d[i+3]=255;}}
   x.putImageData(id,0,0);return tex(c);
@@ -1776,6 +1802,7 @@ function glSync(dt){
   const sk=CFG.stage;if(GL.adTex&&GL.adFont!==(G.fontsOk||0)){GL.adFont=G.fontsOk||0;drawAds(GL.adTex.image);GL.adTex.needsUpdate=true;}if(GL.stageKey!==sk){GL.stageKey=sk;glBuildStage();GL.pKey=null;}
   const pk=[CFG.kit,CFG.glove,CFG.name,CFG.num,G.fontsOk||0,curRival().code].join('|');if(GL.pKey!==pk){GL.pKey=pk;glBuildPlayers();}
   if(!GL.ball)glBuildBall();
+  {const bk=CFG.ball||'clasico';if(GL.ballKey!==bk){if(GL.ballKey!=null){GL.ball.material.map=ballTexture();GL.ball.material.needsUpdate=true;}GL.ballKey=bk;}}
   GL.kview=S.turn==='kick';GL.introOn=S.phase==='intro';
   if(GL.introOn){const u=smooth(0,1,clamp(S.introT/3.5,0,1)),c=GL.camI,a=-1.0+u*2.0,Rr=56-22*u;
     c.position.set(Math.sin(a)*Rr,17-9*u,46-Math.cos(a)*Rr);c.lookAt(0,5-4*u,52-46*u);}
@@ -2647,13 +2674,13 @@ function dailyEv(ev){
   const c=dailyGet(),dd=DAILY.find(x=>x.id===c.id);if(!dd||c.done)return;
   if(dd.ev==='streak'){if(ev==='save'){c.cur++;c.n=Math.max(c.n,c.cur);}else if(ev==='conceded')c.cur=0;else return;}
   else if(dd.ev===ev)c.n++;else return;
-  if(c.n>=dd.goal){c.n=dd.goal;c.done=true;lsSet('arquerito-diario',JSON.stringify(c));addXP(150);
-    S.banner={title:'¡Desafío de hoy completado!',sub:dd.txt+' · +150 de experiencia',t:-0.6,dur:3};setTimeout(()=>sfx.chime(),200);return;}
+  if(c.n>=dd.goal){c.n=dd.goal;c.done=true;lsSet('arquerito-diario',JSON.stringify(c));addXP(150);addStars(3);
+    S.banner={title:'¡Desafío de hoy completado!',sub:dd.txt+' · +3 ★',t:-0.6,dur:3};setTimeout(()=>sfx.chime(),200);return;}
   lsSet('arquerito-diario',JSON.stringify(c));
 }
 function renderProgress(){
   const x=getXP(),l=levelOf(x),a=LV[l-1],b=LV[l]||a,f=b>a?(x-a)/(b-a):1,c=dailyGet(),dd=DAILY.find(q=>q.id===c.id);
-  $('prog').innerHTML=`<div class="lvl"><b>Nivel ${l}</b><span class="xb"><i style="width:${Math.round(f*100)}%"></i></span><span class="st">★ ${getStars()}</span></div>
+  $('prog').innerHTML=`<div class="lvl"><b>Nivel ${l}</b><span class="xb"><i style="width:${Math.round(f*100)}%"></i></span><span class="st">★ ${balance()}</span></div>
     <div class="lvsub">${b>a?`${x-a}/${b-a} para el nivel ${l+1}`:'Nivel máximo'} · ${perkText(l)}</div>
     <div class="daily${c.done?' ok':''}"><span>Desafío de hoy</span><b>${dd.txt}</b><em>${c.done?'✓ Listo':c.n+'/'+dd.goal}</em></div>`;
 }
@@ -3001,6 +3028,50 @@ $('locker').addEventListener('change',e=>{if(e.target.name!=='voz')return;CFG.vo
 $('mute').addEventListener('click',()=>{if(CFG.muted)vozStop();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)vozStop();});
 
+/* ---------- Tienda ----------
+   Las estrellas que se ganan jugando se gastan en camisetas, balones y festejos.
+   Pensada para niños chicos: dibujos grandes, casi sin texto, y se compra con un toque.
+   Saldo = estrellas ganadas − estrellas gastadas (lo comprado se guarda en este teléfono). */
+const BALLS={
+  clasico:{n:'Clásico',base:[255,255,252],acc:[[230,40,50],[25,60,160],[20,22,26]]},
+  fuego:{n:'Fuego',base:[255,224,70],acc:[[230,60,20],[255,130,20],[120,20,10]],need:{buy:4}},
+  oceano:{n:'Océano',base:[235,250,255],acc:[[20,120,200],[30,190,200],[10,50,110]],need:{buy:6}},
+  noche:{n:'Noche',base:[38,41,50],acc:[[255,210,63],[255,255,255],[255,90,78]],need:{buy:8}},
+  arcoiris:{n:'Arcoíris',base:[255,255,255],acc:[[230,40,50],[255,150,20],[255,215,40],[40,180,90],[40,120,220],[140,80,220]],need:{buy:10}},
+  oro:{n:'De oro',base:[250,214,100],acc:[[170,120,25],[205,160,45],[140,95,15]],need:{buy:15}}};
+const CEL_SHOP={puno:{n:'El puño',i:'✊',need:{buy:4}},rodillas:{n:'De rodillas',i:'🧎',need:{buy:6}},avion:{n:'El avión',i:'✈️',need:{buy:8}}};
+function owned(){try{return JSON.parse(lsGet('penales-compras','[]'))||[];}catch(e){return[];}}
+const isOwned=id=>owned().includes(id);
+const spent=()=>parseInt(lsGet('penales-gastadas','0'),10)||0,balance=()=>Math.max(0,getStars()-spent());
+function addStars(n){if(n>0)lsSet('arquerito-estrellas',String(getStars()+n));}
+function shopItems(){
+  const it=[];
+  for(const[k,v]of Object.entries(KITS))if(v.need&&v.need.buy)it.push({id:'kit:'+k,cat:'Camisetas',n:v.n,price:v.need.buy,vis:`<i class="tv" style="background:${v.c}"></i>`,eq:()=>{CFG.kit=k;},on:()=>CFG.kit===k});
+  for(const[k,v]of Object.entries(BALLS))if(v.need)it.push({id:'ball:'+k,cat:'Balones',n:v.n,price:v.need.buy,
+    vis:`<i class="tv ball" style="background:radial-gradient(circle at 30% 30%,rgb(${v.acc[0]}) 0 17%,transparent 18%),radial-gradient(circle at 72% 40%,rgb(${v.acc[1%v.acc.length]}) 0 15%,transparent 16%),radial-gradient(circle at 45% 76%,rgb(${v.acc[2%v.acc.length]}) 0 16%,transparent 17%),rgb(${v.base})"></i>`,eq:()=>{CFG.ball=k;},on:()=>CFG.ball===k});
+  for(const[k,v]of Object.entries(CEL_SHOP))it.push({id:'cel:'+k,cat:'Festejos',n:v.n,price:v.need.buy,vis:`<i class="tv emo">${v.i}</i>`});
+  return it;
+}
+function renderShop(msg){
+  const bal=balance(),items=shopItems(),cats=[...new Set(items.map(x=>x.cat))];
+  $('shopBal').textContent='★ '+bal;$('shopMsg').textContent=msg||'Gana partidos y desafíos para juntar estrellas.';
+  $('shopList').innerHTML=cats.map(c=>`<h3>${c}</h3><div class="tiles">`+items.filter(x=>x.cat===c).map(x=>{const own=isOwned(x.id),on=own&&x.on&&x.on();
+    return`<button type="button" class="tile${own?' own':''}${on?' on':''}${!own&&bal<x.price?' poor':''}" data-id="${x.id}" aria-label="${x.n}, ${own?'ya es tuyo':x.price+' estrellas'}">${x.vis}<b>${x.n}</b><span>${on?'✓ En uso':own?(x.eq?'Usar':'✓ Tuyo'):'★ '+x.price}</span></button>`;}).join('')+'</div>').join('');
+  $('btnShop').textContent='Tienda ★ '+bal;
+}
+function shopTap(id){
+  const x=shopItems().find(q=>q.id===id);if(!x)return;audioInit();
+  if(isOwned(id)){if(x.eq){x.eq();saveCfg();sfx.chime();renderShop('¡Listo! Ya lo estás usando.');}return;}
+  const bal=balance();
+  if(bal<x.price){renderShop(`Te faltan ${x.price-bal} ★ para ${x.n.toLowerCase()}.`);return;}
+  const o=owned();o.push(id);lsSet('penales-compras',JSON.stringify(o));lsSet('penales-gastadas',String(spent()+x.price));
+  if(x.eq){x.eq();saveCfg();}sfx.chime();setTimeout(()=>sfx.chime(),180);
+  renderShop(`¡${x.n} es tuyo!`);
+}
+$('shopList').addEventListener('click',e=>{const b=e.target.closest('.tile');if(b)shopTap(b.dataset.id);});
+$('btnShop').addEventListener('click',()=>{renderShop();show('shop');});
+$('shopDone').addEventListener('click',()=>{renderHome();show('home');});
+
 /* ---------- Hinchada: banderas que flamean y lienzos en las tribunas ----------
    Banderas en mástiles que la gente agita (más fuerte cuando hay gol o atajada) y lienzos con texto
    colgados en el frente de las tribunas. Todo en una sola pieza de geometría para que el teléfono no sufra. */
@@ -3087,7 +3158,7 @@ function hinchadaSpots(o,S2,CL,flags,bans){
    direcciones del cuerpo (arriba, a los lados, adelante), así sirve para cualquier personaje de Mixamo.
    Además, una cámara de festejo se acerca al jugador mientras celebra (como en la tele). */
 const CEL_K=['clasico','rodillas','avion','brazos','puno'],CEL_A=['clasico','grito','brazos','puno','hinchada'];
-function pickCel(list){let c;let n=0;do{c=list[Math.floor(Math.random()*list.length)];}while(c===S.lastCel&&++n<8);S.lastCel=c;return c;}
+function pickCel(list){list=list.filter(c=>!CEL_SHOP[c]||isOwned('cel:'+c));let c;let n=0;do{c=list[Math.floor(Math.random()*list.length)];}while(c===S.lastCel&&++n<8);S.lastCel=c;return c;}
 let _ca,_cb,_cq,_cq2,_cI;
 function celInit(){if(!_ca){_ca=new THREE.Vector3();_cb=new THREE.Vector3();_cq=new THREE.Quaternion();_cq2=new THREE.Quaternion();_cI=new THREE.Quaternion();}}
 function aimBone(bone,child,dir,w){
