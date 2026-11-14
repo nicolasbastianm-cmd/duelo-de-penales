@@ -109,6 +109,13 @@ input[type=text]:focus-visible,input[type=number]:focus-visible{outline:3px soli
 .mode{display:flex;flex-direction:column;align-items:center;gap:1px}
 .mode small{font-family:var(--body);font-size:14px;font-weight:600}
 .minor{display:flex;gap:10px}
+.vit{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.vcup{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11px;font-weight:700;opacity:.38;text-align:center;line-height:1.15}
+.vcup.won{opacity:1}.vcup svg{width:46px;height:46px}.vcup em{font-style:normal;color:var(--sun);font-size:13px}
+.meds{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:7px;text-align:left}
+.meds li{display:flex;gap:8px;align-items:center;font-size:15px;line-height:1.2;opacity:.5}
+.meds li.ok{opacity:1}.meds li i{font-style:normal;font-size:22px;width:26px;text-align:center;color:var(--sun)}
+.meds li small{display:block;font-size:12.5px;opacity:.85}
 #btnVoces{margin-top:4px;font-size:17px}
 #vozList{display:flex;flex-direction:column;gap:8px;text-align:left}
 .vrow{display:flex;align-items:center;gap:8px;border:2px solid rgba(246,243,232,.35);border-radius:12px;padding:7px 8px}
@@ -219,6 +226,9 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
         <div class="minor">
           <button class="ghost" id="btnLocker" type="button">Vestuario</button>
           <button class="ghost" id="btnShop" type="button">Tienda</button>
+        </div>
+        <div class="minor">
+          <button class="ghost" id="btnVit" type="button">Vitrina</button>
           <button class="ghost" id="btnTut" type="button">Tutorial</button>
         </div>
         <p class="small ver" id="ver"></p>
@@ -255,6 +265,17 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
           <p class="small diag" id="diag"></p>
         </div>
         <button class="go" id="lockerDone" type="button">Listo</button>
+      </div>
+    </div>
+
+    <div class="overlay" id="vitrina" hidden>
+      <div class="card">
+        <h2>Vitrina</h2>
+        <p class="small" id="vitSub"></p>
+        <div class="vit" id="vitCups"></div>
+        <ul class="meds" id="vitMeds"></ul>
+        <p class="small">Cada medalla nueva te da 3 estrellas para la tienda.</p>
+        <button class="go" id="vitDone" type="button">Listo</button>
       </div>
     </div>
 
@@ -374,6 +395,39 @@ if(!DIFF[CFG.diff])CFG.diff='normal';
 if(!CFG.stageV){CFG.stageV=2;if(CFG.stage==='barrio')CFG.stage='estadio';}if(!STAGES[CFG.stage])CFG.stage='estadio';
 const saveCfg=()=>lsSet('arquerito-cfg',JSON.stringify(CFG));
 let TROPHIES={};try{TROPHIES=JSON.parse(lsGet('arquerito-trofeos','{}'))||{};}catch(e){}
+/* ---------- Temporada y vitrina ----------
+   Una temporada son 4 copas seguidas, cada una un poco más difícil. Al ganar la cuarta empieza otra temporada.
+   La vitrina guarda las copas ganadas y las medallas por logros. */
+const COPAS=[{n:'Copa del Barrio',c:'#d08a4a',lv:0},{n:'Copa de la Ciudad',c:'#cfd8de',lv:1},{n:'Copa Nacional',c:'#ffd23f',lv:2},{n:'Copa de Campeones',c:'#7ee0ff',lv:3}];
+let TEMP={n:1,copa:0,won:[0,0,0,0],camp:0,med:{}};
+try{const t=JSON.parse(lsGet('penales-temporada','null'));if(t&&typeof t==='object')Object.assign(TEMP,t);}catch(e){}
+if(!Array.isArray(TEMP.won)||TEMP.won.length!==4)TEMP.won=[0,0,0,0];TEMP.copa=Math.min(3,Math.max(0,TEMP.copa|0));TEMP.n=Math.max(1,TEMP.n|0);TEMP.camp=TEMP.camp|0;if(!TEMP.med||typeof TEMP.med!=='object')TEMP.med={};
+function tempSave(){lsSet('penales-temporada',JSON.stringify(TEMP));}
+function copaNow(){return COPAS[TEMP.copa];}
+function copaLv(){return copaNow().lv+Math.min(3,(TEMP.n-1)*0.5);}
+const MEDALS=[
+  {id:'muralla',n:'Muralla',d:'Ataja 3 penales en un partido'},
+  {id:'goleador',n:'Goleador',d:'Mete 5 goles en un partido sin fallar'},
+  {id:'perfecto',n:'Partido perfecto',d:'Gana un partido con 3 estrellas'},
+  {id:'inf10',n:'Imparable',d:'Llega a 10 en el desafío infinito'},
+  {id:'inf25',n:'Leyenda',d:'Llega a 25 en el desafío infinito'},
+  {id:'cien',n:'Cien atajadas',d:'Ataja 100 penales en total'},
+  {id:'tri',n:'Triple corona',d:'Gana un torneo en fácil, normal y difícil'},
+  {id:'temporada',n:'Campeón de temporada',d:'Gana las 4 copas de una temporada'}];
+function medalGive(id){if(TEMP.med[id])return;TEMP.med[id]=1;tempSave();addStars(3);(S.newMed=S.newMed||[]).push(id);}
+function medalScan(){
+  if(S.total>=100)medalGive('cien');if(Object.keys(DIFF).every(k=>TROPHIES[k]))medalGive('tri');if(TEMP.camp>0)medalGive('temporada');
+  let b=0;try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.indexOf('arquerito-best-')===0)b=Math.max(b,+localStorage.getItem(k)||0);}}catch(e){}
+  if(b>=10)medalGive('inf10');if(b>=25)medalGive('inf25');
+}
+function medalNote(){const m=S.newMed;S.newMed=null;if(!m||!m.length)return'';return` ${m.length>1?'Medallas nuevas':'Medalla nueva'}: ${m.map(id=>MEDALS.find(x=>x.id===id).n).join(', ')} (+${3*m.length} ★).`;}
+function cupSvg(col,won){return CUP.replace('FILL',won?col:'none').replace('stroke="currentColor"','stroke="'+(won?col:'currentColor')+'"');}
+function renderVit(){
+  medalScan();S.newMed=null;const tot=TEMP.won.reduce((a,b)=>a+b,0);
+  $('vitSub').textContent=`Temporada ${TEMP.n} · ${tot} ${tot===1?'copa ganada':'copas ganadas'}`+(TEMP.camp?` · ${TEMP.camp} ${TEMP.camp===1?'temporada completa':'temporadas completas'}`:'');
+  $('vitCups').innerHTML=COPAS.map((c,i)=>`<div class="vcup${TEMP.won[i]?' won':''}">${cupSvg(c.c,TEMP.won[i])}<span>${c.n}</span><em>${TEMP.won[i]?'×'+TEMP.won[i]:i===TEMP.copa?'en juego':'—'}</em></div>`).join('');
+  $('vitMeds').innerHTML=MEDALS.map(m=>`<li class="${TEMP.med[m.id]?'ok':''}"><i>${TEMP.med[m.id]?'★':'☆'}</i><span><b>${m.n}</b><small>${m.d}</small></span></li>`).join('');
+}
 let ROLE=null;
 const bestKey=()=>{const r=ROLE||CFG.role;return'arquerito-best-'+(r==='kicker'?'k-':r==='both'?'b-':'')+CFG.diff;};
 const getBest=()=>parseInt(lsGet(bestKey(),'0'),10)||0;
@@ -539,12 +593,13 @@ function hud(){
   $('best').textContent=S.best;$('bestLabel').textContent='Récord '+D().n.toLowerCase();
   lifeEls.forEach((el,i)=>el.classList.toggle('lost',i>=S.lives));
 }
-const OVERLAYS=['home','locker','intro','result','voces','shop'];
+const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='3.3 · 14 nov 2026';
+const VERSION='3.4 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
+  $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
   document.querySelector(`#d-${CFG.diff}`).checked=true;renderRoleUI();renderProgress();
 }
@@ -641,7 +696,7 @@ function endlessPlan(){
   p.banner=banner;return p;
 }
 function tourPlan(){
-  const r=RIVALS[S.tour.round],d=D(),lvl=r.lvl+S.tour.sh.them.length*0.3;
+  const r=RIVALS[S.tour.round],d=D(),lvl=r.lvl+S.tour.sh.them.length*0.3+copaLv();
   const type=Math.random()<r.high?'alto':pickW(r.types,t=>TYPES[t].w);
   const p=planShot(type,lvl,{side:pickSide(r.pref)});
   return decorate(p,{honesty:r.honesty,stutter:r.stutter,feint:r.feint,run:Math.max(0.5,d.run*Math.pow(0.96,lvl))+rand(0,0.4)});
@@ -794,6 +849,7 @@ function endEndless(){
   $('rStars').hidden=true;
   $('rNote').textContent=unit+'. '+(S.saves>0&&S.saves>=S.best?`¡Nuevo récord en ${D().n.toLowerCase()}!`:`Récord en ${D().n.toLowerCase()}: ${S.best}`)+(S.xpGain?` +${S.xpGain} de experiencia.`:'')+(S.lvUp?` ¡Subiste a nivel ${S.lvUp}!`:'');
   {const st=Math.floor(S.saves/5);if(st>0){addStars(st);$('rStars').hidden=false;$('rStars').innerHTML=`<b>+${st} ★</b><span>1 estrella cada 5 ${unit.toLowerCase()}</span>`;}}
+  medalScan();$('rNote').textContent+=medalNote();
   showPrizes(newPrizes());
   setButtons([{t:'Otra vez',f:startEndless},{t:'Volver al menú',f:goHome}]);show('result');hud();
 }
@@ -804,7 +860,7 @@ function showIntro(){
   $('cupList').innerHTML=cupHTML(i);
   $('iStage').textContent=r.stage;$('iTeam').textContent=r.team;$('iBadge').style.background=r.color;
   $('iDesc').textContent=S.role==='keeper'?r.desc+' '+strikerFact(r):S.role==='kicker'?r.gkDesc+' '+keeperFact(r):strikerFact(r)+' '+keeperFact(r);
-  $('iRole').textContent=(S.role==='keeper'?'Tú atajas los penales del rival y tu equipo patea solo.':S.role==='kicker'?'Tú pateas los penales de tu equipo y tu arquero ataja solo.':'Tú pateas los penales de tu equipo y atajas los del rival.')+' Son 5 por lado y, si hay empate, muerte súbita.';
+  $('iRole').textContent=`${copaNow().n}, temporada ${TEMP.n}. `+(S.role==='keeper'?'Tú atajas los penales del rival y tu equipo patea solo.':S.role==='kicker'?'Tú pateas los penales de tu equipo y tu arquero ataja solo.':'Tú pateas los penales de tu equipo y atajas los del rival.')+' Son 5 por lado y, si hay empate, muerte súbita.';
   show('intro');hud();setTimeout(()=>$('iGo').focus({preventScroll:true}),50);
 }
 function startMatch(){
@@ -820,8 +876,10 @@ function endMatch(w){
   const rs=$('rStars');rs.hidden=true;let extra='';
   if(w==='us'){const ms=matchStars();lsSet('arquerito-estrellas',String(getStars()+ms.s));
     addXP(50+ms.s*25+(S.tour.round===RIVALS.length-1?200:0));dailyEv('win');if(ms.s===3)dailyEv('win3');
-    rs.innerHTML=`<b>${starsTxt(ms.s)}</b><span>${ms.why.join(' · ')}</span>`;rs.hidden=false;}
-  extra=(S.xpGain?` +${S.xpGain} de experiencia.`:'')+(S.lvUp?` ¡Subiste a nivel ${S.lvUp}!`:'');
+    rs.innerHTML=`<b>${starsTxt(ms.s)}</b><span>${ms.why.join(' · ')}</span>`;rs.hidden=false;
+    {const st=S.tour.st||{};if(st.saves>=3)medalGive('muralla');if(st.kicks>=5&&!st.miss)medalGive('goleador');if(ms.s===3)medalGive('perfecto');}}
+  if(w==='us')medalScan();
+  extra=(S.xpGain?` +${S.xpGain} de experiencia.`:'')+(S.lvUp?` ¡Subiste a nivel ${S.lvUp}!`:'')+medalNote();
   if(w==='us'){
     if(S.tour.round<RIVALS.length-1){
       $('rTitle').textContent='¡Ganaste!';$('rSub').textContent=`Le ganaste a ${r.team}.`;
@@ -829,10 +887,14 @@ function endMatch(w){
       setButtons([{t:'Siguiente partido',f:()=>{S.tour.round++;showIntro();}},{t:'Volver al menú',f:goHome}]);
     }else{
       TROPHIES[CFG.diff]=true;lsSet('arquerito-trofeos',JSON.stringify(TROPHIES));
+      const cp=copaNow();let nt;TEMP.won[TEMP.copa]++;
+      if(TEMP.copa===COPAS.length-1){const sn=TEMP.n;TEMP.camp++;TEMP.n++;TEMP.copa=0;addStars(12);nt=`¡La ${cp.n} es tuya y ganaste la temporada ${sn}! +12 ★. Empieza la temporada ${TEMP.n}, con rivales más difíciles.`;}
+      else{TEMP.copa++;addStars(2);nt=`La ${cp.n} es tuya (+2 ★). Ahora viene la ${copaNow().n}.`;}
+      tempSave();medalScan();extra+=medalNote();
       $('rTitle').textContent='¡CAMPEONES!';$('rSub').textContent=`Ganaste la final a ${r.team}.`;
-      $('rNote').textContent=`La copa en ${D().n.toLowerCase()} es tuya.`+extra;showPrizes(newPrizes());
+      $('rNote').textContent=nt+extra;showPrizes(newPrizes());
       confetti(140);setTimeout(sfx.fanfare,600);
-      setButtons([{t:'Volver al menú',f:goHome}]);
+      setButtons([{t:'Ver la vitrina',f:()=>{goHome();renderVit();show('vitrina');}},{t:'Volver al menú',f:goHome}]);
     }
   }else{
     $('rTitle').textContent='Perdiste';$('rSub').textContent=`${r.team} ganó la ${r.lower==='cuartos de final'?'tanda de cuartos':r.lower}.`;
@@ -3177,6 +3239,8 @@ function shopTap(id){
 $('shopList').addEventListener('click',e=>{const b=e.target.closest('.tile');if(b)shopTap(b.dataset.id);});
 $('btnShop').addEventListener('click',()=>{renderShop();show('shop');});
 $('shopDone').addEventListener('click',()=>{renderHome();show('home');});
+$('btnVit').addEventListener('click',()=>{renderVit();show('vitrina');});
+$('vitDone').addEventListener('click',()=>{renderHome();show('home');});
 
 /* ---------- Hinchada: banderas que flamean y lienzos en las tribunas ----------
    Banderas en mástiles que la gente agita (más fuerte cuando hay gol o atajada) y lienzos con texto
