@@ -605,7 +605,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='4.6 · 14 nov 2026';
+const VERSION='4.7 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -1429,7 +1429,8 @@ function draw(){
    La cámara de atajar reproduce exactamente la perspectiva de la lógica del arquero.
    La cámara de patear va detrás del pateador. */
 let THREE=null;const GL={ok:false,trail:[],tier:0};
-const R3=0.2; // radio visual del balón (m); el real es 0,11 m, se agranda para leerlo en el celular
+let R3=0.15; // radio visual del balón (m); el real es 0,11 m. Al patear se ve de cerca y va casi a tamaño real; al atajar, un poco más grande para leerlo de lejos
+const R3_GEO=0.2;
 async function glLoad(){
   try{
     const T=await import('three');
@@ -1571,14 +1572,18 @@ function grassMaterial(map){
 function ballTexture(){
   const BP=BALLS[CFG.ball]||BALLS.clasico;
   const w=1024,h=512,c=cnv(w,h),x=c.getContext('2d'),id=x.createImageData(w,h),d=id.data;
+  // 32 gajos: 12 pentágonos (de color) en los vértices del icosaedro y 20 hexágonos (claros) en sus caras, con costuras
+  const CEN=ICO.map(v=>v.slice());for(let a=0;a<ICO.length;a++)for(let b=a+1;b<ICO.length;b++)for(let e=b+1;e<ICO.length;e++){const A=ICO[a],B=ICO[b],E=ICO[e],dt=(p,q)=>p[0]*q[0]+p[1]*q[1]+p[2]*q[2];
+    if(dt(A,B)>0.4&&dt(A,E)>0.4&&dt(B,E)>0.4){const s=[A[0]+B[0]+E[0],A[1]+B[1]+E[1],A[2]+B[2]+E[2]],L=Math.hypot(s[0],s[1],s[2]);CEN.push([s[0]/L,s[1]/L,s[2]/L]);}}
+  const NP=ICO.length;
   for(let py=0;py<h;py++){const th=(py+0.5)/h*Math.PI;for(let px=0;px<w;px++){const ph=(px+0.5)/w*Math.PI*2;
-    const vx=-Math.cos(ph)*Math.sin(th),vy=Math.cos(th),vz=Math.sin(ph)*Math.sin(th);let best=-2,bi=0;
-    for(let k=0;k<ICO.length;k++){const v=ICO[k],dd=vx*v[0]+vy*v[1]+vz*v[2];if(dd>best){best=dd;bi=k;}}
-    const ang=Math.acos(Math.min(1,best)),t=clamp((ang-0.3)/0.02,0,1),i=(py*w+px)*4;
+    const vx=-Math.cos(ph)*Math.sin(th),vy=Math.cos(th),vz=Math.sin(ph)*Math.sin(th);let best=-2,sec=-2,bi=0;
+    for(let k=0;k<CEN.length;k++){const v=CEN[k],dd=(vx*v[0]+vy*v[1]+vz*v[2])*(k<NP?1.035:1);if(dd>best){sec=best;best=dd;bi=k;}else if(dd>sec)sec=dd;}
+    const i=(py*w+px)*4,gap=best-sec,seam=clamp(gap/0.012,0,1);
     let r=BP.base[0],g=BP.base[1],b=BP.base[2];
-    if(t<1){const acc=BP.acc[bi%BP.acc.length];r=acc[0]+(r-acc[0])*t;g=acc[1]+(g-acc[1])*t;b=acc[2]+(b-acc[2])*t;}
-    else if(Math.abs(ang-0.55)<0.008){r=g=b=200;}
-    d[i]=r;d[i+1]=g;d[i+2]=b;d[i+3]=255;}}
+    if(bi<NP){const acc=BP.acc[bi%BP.acc.length];r=acc[0];g=acc[1];b=acc[2];}
+    const sh=0.9+0.1*clamp(gap/0.09,0,1),k2=(0.28+0.72*seam)*sh; // costura oscura y gajo apenas abombado
+    d[i]=r*k2;d[i+1]=g*k2;d[i+2]=b*k2;d[i+3]=255;}}
   x.putImageData(id,0,0);return tex(c);
 }
 function crowdTexture(arms,dark){
@@ -1626,7 +1631,7 @@ function buildGoalNet(zl,dir,simple){
   grid(nx,Math.round(2.6/step),(u,v)=>[-X+2*X*u,Hh*(1-v),zl-dir*(1+v)]);
   for(const sx of[-X,X])grid(Math.round(2/step),Math.round(Hh/step),(u,v)=>{const dd=2*u,top=dd<=1?Hh:Hh*(2-dd);return[sx,top*v,zl-dir*dd];});
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pts,3));g.setIndex(idx);
-  const ls=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0xf2f4f6,transparent:true,opacity:simple?0.45:0.6}));
+  const ls=new THREE.LineSegments(g,new THREE.LineBasicMaterial({color:0xf6f8fa,transparent:true,opacity:simple?0.45:0.78}));
   ls.userData.base=Float32Array.from(pts);return ls;
 }
 function buildGoal(grp,zl,dir,simple){
@@ -1848,7 +1853,7 @@ function glBuildPlayers(){
   GL.rivK=makePlayer({shirt:r.gk,trim:col(r.gk,0.5),shorts:'#1b1f26',socks:r.gk,band:'#1b1f26',hair:'#2a1a10',glove:'#f6f3e8',keeper:true,skin:'#e0aa82'});GL.rivK.scale.setScalar(1.17);
   for(const k of['meK','meS','rivS','rivK'])sc.add(GL[k]);
 }
-function glBuildBall(){const b=mesh(new THREE.SphereGeometry(R3,40,28),new THREE.MeshPhysicalMaterial({map:ballTexture(),roughness:0.35,clearcoat:0.7,clearcoatRoughness:0.3}));GL.ball=b;GL.scene.add(b);}
+function glBuildBall(){const b=mesh(new THREE.SphereGeometry(R3_GEO,40,28),new THREE.MeshPhysicalMaterial({map:ballTexture(),roughness:0.35,clearcoat:0.7,clearcoatRoughness:0.3}));GL.ball=b;GL.scene.add(b);}
 
 /* ---------- Poses (con suavizado de articulaciones) ---------- */
 let JK=1;
@@ -1911,7 +1916,7 @@ function poseKickScene(){
   strikerRig(GL.meS,{x:px,z:pz,yaw:Math.PI+(run?0.35:0.25),run,ph,kick,follow,lean:0,hop:run?Math.abs(Math.sin(ph))*0.04:0});
 }
 function placeBall(){
-  const o=GL.ball;
+  const o=GL.ball;R3=GL.kview?0.122:0.15;o.scale.setScalar(R3/R3_GEO);
   if(GL.kview){const k=S.kick;o.visible=!(S.phase==='ourKick'||S.phase==='themKick');
     if(!k||S.phase==='aim'||S.phase==='krun'){o.position.set(0,R3,11);o.rotation.set(0.4,0.7,0);GL.trail.length=0;return;}
     o.position.set(k.b.x,k.b.y-0.11+R3,k.b.z);o.rotation.set(-k.b.spin,k.b.spinY||0,0);
