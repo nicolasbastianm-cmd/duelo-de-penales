@@ -605,7 +605,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='4.8 · 14 nov 2026';
+const VERSION='4.9 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -1955,7 +1955,7 @@ function glSync(dt){
   GL.replayOn=!!RP;if(RP)replayCam();
   crowdPhotoApply();celCam();
   GL.rp.camera=activeCam();
-  GL.meK.visible=GL.rivS.visible=!GL.kview;GL.meS.visible=GL.rivK.visible=GL.kview;
+  GL.meK.visible=GL.rivS.visible=!GL.kview;GL.meS.visible=GL.rivK.visible=GL.kview;if(GL.wkUs){GL.wkUs.visible=GL.kview;GL.wkThem.visible=!GL.kview;}
   const real=GL.meK.userData.real;
   if(GL.kview){if(real)poseKickReal(dt);else poseKickScene();}else if(real){poseKeeperReal(dt);poseRivalReal(dt);}else{poseKeeperMe();poseRivalStriker();}
   placeBall();rippleNet();confettiStep(dt);flaresStep(dt);flashesStep(dt);poseExtras(dt);
@@ -2433,10 +2433,10 @@ function poseKeeperReal(dt){
 /* Antes de patear en la copa: el pateador acomoda la pelota en el punto penal y retrocede a tomar carrera (1,2 s).
    Después del remate: si no fue gol se lamenta; si fue gol gira trotando y festeja. Nunca se queda congelado. */
 const PRE_T=1.2,TURN_T=0.9;
-function prePose(m,R,u,dt){ // u: 0 → 1
+function prePose(m,R,u,dt,end){ // u: 0 → 1; end: dónde queda parado al terminar
   const A=m.userData.acts;if(!A.pl||!A.jb)return false;const px=0.02,pz=11.62;
   if(u<0.42){drive(m,'pl',0.78+u/0.42*0.5,dt,false);m.position.set(px,0,pz);}
-  else{const w=smooth(0,1,(u-0.42)/0.58);drive(m,'jb',((u-0.42)*PRE_T*1.25)%A.jb.getClip().duration,dt,false);m.position.set(px+(R.x-px)*w,0,pz+(R.z-pz)*w);}
+  else{const w=smooth(0,1,(u-0.42)/0.58);drive(m,'jb',((u-0.42)*PRE_T*1.25)%A.jb.getClip().duration,dt,false);m.position.set(px+(end[0]-px)*w,0,pz+(end[1]-pz)*w);}
   m.rotation.set(0,Math.PI,0);return true;
 }
 const fadeW=m=>m.userData.prev?m.userData.fade:1;
@@ -2461,9 +2461,10 @@ function poseRivalReal(dt){
     const tA=st.run*0.78,P=0.38;let eff=st.t;if(st.stutter){if(st.t>=tA&&st.t<tA+P){eff=tA;hop=Math.abs(Math.sin((st.t-tA)/P*Math.PI*2))*0.06;}else if(st.t>=tA+P)eff=st.t-P;}
     if(st.k!=null)t=KICK_T+st.k;else t=Math.max(0,KICK_T-(st.run-eff));
     if(S.phase==='runup'||S.phase==='kick'||S.phase==='flight'){const q=strikerU(st);let side=st.tell;if(st.feint&&st.t<st.run*0.78+0.19)side=-st.tell;lean=side*st.honesty*smooth(0.4,0.85,q.u);}}
-  if(playing()&&st&&S.turn==='save'&&st.pre>0&&prePose(m,R,1-st.pre/PRE_T,dt)){}
+  if(playing()&&st&&S.turn==='save'&&st.pre>0&&prePose(m,R,1-st.pre/PRE_T,dt,[R.x+0.13*f,R.z-0.29*f])){}
   else if(st&&st.k!=null&&KICK_T+st.k>1.45){const res=S.phase==='after',gol=S.celeb&&S.celeb.who==='rivS';afterKick(m,R,f,KICK_T+st.k-1.45,dt,res,gol,RIV_CEL[(S.shotN||0)%RIV_CEL.length],false);}
-  else{drive(m,'kick',Math.min(t,1.45),dt,false);m.position.set(R.x,hop,R.z);m.rotation.set(0,Math.PI,0);}
+  else if(t<=0&&m.userData.acts.oi&&playing()&&S.turn==='save'&&S.phase==='runup'){const d=m.userData.acts.oi.getClip().duration-0.3,x=(S.time*0.8)%(2*d);drive(m,'oi',0.15+(x<d?x:2*d-x),dt,false);m.position.set(R.x+0.13*f,0,R.z-0.29*f);m.rotation.set(0,Math.PI,0);}
+  else{drive(m,'kick',Math.min(t,1.45),dt,false);const w=1-fadeW(m);m.position.set(R.x+0.13*f*w,hop,R.z-0.29*f*w);m.rotation.set(0,Math.PI,0);}
   const B=m.userData.B;if(B.Spine1&&lean){B.Spine1.rotation.z+=-lean*0.28;B.Head.rotation.y+=lean*0.6;}
   const hp=new THREE.Vector3();B.Head.getWorldPosition(hp);const fp=glProject(new THREE.Vector3(hp.x,0,hp.z)),hq=glProject(hp);S.strPos={x:fp.x,y:fp.y,h:Math.max(10,(fp.y-hq.y)*1.1)};
 }
@@ -2486,10 +2487,11 @@ function poseKickReal(dt){
   if(k&&k.res==='catch'){const h=handsMid(gk);k.b.x=h.x;k.b.y=h.y;k.b.z=h.z+0.12;}
   // pateador propio
   const me=GL.meS,f=me.userData.f,R=kickRoot(f),A=me.userData.acts;
-  if(k&&S.phase==='aim'&&S.mode==='tour'&&k.t<PRE_T&&prePose(me,R,k.t/PRE_T,dt))return; // acomoda la pelota mientras apuntas
+  if(k&&S.phase==='aim'&&S.mode==='tour'&&k.t<PRE_T&&prePose(me,R,k.t/PRE_T,dt,[R.x+0.33*f,R.z-0.81*f]))return; // acomoda la pelota mientras apuntas
   const e=k&&(S.phase==='krun'||S.phase==='kflight'||S.phase==='kafter')?k.t+KS-1.45:-1,gol=k&&(k.res==='goal'||k.res==='postin');
   if(e>0)afterKick(me,R,f,e,dt,k.res,gol,celClip(),false); // festeja mirando al arco y a su hinchada; la cámara se pone delante
-  else{drive(me,'kick',k&&S.phase!=='aim'?Math.min(k.t+KS,1.45):KS,dt,false);me.position.set(R.x,0,R.z);me.rotation.set(0,Math.PI,0);}
+  else if(A.oi&&(!k||S.phase==='aim')){const d=A.oi.getClip().duration-0.3,x=(S.time*0.8)%(2*d);drive(me,'oi',0.15+(x<d?x:2*d-x),dt,false);me.position.set(R.x+0.33*f,0,R.z-0.81*f);me.rotation.set(0,Math.PI,0);}
+  else{drive(me,'kick',k&&S.phase!=='aim'?Math.min(k.t+KS,1.45):KS,dt,false);const w=1-fadeW(me);me.position.set(R.x+0.33*f*w,0,R.z-0.81*f*w);me.rotation.set(0,Math.PI,0);}
 }
 
 /* ---------- Turno de patear (lógica en metros; requiere 3D) ---------- */
@@ -2752,7 +2754,7 @@ function drawKickAid(){
    Se ven desde la cámara del arquero, en la presentación y en las repeticiones. */
 const SKINS=['#ffffff','#ecc9ae','#c99a78','#9c6f52','#74513b'],HAIRS=['#1b130d','#3a2314','#6b4423','#c49a5a','#111111'];
 function glBuildExtras(){
-  if(GL.extras){GL.scene.remove(GL.extras);GL.extras=null;}
+  if(GL.extras){GL.scene.remove(GL.extras);GL.extras=null;}if(GL.sideGrp){GL.scene.remove(GL.sideGrp);GL.sideGrp=null;}
   if(!GL.charGLB)return;
   const grp=new THREE.Group(),kit=KITS[CFG.kit],r=curRival(),n=[9,9,6][GL.tier||0],nums=[2,3,4,5,6,7,8,10,11];GL.team=[];
   for(const side of[0,1])for(let i=0;i<n;i++){
@@ -2763,6 +2765,14 @@ function glBuildExtras(){
   GL.ref=makeReal({style:1,c2:'#ffd23f',shirt:'#161616',shorts:'#161616',socks:'#161616',skin:'#e6b896',hair:'#2a2a2a',height:1.86});
   GL.ref.position.set(3.6,0,15.8);GL.ref.rotation.y=Math.PI+0.55;grp.add(GL.ref);
   GL.scene.add(grp);GL.extras=grp;GL.exCel=null;
+  // junto al arco, como en una tanda real: el juez de línea sobre la línea de gol y el arquero que espera su turno
+  {const sg=new THREE.Group(),still=(m,x,z,ry,tt)=>{m.traverse(q=>{if(q.isMesh)q.castShadow=false;});m.position.set(x,0,z);m.rotation.y=ry;drive(m,m.userData.acts.oi?'oi':'idle',tt,1,false);sg.add(m);return m;};
+    const ar=still(makeReal({style:1,c2:'#ffd23f',shirt:'#161616',shorts:'#161616',socks:'#161616',skin:'#c99a78',hair:'#1b130d',height:1.8}),-4.75,0.1,Math.PI/2,2.1);
+    {const hd=ar.userData.B.RightHand;if(hd){const fl=new THREE.Group(),st=mesh(new THREE.CylinderGeometry(0.9,0.9,46,8),M('#d8d8d8'),false);st.position.y=20;fl.add(st);
+      const pn=new THREE.Mesh(new THREE.PlaneGeometry(26,19),new THREE.MeshBasicMaterial({color:'#ffd23f',side:THREE.DoubleSide}));pn.position.set(13,33,0);fl.add(pn);hd.add(fl);}}
+    GL.wkThem=still(makeReal({shirt:r.gk,shorts:'#1b1f26',socks:r.gk,glove:'#f6f3e8',num:1,skin:r.gkSkin,hair:r.gkHair,height:1.92}),4.85,-0.9,Math.PI+0.35,0.9);
+    GL.wkUs=still(makeReal({shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,numColor:kit.t,height:1.9}),4.85,-0.9,Math.PI+0.35,1.6);
+    GL.scene.add(sg);GL.sideGrp=sg;}
 }
 function poseExtras(dt){
   if(!GL.extras)return;
