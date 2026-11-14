@@ -12,7 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Penales">
 <style>
-html{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);-webkit-text-size-adjust:100%}
+html{box-sizing:border-box;height:100vh;padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
 *,*::before,*::after{box-sizing:inherit}
 body{margin:0;font-size:14px}
 img{max-width:100%}
@@ -61,7 +61,7 @@ body{background:var(--ink);color:var(--chalk);font-family:var(--body);overflow:h
 .icon-btn svg{width:19px;height:19px}
 .stage{position:relative;flex:1;min-height:0;user-select:none;-webkit-user-select:none}
 canvas{display:block;position:absolute;inset:0;width:100%;height:100%;touch-action:none}
-.overlay{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding-block:12px;
+.overlay{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
 .card{background:var(--panel);border:3px solid var(--chalk);border-radius:20px;padding:18px 18px 20px;max-width:360px;width:100%;box-sizing:border-box;
   text-align:center;display:flex;flex-direction:column;gap:12px;box-shadow:0 10px 0 rgba(0,0,0,.25);margin-block:auto}
@@ -509,8 +509,15 @@ function geom(){
   G.unit=Math.min(W,H*0.6);
   G.kH=G.unit*0.30;G.reach=G.kH*0.94;G.ballR=G.unit*0.042;G.frameH=G.kH*1.28;G.hpm=G.frameH/2.44;
 }
+/* En el iPhone, la app instalada calculaba mal el alto y dejaba una franja vacía abajo: se fija el alto real de la pantalla.
+   SAFE_B es el espacio de la barra de inicio del iPhone; los avisos de abajo se suben esa distancia. */
+let SAFE_B=0;
+function fitScreen(){
+  try{if(navigator.standalone){const p=matchMedia('(orientation: portrait)').matches,h=p?Math.max(screen.width,screen.height):Math.min(screen.width,screen.height);document.documentElement.style.height=h+'px';}
+    const t=document.createElement('div');t.style.cssText='position:fixed;bottom:0;height:env(safe-area-inset-bottom,0px);width:1px;visibility:hidden';document.body.appendChild(t);SAFE_B=t.getBoundingClientRect().height||0;t.remove();}catch(e){}
+}
 function resize(){
-  const r=stage.getBoundingClientRect(),oldW=W;
+  fitScreen();const r=stage.getBoundingClientRect(),oldW=W;
   dpr=Math.min(window.devicePixelRatio||1,2);W=Math.max(1,r.width);H=Math.max(1,r.height);
   cv.width=Math.round(W*dpr);cv.height=Math.round(H*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);geom();glResize();
   if(oldW>0){S.keeper.x*=W/oldW;if(S.keeper.target!=null)S.keeper.target*=W/oldW;}else S.keeper.x=W/2;
@@ -536,7 +543,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='2.4 · 13 nov 2026';
+const VERSION='2.5 · 13 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
   document.querySelector(`#d-${CFG.diff}`).checked=true;renderRoleUI();renderProgress();
@@ -1355,12 +1362,13 @@ function glComposer(){
 }
 /* Resolución: la misma que funcionaba sin cortes de audio. Si el reloj del audio se atrasa durante el juego
    (señal de que el teléfono no da abasto), se baja un poco la resolución y se recuerda para la próxima vez. */
-GL.prK=parseFloat(lsGet('penales-prk','1'))||1;
+GL.prK=parseFloat(lsGet('penales-prk2','1'))||1;
 const glPR=()=>{const d=window.devicePixelRatio||1;return Math.max(1,(GL.tier===0?Math.min(d,2):GL.tier===1?Math.min(d,1.6):Math.min(d,1.2))*GL.prK);};
 function audioLagged(){
-  if(CFG.quality!=='auto'||!matchMedia('(pointer: coarse)').matches||GL.prK<=0.76)return;
-  const now=performance.now();if(now<(GL.prCool||0))return;GL.prCool=now+8000;
-  GL.prK=Math.max(0.75,+(GL.prK-0.08).toFixed(2));lsSet('penales-prk',String(GL.prK));glResize();
+  if(CFG.quality!=='auto'||!matchMedia('(pointer: coarse)').matches||GL.prK<=0.86)return;
+  const now=performance.now();if(now<(GL.prCool||0))return;
+  if(!(now-(GL.prLast||0)<20000)){GL.prLast=now;return;} // un atraso suelto no cuenta: tienen que ser dos en 20 s
+  GL.prLast=0;GL.prCool=now+15000;GL.prK=Math.max(0.85,+(GL.prK-0.05).toFixed(2));lsSet('penales-prk2',String(GL.prK));glResize();
 }
 const isPhone=()=>matchMedia('(pointer: coarse)').matches;
 const QT={alta:0,media:1,baja:2};
@@ -1411,7 +1419,7 @@ function normalTex(w,h,hf,rep){ // mapa de normales a partir de una función de 
 
 /* ---------- Texturas ---------- */
 function pitchTexture(st){
-  const CW=GL.tier===0?1536:1024,CH=GL.tier===0?2048:1366,X0=-45,Z0=-15,SX=CW/90,SZ=CH/120,c=cnv(CW,CH),x=c.getContext('2d');
+  const CW=GL.tier===2?1024:1536,CH=GL.tier===2?1366:2048,X0=-45,Z0=-15,SX=CW/90,SZ=CH/120,c=cnv(CW,CH),x=c.getContext('2d');
   const P=(wx,wz)=>[(wx-X0)*SX,(wz-Z0)*SZ];
   const pal=st==='noche'?['#428d47','#37793c']:st==='final'?['#4f9e48','#40883c']:['#5c9b45','#4b873a'];
   x.fillStyle=pal[1];x.fillRect(0,0,CW,CH);
@@ -1817,7 +1825,7 @@ function glSync(dt){
   if(GL.crowdMesh){const ck=CFG.kit+'|'+curRival().code+'|'+CFG.name+'|'+(G.fontsOk||0);if(GL.crowdKey!==ck){GL.crowdKey=ck;recolorCrowd();recolorFlags();drawBanners();}
     const tense=playing()&&((S.turn==='save'&&S.phase==='runup')||(S.turn==='kick'&&(S.phase==='aim'||S.phase==='krun')));
     const tg=(S.joy||0)>0?Math.min(1.2,0.3+S.joy):(tense?0:0.05);GL.crowdU.excite.value+=(tg-GL.crowdU.excite.value)*Math.min(1,dt*5);GL.crowdU.time.value=S.time;GL.crowdU.hideZ.value=GL.rp.camera===GL.cam?-9.3:-1e5;}
-  if(GL.backBoard){const v=GL.rp.camera!==GL.cam;GL.backBoard.forEach(m=>m.visible=v);}
+  if(GL.backBoard){const cm=GL.rp.camera,v=cm!==GL.cam&&!(cm===GL.camR&&cm.position.z<-4.7);GL.backBoard.forEach(m=>m.visible=v);}
   if(GL.adTex)GL.adTex.offset.x=(S.time*0.02)%1;
   updateScreens();
   if(GL.crowdMats.length){const m=S.cheer>0&&!reduce&&Math.floor(S.time*8)%2===0?GL.crowdTex[1]:GL.crowdTex[0];
@@ -2580,7 +2588,7 @@ function drawRivalChip(){
   else if(S.turn==='kick'&&S.phase==='aim'){name=r.gkName+' se tiró';h=S.tour.gkHist||[];}else return;
   const c={'-1':0,'0':0,'1':0};h.forEach(x=>c[x]++);
   const txt=`${name}:  ◀ ${c[-1]}   ● ${c[0]}   ▶ ${c[1]}`,fs=Math.round(clamp(G.unit*0.036,12,15));
-  ctx.save();ctx.font=`600 ${fs}px ${BODY}`;const w=ctx.measureText(txt).width+22,x=12,y=H-fs*2.6-10;
+  ctx.save();ctx.font=`600 ${fs}px ${BODY}`;const w=ctx.measureText(txt).width+22,x=12,y=H-fs*2.6-10-SAFE_B;
   ctx.fillStyle='rgba(15,42,23,.82)';roundRect(x,y,w,fs*2.1,10);ctx.fill();ctx.fillStyle='#f6f3e8';ctx.textBaseline='middle';ctx.textAlign='left';ctx.fillText(txt,x+11,y+fs*1.05);ctx.restore();
 }
 
@@ -3269,7 +3277,7 @@ function celRoot(model,style,t){
   else if(style==='avion'){model.rotation.y+=t*1.1;model.rotation.z=Math.sin(t*2.6)*0.26*smooth(0,0.4,t);}
   else if(style==='rodillas'){const d=3.0*(1-Math.exp(-t*2.4)),F=new THREE.Vector3(0,0,1).applyAxisAngle(new THREE.Vector3(0,1,0),model.rotation.y);model.position.addScaledVector(F,d);}
 }
-function drawCelHint(){if(!GL.celOn||RP||(GL.celEl||0)<1.0)return;ctx.save();ctx.textAlign='right';ctx.font=`600 ${Math.round(clamp(G.unit*0.035,12,14))}px ${BODY}`;ctx.fillStyle='rgba(246,243,232,.8)';ctx.fillText('Toca para seguir',W-16,H-18);ctx.restore();}
+function drawCelHint(){if(!GL.celOn||RP||(GL.celEl||0)<1.0)return;ctx.save();ctx.textAlign='right';ctx.font=`600 ${Math.round(clamp(G.unit*0.035,12,14))}px ${BODY}`;ctx.fillStyle='rgba(246,243,232,.8)';ctx.fillText('Toca para seguir',W-16,H-18-SAFE_B);ctx.restore();}
 /* Cámara de festejo */
 function celCam(){
   if(!GL.camC){GL.camC=new THREE.PerspectiveCamera(42,1,0.1,6000);}
@@ -3281,7 +3289,7 @@ function celCam(){
   GL.celOn=!!m;GL.celEl=m?el:0;if(!m)return;
   const B=m.userData.B,h=new THREE.Vector3();(B.Spine1||B.Hips).getWorldPosition(h);
   const kv=m===GL.meS,sd=S.celSide||1,a=(kv?0.5:-0.55)*sd+el*0.22*sd,d=(kv?7.6:8.2)-1.4*smooth(0,2.2,el);
-  c.position.set(h.x+Math.sin(a)*d,0.55,h.z+Math.cos(a)*d);c.lookAt(h.x,h.y+0.75,h.z);
+  c.position.set(h.x+Math.sin(a)*d,1.45,h.z+Math.cos(a)*d);c.lookAt(h.x,h.y+0.45,h.z);
 }
 
 /* ---------- Diagnóstico de sonido e imagen ----------
@@ -3293,7 +3301,7 @@ function diagFrame(now,raw){
   if(raw>120)DIAG.img++;
   if(!DIAG.fw){DIAG.fw=now;DIAG.fn=0;}else if(now-DIAG.fw>=2000){DIAG.fps=Math.round(DIAG.fn*1000/(now-DIAG.fw));DIAG.fw=now;DIAG.fn=0;}
   if(AC&&sonNew()){if(AC.state!=='running'){DIAG.lw=0;return;}
-    if(!DIAG.lw){DIAG.lw=now;DIAG.la=AC.currentTime;}else if(now-DIAG.lw>=1000){const w=now-DIAG.lw,a=(AC.currentTime-DIAG.la)*1000;if(w-a>45){DIAG.a++;audioLagged();}DIAG.lw=now;DIAG.la=AC.currentTime;}}
+    if(!DIAG.lw){DIAG.lw=now;DIAG.la=AC.currentTime;}else if(now-DIAG.lw>=1000){const w=now-DIAG.lw,a=(AC.currentTime-DIAG.la)*1000;if(w-a>45)DIAG.a++;if(w-a>140)audioLagged();DIAG.lw=now;DIAG.la=AC.currentTime;}}
 }
 function diagText(){
   const ios=(navigator.userAgent.match(/OS (\d+)_(\d+)/)||[]).slice(1).join('.'),q=['alta','media','baja'][GL.tier]||'-';
