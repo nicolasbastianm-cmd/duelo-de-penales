@@ -605,7 +605,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='4.5 · 14 nov 2026';
+const VERSION='4.6 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -2312,7 +2312,8 @@ function kitMaterial(base,color,o={}){
     sh.vertexShader='uniform vec3 kb0,kb1;varying vec3 vBind;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vBind=(position-kb0)*kb1;');
     sh.fragmentShader='uniform vec3 kit,kit2;uniform float kst;varying vec3 vBind;\n'+sh.fragmentShader.replace('#include <map_fragment>',
     `float km=0.0,ktx=abs(vBind.x-0.5),ktor=1.0-smoothstep(0.150,0.160,ktx);
-     if(kst>4.5)km=step(0.80,vBind.y);
+     if(kst>5.5)km=step(0.435,ktx);
+     else if(kst>4.5)km=step(0.80,vBind.y);
      else if(kst>0.5){
        if(kst>3.5)km=ktor*(1.0-smoothstep(0.085,0.095,abs((vBind.x-0.5)*2.6+(vBind.y-0.5)*0.9)));
        else if(kst>2.5)km=step(0.5,fract(vBind.y*4.0+0.15));
@@ -2352,7 +2353,7 @@ function makeReal(o){
     if(!n.isMesh)return;n.castShadow=true;n.receiveShadow=true;n.frustumCulled=false;const part=(n.parent&&n.parent.name)||'';
     if(/Shirt/.test(part))n.material=kitMaterial(n.material,o.shirt,{geo:n.geometry,style:o.style==null?1:o.style,c2:o.c2||o.numColor||contrast(o.shirt)});
     else if(/Socks/.test(part))n.material=kitMaterial(n.material,o.socks,{geo:n.geometry,style:o.style===0?0:5,c2:o.c2||o.numColor||contrast(o.socks)});
-    else if(/Shorts/.test(part))n.material=kitMaterial(n.material,o.shorts);
+    else if(/Shorts/.test(part))n.material=kitMaterial(n.material,o.shorts,o.style===0?{}:{geo:n.geometry,style:6,c2:o.shirt});
     else if(/Hair/.test(part)&&o.bald){n.visible=false;n.castShadow=false;}
     else if(/Hair/.test(part)&&o.hair){n.material=n.material.clone();n.material.color.set(o.hair);}
     else if(/Body/.test(part)&&o.skin){n.material=n.material.clone();n.material.color.set(o.skin);}
@@ -2429,7 +2430,22 @@ function prePose(m,R,u,dt){ // u: 0 → 1
   else{const w=smooth(0,1,(u-0.42)/0.58);drive(m,'jb',((u-0.42)*PRE_T*1.25)%A.jb.getClip().duration,dt,false);m.position.set(px+(R.x-px)*w,0,pz+(R.z-pz)*w);}
   m.rotation.set(0,Math.PI,0);return true;
 }
-const fadeW=m=>m.userData.prev?m.userData.fade:1; // cuánto pesa ya la animación nueva (para mover el cuerpo sin saltos)
+const fadeW=m=>m.userData.prev?m.userData.fade:1;
+/* Después del remate, como un jugador de verdad: da un par de pasos frenando, se queda mirando la jugada y recién
+   cuando se sabe el resultado festeja (girando al trote si hay que mirar a la cámara) o se lamenta. */
+const AK_T=0.75;
+function afterKick(m,R,f,e,dt,res,gol,celName,turn){
+  const A=m.userData.acts,u=m.userData,ox=R.x+0.85*f,oz=R.z-2.98*f,dA=t=>{const x=Math.min(t,AK_T);return 2.3*(x-x*x/(2*AK_T));};
+  if(e<AK_T&&A.jog){u.ak=null;drive(m,'jog',(e*(1.35-0.5*e/AK_T))%A.jog.getClip().duration,dt,false);const w=fadeW(m);m.position.set(R.x+0.85*f*w,0,R.z-2.98*f*w-dA(e));m.rotation.set(0,Math.PI,0);return;}
+  const pz=oz-(A.jog?dA(AK_T):0);
+  if(!res){u.ak=null;drive(m,A.oi?'oi':'kick',A.oi?0.4+(e-AK_T)*0.8:1.45,dt,false);m.position.set(ox,0,pz);m.rotation.set(0,Math.PI,0);return;}
+  if(u.ak==null)u.ak=e;const e2=e-u.ak;
+  if(!gol){drive(m,A.l1?'l1':'oi',0.15+e2,dt,false);m.position.set(ox,0,pz);m.rotation.set(0,Math.PI,0);return;}
+  if(!turn||!A.jog){drive(m,A[celName]?celName:'victory',0.3+e2,dt,false);m.position.set(ox,0,pz);m.rotation.set(0,Math.PI,0);return;}
+  const th0=Math.PI,dth=-(Math.PI-0.3),om=dth/TURN_T,r=2.0/om,th=th0+dth*Math.min(1,e2/TURN_T);
+  if(e2<TURN_T)drive(m,'jog',(e2*1.3)%A.jog.getClip().duration,dt,false);else drive(m,A[celName]?celName:'victory',0.1+(e2-TURN_T),dt,false);
+  m.position.set(ox-r*(Math.cos(th)-Math.cos(th0)),0,pz+r*(Math.sin(th)-Math.sin(th0)));m.rotation.set(0,th,0);
+} // cuánto pesa ya la animación nueva (para mover el cuerpo sin saltos)
 function poseRivalReal(dt){
   const st=S.striker,m=GL.rivS,f=m.userData.f,R=kickRoot(f);let t=0,lean=0,hop=0;
   if(playing()&&st&&S.turn==='save'){
@@ -2437,8 +2453,7 @@ function poseRivalReal(dt){
     if(st.k!=null)t=KICK_T+st.k;else t=Math.max(0,KICK_T-(st.run-eff));
     if(S.phase==='runup'||S.phase==='kick'||S.phase==='flight'){const q=strikerU(st);let side=st.tell;if(st.feint&&st.t<st.run*0.78+0.19)side=-st.tell;lean=side*st.honesty*smooth(0.4,0.85,q.u);}}
   if(playing()&&st&&S.turn==='save'&&st.pre>0&&prePose(m,R,1-st.pre/PRE_T,dt)){}
-  else if(st&&st.k!=null&&KICK_T+st.k>1.45&&S.phase==='after'){const A=m.userData.acts,gol=S.celeb&&S.celeb.who==='rivS',e=KICK_T+st.k-1.45;
-    const rc=gol?RIV_CEL[(S.shotN||0)%RIV_CEL.length]:'l1';drive(m,A[rc]?rc:'oi',0.1+e,dt,false);const w=fadeW(m);m.position.set(R.x+0.85*f*w,0,R.z-2.98*f*w);m.rotation.set(0,Math.PI,0);}
+  else if(st&&st.k!=null&&KICK_T+st.k>1.45){const res=S.phase==='after',gol=S.celeb&&S.celeb.who==='rivS';afterKick(m,R,f,KICK_T+st.k-1.45,dt,res,gol,RIV_CEL[(S.shotN||0)%RIV_CEL.length],false);}
   else{drive(m,'kick',Math.min(t,1.45),dt,false);m.position.set(R.x,hop,R.z);m.rotation.set(0,Math.PI,0);}
   const B=m.userData.B;if(B.Spine1&&lean){B.Spine1.rotation.z+=-lean*0.28;B.Head.rotation.y+=lean*0.6;}
   const hp=new THREE.Vector3();B.Head.getWorldPosition(hp);const fp=glProject(new THREE.Vector3(hp.x,0,hp.z)),hq=glProject(hp);S.strPos={x:fp.x,y:fp.y,h:Math.max(10,(fp.y-hq.y)*1.1)};
@@ -2464,13 +2479,7 @@ function poseKickReal(dt){
   const me=GL.meS,f=me.userData.f,R=kickRoot(f),A=me.userData.acts;
   if(k&&S.phase==='aim'&&S.mode==='tour'&&k.t<PRE_T&&prePose(me,R,k.t/PRE_T,dt))return; // acomoda la pelota mientras apuntas
   const e=k&&(S.phase==='krun'||S.phase==='kflight'||S.phase==='kafter')?k.t+KS-1.45:-1,gol=k&&(k.res==='goal'||k.res==='postin');
-  if(e>0&&k.res){const ox=R.x+0.85*f,oz=R.z-2.98*f;
-    if(gol&&A.jog&&e<TURN_T){ // gol: gira trotando en un arco corto hacia la cámara
-      drive(me,'jog',(e*1.3)%A.jog.getClip().duration,dt,false);const w=fadeW(me),th0=Math.PI,dth=-(Math.PI-0.3),om=dth/TURN_T,th=th0+dth*(e/TURN_T),r=2.0/om;
-      me.position.set(R.x+0.85*f*w-r*(Math.cos(th)-Math.cos(th0)),0,R.z-2.98*f*w+r*(Math.sin(th)-Math.sin(th0)));me.rotation.set(0,th,0);}
-    else if(gol){const om=-(Math.PI-0.3)/TURN_T,r=A.jog?2.0/om:0,th=0.3,kn=celClip();drive(me,kn,0.1+Math.max(0,e-(A.jog?TURN_T:0)),dt,false);
-      me.position.set(ox-r*(Math.cos(th)-Math.cos(Math.PI)),0,oz+r*(Math.sin(th)-Math.sin(Math.PI)));me.rotation.set(0,th,0);}
-    else{drive(me,A.l1?'l1':'oi',0.1+e,dt,false);const w=fadeW(me);me.position.set(R.x+0.85*f*w,0,R.z-2.98*f*w);me.rotation.set(0,Math.PI,0);}}
+  if(e>0)afterKick(me,R,f,e,dt,k.res,gol,celClip(),false); // festeja mirando al arco y a su hinchada; la cámara se pone delante
   else{drive(me,'kick',k&&S.phase!=='aim'?Math.min(k.t+KS,1.45):KS,dt,false);me.position.set(R.x,0,R.z);me.rotation.set(0,Math.PI,0);}
 }
 
@@ -3594,7 +3603,7 @@ function celCam(){
     else if(!GL.kview&&S.phase==='after'&&S.celeb&&S.celeb.who==='me'&&S.time>=S.celeb.t+0.15){m=GL.meK;el=S.time-S.celeb.t-0.15;}}
   GL.celOn=!!m;GL.celEl=m?el:0;if(!m)return;
   const B=m.userData.B,h=new THREE.Vector3();(B.Spine1||B.Hips).getWorldPosition(h);
-  const kv=m===GL.meS,sd=S.celSide||1,a=(kv?0.5:-0.55)*sd+el*0.22*sd,d=(kv?7.6:8.2)-1.4*smooth(0,2.2,el);
+  const kv=m===GL.meS,sd=S.celSide||1,a=(kv?Math.PI+0.45*sd:-0.55*sd)+el*0.18*sd,d=(kv?7.6:8.2)-1.4*smooth(0,2.2,el);
   c.position.set(h.x+Math.sin(a)*d,1.45+Math.sin(el*2.1)*0.025,h.z+Math.cos(a)*d);c.lookAt(h.x+Math.sin(el*1.6)*0.04,h.y+0.45+Math.sin(el*1.2+2)*0.025,h.z);
 }
 
