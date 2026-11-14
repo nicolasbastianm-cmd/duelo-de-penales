@@ -1,7 +1,7 @@
 /* Duelo de Penales: guarda los archivos del juego para jugar sin internet.
    La página principal busca primero la versión nueva en internet (sin usar la copia guardada por el navegador); el resto (modelo, sonidos, motor 3D, letras) sale de la memoria. */
-const CACHE='penales-v8';
-const BASE=['./','index.html','jugador.js?v=5','manifest.webmanifest','icono-192.png','icono-512.png','apple-touch-icon.png',
+const CACHE='penales-v9';
+const BASE=['./','index.html','jugador.js?v=6','manifest.webmanifest','icono-192.png','icono-512.png','apple-touch-icon.png',
   'sonido_amb.mp3','sonido_gol.mp3','sonido_atajada.mp3','sonido_entrada.mp3','sonido_alivio.mp3','sonido_uy.mp3','sonido_lamento.mp3','sonido_pifia.mp3','sonido_latido.mp3',
   'sonido_amb2.mp3','sonido_gol2.mp3','sonido_gol3.mp3','sonido_atajada2.mp3','sonido_atajada3.mp3','sonido_entrada2.mp3'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(BASE)).then(()=>self.skipWaiting()));});
