@@ -605,7 +605,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='4.9 · 14 nov 2026';
+const VERSION='5.0 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -2116,6 +2116,12 @@ function stadium(grp,st){
     const bt=mesh(new T.CylinderGeometry(0.04,0.04,0.24,10),M('#39c0e8',{roughness:0.3}),false);bt.position.set(3.95,0.12,-0.45);grp.add(bt);
     const cap=mesh(new T.CylinderGeometry(0.025,0.025,0.05,8),M('#f4f4f4'),false);cap.position.set(3.95,0.265,-0.45);grp.add(cap);
     const tw=mesh(new T.BoxGeometry(0.42,0.04,0.28),M('#f4f4f0',{roughness:1}),false);tw.position.set(4.3,0.02,-0.55);tw.rotation.y=0.3;grp.add(tw);}
+  // bancas de suplentes a los lados del túnel, con su techo, y los suplentes sentados
+  {const gl=new T.MeshBasicMaterial({color:'#bfd9e6',transparent:true,opacity:0.28,side:T.DoubleSide,depthWrite:false}),fr=M('#e9ecef',{roughness:0.6}),se=M('#2b3340',{roughness:0.8}),bx=(w,hh,d,m,x,y,z)=>{const b=mesh(new T.BoxGeometry(w,hh,d),m,false);b.position.set(x,y,z);grp.add(b);return b;};
+    [[46.4,0],[58.6,1]].forEach(([zc,tm])=>{
+      bx(0.06,1.9,6.6,gl,-37.75,0.95,zc);bx(1.3,0.06,6.6,gl,-37.1,1.93,zc);bx(1.3,1.9,0.06,gl,-37.1,0.95,zc-3.3);bx(1.3,1.9,0.06,gl,-37.1,0.95,zc+3.3);
+      for(const dz of[-3.3,0,3.3])bx(0.07,1.95,0.07,fr,-36.45,0.97,zc+dz);bx(0.07,0.07,6.6,fr,-36.45,1.93,zc);bx(0.5,0.08,6.2,se,-37.2,0.45,zc);
+      for(let i=0;i<6;i++)crowd.push([-37.15,0.5,zc-2.6+i*1.04,hash2(i+tm*9,41),Math.floor(hash2(i+tm*7,43)*3),0.08,1.02,0.9,tm,hash2(i,47)]);});}
   // fotógrafos detrás del arco
   for(let i=0;i<10;i++){const s=i<5?-1:1,xx=s*(5.6+(i%5)*0.9);crowd.push([xx,0,-3.3-hash2(i,1)*0.5,hash2(i,2),Math.floor(hash2(i,3)*8),0.05,1.05,1,2,0.5]);}
   // geometría instanciada de la hinchada (orden aleatorio para poder mostrar menos en celulares lentos)
@@ -2472,6 +2478,7 @@ function poseKickReal(dt){
   const k=S.kick,ai=k?k.ai:{x:Math.sin(S.time*1.3)*0.22,dir:null};
   // arquero rival
   const gk=GL.rivK;let name='idle',t=S.time%4.6,mir=false,x=ai.x,lift=0;
+  if(!(k&&k.shot)&&gk.userData.acts.ss1&&gk.userData.acts.ss2){const v=Math.cos(S.time*1.3);if(Math.abs(v)>0.35){name=v>0?'ss1':'ss2';t=(S.time*0.85)%gk.userData.acts[name].getClip().duration;}}
   if(k&&k.shot){const s=k.shot,tArr=KT()+s.T;
     if(ai.dir!=null&&k.t>=ai.diveAt){const el=k.t-ai.diveAt,pr=clamp(el/0.42,0,1),e=smooth(0,1,pr);
       if(ai.dir===0){const A=gk.userData.acts;
@@ -2674,7 +2681,7 @@ function confettiInit(){
 function confettiBurst(count){
   if(!GL.ok||reduce)return;count=Math.round(count*[1,0.6,0.35][GL.tier||0]);if(!GL.conf)confettiInit();const C2=GL.conf,c=new THREE.Color(),cols=[KITS[CFG.kit].c,'#ffffff','#ffd23f',KITS[CFG.kit].c,'#f6f3e8'];
   for(let k=0;k<count;k++){const i=C2.next;C2.next=(C2.next+1)%C2.n;const p=C2.p[i];
-    Object.assign(p,{x:rand(-11,11),y:rand(3.5,10),z:rand(-1.5,4.5),vx:rand(-0.4,0.4),vy:rand(-1.1,-0.5),vz:rand(0.1,0.7),rx:rand(0,6),ry:rand(0,6),sx:rand(-6,6),sy:rand(-6,6),ph:rand(0,6),life:rand(5,8)});
+    Object.assign(p,{x:rand(-11,11),y:rand(3.5,10),z:rand(-1.5,4.5),vx:rand(-0.4,0.4),vy:rand(-1.1,-0.5),vz:rand(0.1,0.7),rx:rand(0,6),ry:rand(0,6),sx:rand(-6,6),sy:rand(-6,6),ph:rand(0,6),life:rand(2.8,4.6)});
     C2.im.setColorAt(i,c.set(cols[k%cols.length]).offsetHSL(0,0,rand(-0.08,0.08)));}
   C2.im.instanceColor.needsUpdate=true;
 }
@@ -2764,6 +2771,9 @@ function glBuildExtras(){
     m.traverse(q=>{if(q.isMesh)q.castShadow=false;});m.userData.side=side;m.userData.idx=i;m.userData.home=[m.position.x,m.position.z,m.rotation.y];m.userData.ph=i*0.31+side*0.17;grp.add(m);GL.team.push(m);}
   GL.ref=makeReal({style:1,c2:'#ffd23f',shirt:'#161616',shorts:'#161616',socks:'#161616',skin:'#e6b896',hair:'#2a2a2a',height:1.86});
   GL.ref.position.set(3.6,0,15.8);GL.ref.rotation.y=Math.PI+0.55;grp.add(GL.ref);
+  for(const[zc,ry,sk,hr]of[[49.3,Math.PI/2+0.25,'#c99a78','#2a2a2a'],[55.7,Math.PI/2-0.25,'#8d5524','#1b130d']]){ // los dos directores técnicos, de buzo, en su zona
+    const dtm=makeReal({style:0,shirt:'#1e2b47',shorts:'#1e2b47',socks:'#1e2b47',skin:sk,hair:hr,height:1.8,build:1.08});dtm.traverse(q=>{if(q.isMesh)q.castShadow=false;});
+    dtm.position.set(-35.2,0,zc);dtm.rotation.y=ry;drive(dtm,dtm.userData.acts.oi?'oi':'idle',1.4,1,false);grp.add(dtm);}
   GL.scene.add(grp);GL.extras=grp;GL.exCel=null;
   // junto al arco, como en una tanda real: el juez de línea sobre la línea de gol y el arquero que espera su turno
   {const sg=new THREE.Group(),still=(m,x,z,ry,tt)=>{m.traverse(q=>{if(q.isMesh)q.castShadow=false;});m.position.set(x,0,z);m.rotation.y=ry;drive(m,m.userData.acts.oi?'oi':'idle',tt,1,false);sg.add(m);return m;};
