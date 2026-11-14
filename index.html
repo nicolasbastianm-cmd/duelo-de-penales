@@ -601,7 +601,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='3.5 · 14 nov 2026';
+const VERSION='3.6 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -1504,6 +1504,7 @@ function pitchTexture(st){
   const pal=st==='noche'?['#428d47','#37793c']:st==='final'?['#4f9e48','#40883c']:['#5c9b45','#4b873a'];
   x.fillStyle=pal[1];x.fillRect(0,0,CW,CH);
   for(let z=-15,i=0;z<105;z+=5.5,i++){if(i%2===0){x.fillStyle=pal[0];const[,y0]=P(0,z),[,y1]=P(0,z+5.5);x.fillRect(0,y0,CW,y1-y0);}}
+  for(let wx=-45,i=0;wx<45;wx+=5.5,i++){if(i%2===0){x.fillStyle='rgba(255,255,210,.055)';const[x0]=P(wx,0),[x1]=P(wx+5.5,0);x.fillRect(x0,0,x1-x0,CH);}}
   for(let i=0;i<320;i++){const px=srand(i)*CW,py=srand(i+500)*CH,r=24+srand(i+900)*150,g=x.createRadialGradient(px,py,0,px,py,r),dk=srand(i+77)<0.55;
     g.addColorStop(0,dk?'rgba(20,40,10,.11)':'rgba(200,225,120,.07)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(px-r,py-r,2*r,2*r);}
   const wear=(wx,wz,rx,rz,a)=>{const[px,py]=P(wx,wz);x.save();x.translate(px,py);x.scale(rx*SX,rz*SZ);const g=x.createRadialGradient(0,0,0,0,0,1);
@@ -1525,6 +1526,28 @@ function pitchTexture(st){
   arc(0,52.5,9.15,0,Math.PI*2);
   for(const[cx,cz,a0]of[[-34,0,0],[34,0,Math.PI/2],[34,105,Math.PI],[-34,105,Math.PI*1.5]])arc(cx,cz,1,a0,a0+Math.PI/2);
   return tex(c);
+}
+/* Detalle del pasto: una textura chica de briznas que se repite cada 2 m y se multiplica sobre el dibujo de la cancha,
+   para que de cerca se vea pasto y no un color liso. Una segunda pasada más grande rompe la repetición. */
+function grassDetail(){
+  const N=512,c=cnv(N,N),x=c.getContext('2d');x.fillStyle='#868686';x.fillRect(0,0,N,N);
+  for(let i=0;i<60;i++){const px=srand(i+11)*N,py=srand(i+23)*N,r=30+srand(i+37)*70,dk=srand(i+41)<0.5;
+    for(const ox of[-N,0,N])for(const oy of[-N,0,N]){const g=x.createRadialGradient(px+ox,py+oy,0,px+ox,py+oy,r);g.addColorStop(0,dk?'rgba(60,60,60,.16)':'rgba(190,190,190,.14)');g.addColorStop(1,'rgba(128,128,128,0)');x.fillStyle=g;x.fillRect(px+ox-r,py+oy-r,2*r,2*r);}}
+  x.lineCap='round';
+  for(let i=0;i<15000;i++){const px=srand(i*3+1)*N,py=srand(i*3+2)*N,len=4+srand(i*3+3)*9,a=-Math.PI/2+(srand(i+7000)-0.5)*1.1,k=srand(i+9000);
+    x.strokeStyle=k<0.5?`rgba(${40+k*90|0},${52+k*90|0},${34+k*60|0},${0.35+srand(i+5)*0.35})`:`rgba(${150+k*80|0},${160+k*80|0},${120+k*60|0},${0.25+srand(i+6)*0.35})`;x.lineWidth=0.8+srand(i+8)*1.3;
+    const dx=Math.cos(a)*len,dy=Math.sin(a)*len;
+    for(const ox of(px<12?[0,N]:px>N-12?[0,-N]:[0]))for(const oy of(py<14?[0,N]:py>N-14?[0,-N]:[0])){x.beginPath();x.moveTo(px+ox,py+oy);x.lineTo(px+ox+dx,py+oy+dy);x.stroke();}}
+  const t=tex(c,{lin:true,rep:[1,1]});return t;
+}
+function grassMaterial(map){
+  const m=M('#ffffff',{map,roughness:0.95});const det=grassDetail(),U={grassDet:{value:det}};
+  if(GL.tier<2){const h2=(i,y)=>vnoise(i*0.35,y*0.35)*0.6+vnoise(i*0.09,y*0.09)*1.2;m.normalMap=normalTex(256,256,h2,[60,80]);m.normalScale=new THREE.Vector2(0.55,0.55);}
+  m.onBeforeCompile=sh=>{sh.uniforms.grassDet=U.grassDet;
+    sh.fragmentShader='uniform sampler2D grassDet;\n'+sh.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
+      {vec3 gd=texture2D(grassDet,vMapUv*vec2(45.0,60.0)).rgb;vec3 gm=texture2D(grassDet,vMapUv*vec2(6.3,8.1)+0.37).rgb;
+       diffuseColor.rgb*=clamp(gd*1.9,0.35,1.9)*(0.78+gm*0.42);}`);};
+  return m;
 }
 function ballTexture(){
   const BP=BALLS[CFG.ball]||BALLS.clasico;
@@ -1686,7 +1709,7 @@ function glBuildStage(){
   }
   pm.dispose();
   const ground=new T.Mesh(new T.PlaneGeometry(4000,4000),M(night?'#2c6233':st==='final'?'#3d8038':'#4a8238',{roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-0.02;grp.add(ground);
-  const pitch=new T.Mesh(new T.PlaneGeometry(90,120),M('#ffffff',{map:pitchTexture(st==='estadio'?'final':st),roughness:0.92}));pitch.rotation.x=-Math.PI/2;pitch.position.set(0,0,45);pitch.receiveShadow=true;grp.add(pitch);
+  const pitch=new T.Mesh(new T.PlaneGeometry(90,120),grassMaterial(pitchTexture(st==='estadio'?'final':st)));pitch.rotation.x=-Math.PI/2;pitch.position.set(0,0,45);pitch.receiveShadow=true;grp.add(pitch);
   const gp=night?['#3e8a45','#337a3a']:st==='final'||st==='estadio'?['#4e9c47','#3f873b']:['#5b9a44','#4a8639'];
   grassField(grp,-7.5,7.5,-1.6,7,260,gp);grassField(grp,-5,5,8.5,19,260,gp);
   GL.net=buildGoal(grp,0,1,false);buildGoal(grp,105,-1,true);
