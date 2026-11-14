@@ -605,7 +605,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='4.2 · 14 nov 2026';
+const VERSION='4.3 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -2579,7 +2579,8 @@ function startReplay(then){
   const last=frames[ri-i0]||frames[frames.length-1];let tw;
   if(last.turn==='kick'&&last.kick&&last.kick.shot)tw=new THREE.Vector3(last.kick.shot.tx,last.kick.shot.ty,0);
   else{const b=last.ball;tw=b&&b.txf!=null?ballWorld(ballPos(b,1)):new THREE.Vector3(0,1,0);}
-  RP={frames,t:0,el:0,tRes:tRes-frames[0].time,then,tw,side:tw.x>=0?1:-1,turn:last.turn,
+  S.rpN=(S.rpN||0)+1;
+  RP={cam:S.rpN%3,frames,t:0,el:0,tRes:tRes-frames[0].time,then,tw,side:tw.x>=0?1:-1,turn:last.turn,
     live:{keeper:S.keeper,striker:S.striker,ball:S.ball,kick:S.kick,ripple:S.ripple,phase:S.phase,turn:S.turn,time:S.time,plan:S.plan,celeb:S.celeb}};
   DIAG.rp=(DIAG.rp||0)+1;S.lastReplay=S.shotN;S.msg=null;S.banner=null;GL.trail.length=0;
 }
@@ -2599,9 +2600,12 @@ function endReplay(){
 function replayCam(){
   const c=GL.camR,u=clamp(RP.t/Math.max(0.5,RP.frames[RP.frames.length-1].time-RP.frames[0].time),0,1),s=RP.side,tw=RP.tw;
   // toma abierta en diagonal: se ve el arco completo, al arquero y la trayectoria del balón
-  const far=W/H<0.8?1:0.72;
-  if(RP.turn==='kick'){c.position.set(-s*(9.5-1.2*u)*far,2.3,(17.5-1.5*u)*far);c.lookAt(0,1.15,0.4);}
-  else{c.position.set(s*(9-1.2*u)*far,2.1,(17-1.5*u)*far);c.lookAt(0,1.15,0.2);}
+  const far=W/H<0.8?1:0.72,sw=Math.sin(RP.el*1.3)*0.05,sv=Math.sin(RP.el*0.9+1)*0.03; // leve pulso de cámara en mano
+  // tres cámaras que se van turnando, como en la tele: abierta en diagonal, a ras de pasto junto al palo y alta detrás del arco
+  if(RP.cam===1){c.position.set(-s*(7.6-0.8*u),0.7+0.1*u,2.4-0.5*u);c.lookAt(s*0.9+sw,1.05+sv,0.25);}
+  else if(RP.cam===2){c.position.set(s*(2.6-0.6*u),3.5-0.3*u,-6.9+0.5*u);c.lookAt(sw,0.85+sv,3.2);}
+  else if(RP.turn==='kick'){c.position.set(-s*(9.5-1.2*u)*far,2.3,(17.5-1.5*u)*far);c.lookAt(sw,1.15+sv,0.4);}
+  else{c.position.set(s*(9-1.2*u)*far,2.1,(17-1.5*u)*far);c.lookAt(sw,1.15+sv,0.2);}
 }
 function drawReplayOverlay(){
   if(!RP)return;const bh=Math.round(H*0.07);ctx.fillStyle='rgba(0,0,0,.85)';ctx.fillRect(0,0,W,bh);ctx.fillRect(0,H-bh,W,bh);
@@ -3559,7 +3563,7 @@ function celCam(){
   GL.celOn=!!m;GL.celEl=m?el:0;if(!m)return;
   const B=m.userData.B,h=new THREE.Vector3();(B.Spine1||B.Hips).getWorldPosition(h);
   const kv=m===GL.meS,sd=S.celSide||1,a=(kv?0.5:-0.55)*sd+el*0.22*sd,d=(kv?7.6:8.2)-1.4*smooth(0,2.2,el);
-  c.position.set(h.x+Math.sin(a)*d,1.45,h.z+Math.cos(a)*d);c.lookAt(h.x,h.y+0.45,h.z);
+  c.position.set(h.x+Math.sin(a)*d,1.45+Math.sin(el*2.1)*0.025,h.z+Math.cos(a)*d);c.lookAt(h.x+Math.sin(el*1.6)*0.04,h.y+0.45+Math.sin(el*1.2+2)*0.025,h.z);
 }
 
 /* ---------- Diagnóstico de sonido e imagen ----------
