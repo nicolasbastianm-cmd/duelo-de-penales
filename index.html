@@ -543,7 +543,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='2.5 · 13 nov 2026';
+const VERSION='3.0 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
   document.querySelector(`#d-${CFG.diff}`).checked=true;renderRoleUI();renderProgress();
@@ -2161,7 +2161,7 @@ function makeReal(o){
 /* Fija la animación y el instante exacto (la lógica del juego manda el tiempo), con fundido de 0,2 s al cambiar */
 function drive(model,name,time,dt,mirror){
   const u=model.userData,a=u.acts[name];if(!a)return;
-  if(u.cur!==a){if(u.cur){u.prev=u.cur;u.prevT=u.curT;u.fade=0;u.fl=(name==='dive'||name==='catch1')?0.07:name==='victory'?0.25:0.14;}u.cur=a;}
+  if(u.cur!==a){if(u.cur){u.prev=u.cur;u.prevT=u.curT;u.fade=0;u.fl=(name==='dive'||name==='catch1')?0.07:(name==='victory'||/^[fl]\d$/.test(name))?0.25:0.14;}u.cur=a;}
   u.curT=time;a.time=Math.min(time,a.getClip().duration-0.01);
   if(u.prev){u.fade=Math.min(1,u.fade+dt/(u.fl||0.14));u.prev.time=Math.min(u.prevT,u.prev.getClip().duration-0.01);}
   for(const k in u.acts){const x=u.acts[k];x.setEffectiveWeight(x===a?(u.prev?u.fade:1):(x===u.prev?1-u.fade:0));}
@@ -2173,17 +2173,18 @@ function handsMid(model){const B=model.userData.B,a=new THREE.Vector3(),b=new TH
 function kickRoot(f){return{x:TOE[0]*f,z:11.15+TOE[2]*f};} // con el jugador mirando al arco (giro de 180°)
 function poseKeeperReal(dt){
   const k=S.keeper,m=GL.meK,xm=(k.x-W/2)/GL.pxm,T=diveT(),endH=S.plan?S.plan.endH/G.hpm:1;
-  let name='idle',t=S.time%4.6,mir=false,lift=0;
+  let name='idle',t=S.time%4.6,mir=false,lift=0,cel=false;
   if(k.dive){const pr=clamp(k.dive.t/T,0,1);
     if(k.dive.dir){name='dive';t=DIVE_A+pr*(DIVE_B-DIVE_A);mir=k.dive.dir>0;lift=Math.sin(Math.PI*pr)*clamp((endH-0.9)*0.75,0,0.85);}
     else{name='catch1';t=0.35+pr*0.6;lift=Math.sin(Math.PI*pr)*0.5;}}
   else if(k.rec>0){const r=1-k.rec/REC_T;if(k.lastDir){name='dive';t=DIVE_B+r*0.9;mir=k.lastDir>0;}else{name='catch1';t=0.95+r*0.3;}}
-  else if(S.celeb&&S.celeb.who==='me'&&S.time>=S.celeb.t){name='victory';t=0.3+(S.time-S.celeb.t);}
+  else if(S.celeb&&S.celeb.who==='me'&&S.time>=S.celeb.t){name=celClip();cel=true;t=(name==='victory'?0.3:0.1)+(S.time-S.celeb.t);}
+  else if(S.celeb&&S.celeb.who==='rivS'&&S.phase==='after'&&!k.dive&&!(k.rec>0)&&S.time>=S.celeb.t+0.5&&m.userData.acts.l2){name='l2';t=S.time-S.celeb.t-0.5;}
   else if(k.saveT>0){name='catch1';t=0.5+(1-k.saveT/0.6)*0.7;}
   else if(S.phase==='kick'&&S.striker&&S.striker.k!=null)lift=Math.sin(clamp(S.striker.k/0.1,0,1)*Math.PI)*0.08;
   const mv=name==='idle'?clamp(Math.abs(k.vx)/(W*0.9),0,1):0;if(mv>0.05){lift+=Math.abs(Math.sin(S.time*15))*0.06*mv;t=1.2+Math.sin(S.time*15)*0.15;}
-  drive(m,name,t,dt,mir);m.position.set(-xm,lift,0);const turn=name==='victory'&&(!S.celStyle||S.celStyle==='clasico'||S.celStyle==='hinchada');m.rotation.set(0,turn?Math.PI*smooth(0,0.6,S.time-S.celeb.t):0,name==='idle'?-k.lean*0.12*mv:0);
-  if(name==='victory'){const ct=S.time-S.celeb.t;celRoot(m,S.celStyle,ct);celPose(m,S.celStyle,ct);}
+  drive(m,name,t,dt,mir);m.position.set(-xm,lift,0);const turn=cel&&(!S.celStyle||S.celStyle==='clasico');m.rotation.set(0,turn?Math.PI*smooth(0,0.6,S.time-S.celeb.t):0,name==='idle'?-k.lean*0.12*mv:0);
+  if(cel){const ct=S.time-S.celeb.t;celRoot(m,S.celStyle,ct);celPose(m,S.celStyle,ct);}
 }
 function poseRivalReal(dt){
   const st=S.striker,m=GL.rivS,f=m.userData.f,R=kickRoot(f);let t=0,lean=0,hop=0;
@@ -2191,7 +2192,7 @@ function poseRivalReal(dt){
     const tA=st.run*0.78,P=0.38;let eff=st.t;if(st.stutter){if(st.t>=tA&&st.t<tA+P){eff=tA;hop=Math.abs(Math.sin((st.t-tA)/P*Math.PI*2))*0.06;}else if(st.t>=tA+P)eff=st.t-P;}
     if(st.k!=null)t=KICK_T+st.k;else t=Math.max(0,KICK_T-(st.run-eff));
     if(S.phase==='runup'||S.phase==='kick'||S.phase==='flight'){const q=strikerU(st);let side=st.tell;if(st.feint&&st.t<st.run*0.78+0.19)side=-st.tell;lean=side*st.honesty*smooth(0.4,0.85,q.u);}}
-  if(st&&st.k!=null&&KICK_T+st.k>1.45&&S.celeb&&S.celeb.who==='rivS'){drive(m,'victory',0.4+(KICK_T+st.k-1.45),dt,false);m.position.set(R.x+0.85*f,0,R.z-2.98*f);}
+  if(st&&st.k!=null&&KICK_T+st.k>1.45&&S.celeb&&S.celeb.who==='rivS'){const rc=RIV_CEL[(S.shotN||0)%RIV_CEL.length];drive(m,m.userData.acts[rc]?rc:'victory',(rc==='victory'?0.4:0.1)+(KICK_T+st.k-1.45),dt,false);m.position.set(R.x+0.85*f,0,R.z-2.98*f);}
   else{drive(m,'kick',Math.min(t,1.45),dt,false);m.position.set(R.x,hop,R.z);}m.rotation.set(0,Math.PI,0);
   const B=m.userData.B;if(B.Spine1&&lean){B.Spine1.rotation.z+=-lean*0.28;B.Head.rotation.y+=lean*0.6;}
   const hp=new THREE.Vector3();B.Head.getWorldPosition(hp);const fp=glProject(new THREE.Vector3(hp.x,0,hp.z)),hq=glProject(hp);S.strPos={x:fp.x,y:fp.y,h:Math.max(10,(fp.y-hq.y)*1.1)};
@@ -2206,13 +2207,14 @@ function poseKickReal(dt){
       else{name='dive';mir=ai.dir<0;t=el<0.42?DIVE_A+pr*(DIVE_B-DIVE_A):Math.min(3.3,DIVE_B+(el-0.42));x=ai.x+ai.dir*1.7*e;lift=Math.sin(Math.PI*pr)*clamp((s.ty-0.9)*0.75,0,0.85);}}
     else if(ai.stay&&k.t>tArr-0.45){name='catch1';t=0.3+clamp((k.t-(tArr-0.45))/0.7,0,1)*0.9;}
     else if(S.phase==='krun'&&k.t>KT()-0.2&&k.t<KT()+0.05)lift=Math.sin((k.t-(KT()-0.2))/0.25*Math.PI)*0.1;}
-  if(k&&S.celeb&&S.celeb.who==='rivK'&&S.time>=S.celeb.t){name='victory';t=0.3+(S.time-S.celeb.t);mir=false;lift=0;x=ai.dir?ai.x+ai.dir*1.7:ai.x;}
+  if(k&&S.celeb&&S.celeb.who==='rivK'&&S.time>=S.celeb.t){name=RIV_CEL[(S.shotN||0)%RIV_CEL.length];if(!gk.userData.acts[name])name='victory';t=(name==='victory'?0.3:0.1)+(S.time-S.celeb.t);mir=false;lift=0;x=ai.dir?ai.x+ai.dir*1.7:ai.x;}
   drive(gk,name,t,dt,mir);gk.position.set(x,lift,0.3);gk.rotation.set(0,0,0);
   if(k&&k.res==='catch'){const h=handsMid(gk);k.b.x=h.x;k.b.y=h.y;k.b.z=h.z+0.12;}
   // pateador propio
-  const me=GL.meS,f=me.userData.f,R=kickRoot(f);let kn='kick',kt=KS;
-  if(k&&(S.phase==='krun'||S.phase==='kflight'||S.phase==='kafter')){kt=Math.min(k.t+KS,1.45);if((k.res==='goal'||k.res==='postin')&&k.t+KS>1.45){kn='victory';kt=0.4+(k.t+KS-1.45);}}
-  drive(me,kn,kt,dt,false);if(kn==='victory'){me.position.set(R.x+0.85*f,0,R.z-2.98*f);me.rotation.set(0,0.3,0);const ct=kt-0.4;celRoot(me,S.celStyle,ct);celPose(me,S.celStyle,ct);}else{me.position.set(R.x,0,R.z);me.rotation.set(0,Math.PI,0);}
+  const me=GL.meS,f=me.userData.f,R=kickRoot(f);let kn='kick',kt=KS,kcel=false;
+  if(k&&(S.phase==='krun'||S.phase==='kflight'||S.phase==='kafter')){kt=Math.min(k.t+KS,1.45);if((k.res==='goal'||k.res==='postin')&&k.t+KS>1.45){kn=celClip();kcel=true;kt=(kn==='victory'?0.4:0.1)+(k.t+KS-1.45);}
+    else if(k.res&&k.res!=='goal'&&k.res!=='postin'&&k.t+KS>1.75&&me.userData.acts.l1){kn='l1';kt=k.t+KS-1.75;}}
+  drive(me,kn,kt,dt,false);if(kcel){me.position.set(R.x+0.85*f,0,R.z-2.98*f);me.rotation.set(0,0.3,0);const ct=k.t+KS-1.45;celRoot(me,S.celStyle,ct);celPose(me,S.celStyle,ct);}else{me.position.set(R.x,0,R.z);me.rotation.set(0,Math.PI,0);}
 }
 
 /* ---------- Turno de patear (lógica en metros; requiere 3D) ---------- */
@@ -2486,8 +2488,9 @@ function poseExtras(dt){
   if(!tc&&GL.exCel===key)return; // de pie y quietos: no hace falta recalcular la pose
   GL.exCel=key;GL.exF=(GL.exF||0)+1;if(tc&&GL.exF%2)return; // festejando: se actualiza un cuadro por medio
   for(const m of GL.team){const cel=tc&&((tc.who==='us')===(m.userData.side===0));
-    drive(m,'victory',cel?0.35+(S.time-tc.t)*1.1+m.userData.ph:0.05,cel?dt*2:1,false);}
-  drive(GL.ref,'victory',0.05,1,false);
+    const cn=['f3','f1','victory','f4'][Math.floor(m.userData.ph*10)%4],A=m.userData.acts;
+    if(cel)drive(m,A[cn]?cn:'victory',0.2+(S.time-tc.t)+m.userData.ph,dt*2,false);else drive(m,A.oi?'oi':'victory',A.oi?0.3+m.userData.ph*9:0.05,1,false);}
+  drive(GL.ref,GL.ref.userData.acts.oi?'oi':'victory',GL.ref.userData.acts.oi?1.2:0.05,1,false);
 }
 
 /* ---------- Consejos: por qué se falló ---------- */
@@ -3224,6 +3227,10 @@ function hinchadaSpots(o,S2,CL,flags,bans){
    direcciones del cuerpo (arriba, a los lados, adelante), así sirve para cualquier personaje de Mixamo.
    Además, una cámara de festejo se acerca al jugador mientras celebra (como en la tele). */
 const CEL_K=['clasico','rodillas','avion','brazos','puno'],CEL_A=['clasico','grito','brazos','puno','hinchada'];
+/* Cada festejo usa una animación real de Mixamo; solo «de rodillas» se sigue armando por código */
+const CEL_CLIP={clasico:'victory',brazos:'f1',grito:'f2',puno:'f3',avion:'f4',hinchada:'f5',rodillas:'victory'};
+const celClip=()=>{const c=CEL_CLIP[S.celStyle]||'victory';return GL.meK&&GL.meK.userData.acts&&GL.meK.userData.acts[c]?c:'victory';};
+const RIV_CEL=['victory','f1','f3','f2'];
 function pickCel(list){list=list.filter(c=>!CEL_SHOP[c]||isOwned('cel:'+c));let c;let n=0;do{c=list[Math.floor(Math.random()*list.length)];}while(c===S.lastCel&&++n<8);S.lastCel=c;return c;}
 let _ca,_cb,_cq,_cq2,_cI;
 function celInit(){if(!_ca){_ca=new THREE.Vector3();_cb=new THREE.Vector3();_cq=new THREE.Quaternion();_cq2=new THREE.Quaternion();_cI=new THREE.Quaternion();}}
@@ -3235,7 +3242,7 @@ function aimBone(bone,child,dir,w){
   bone.parent.getWorldQuaternion(_cq2);bone.quaternion.copy(_cq2.invert().multiply(_cq));bone.updateMatrixWorld(true);
 }
 function celPose(model,style,t){
-  if(!style||style==='clasico')return;
+  if(style!=='rodillas')return;
   const B=model.userData.B;if(!B.LeftArm||!B.RightArm)return;celInit();
   model.updateMatrixWorld(true);
   const q=model.getWorldQuaternion(new THREE.Quaternion()),F=new THREE.Vector3(0,0,1).applyQuaternion(q),L=new THREE.Vector3(1,0,0).applyQuaternion(q),U=new THREE.Vector3(0,1,0),Rr=L.clone().negate();
@@ -3270,6 +3277,7 @@ function celPose(model,style,t){
 }
 /* Movimiento del cuerpo entero según el festejo (se suma a la posición base) */
 function celRoot(model,style,t){
+  if(style!=='rodillas')return;
   if(style==='brazos')model.position.y+=Math.max(0,Math.sin(t*6.5))*0.26*smooth(0,0.3,t)*(t<2.4?1:0);
   else if(style==='hinchada')model.position.y+=Math.max(0,Math.sin(t*7))*0.18*smooth(0.4,0.7,t);
   else if(style==='grito')model.position.y-=0.06*smooth(0,0.3,t);
