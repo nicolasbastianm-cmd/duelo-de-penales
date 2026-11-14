@@ -601,7 +601,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='3.8 · 14 nov 2026';
+const VERSION='3.9 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -870,7 +870,7 @@ function showIntro(){
 function startMatch(){
   DIAG.t0=performance.now();
   S.mode='tour';S.pow=1;S.powOn=null;S.role=roleNow();ROLE=S.role;S.lvlSave=0;S.tour.sh={us:[],them:[]};Object.assign(S.tour,{hist:[],gkHist:[],toldS:false,toldK:false,vozMS:false,st:{saves:0,kicks:0,miss:0}});S.xpGain=0;S.lvUp=null;resetKeeper();show(null);crowdStart();hud();
-  if(GL.ok&&!reduce){const r=RIVALS[S.tour.round];S.phase='intro';S.introT=0;S.banner={title:r.stage,sub:'Tu equipo vs '+r.team,t:0,dur:3.3};ambReact('entrance');}else themTurn();vozIntro();cv.focus({preventScroll:true});
+  if(GL.ok&&!reduce){const r=RIVALS[S.tour.round];S.phase='intro';S.introT=0;S.banner={title:r.stage,sub:'Tu equipo vs '+r.team,t:0,dur:introLen()-0.3};ambReact('entrance');}else themTurn();vozIntro();cv.focus({preventScroll:true});
 }
 function endMatch(w){
   if(DIAG.t0){DIAG.dur=(performance.now()-DIAG.t0)/1000;DIAG.shots=S.tour.sh.us.length+S.tour.sh.them.length;DIAG.t0=0;}
@@ -944,6 +944,9 @@ function updParts(dt){
 /* ---------- Poder especial (una vez por partido) ----------
    Al atajar: cámara lenta (la pelota y el pateador van lentos; el arquero se mueve normal).
    Al patear: tiro de fuego (sale más rápido y el arquero rival reacciona tarde). */
+/* Entrada de los equipos: salen trotando del túnel (4 s) y luego la cámara recorre el estadio */
+function introEnt(){return GL.extras&&GL.ref&&GL.ref.userData.acts.jog?4.0:0;}
+function introLen(){return introEnt()+3.6;}
 function powReady(){return playing()&&S.mode!=='tut'&&!RP&&((S.turn==='save'&&S.phase==='runup')||(S.turn==='kick'&&S.phase==='aim'));}
 function powUI(){
   const b=$('power'),vis=powReady()&&((S.pow||0)>0||S.powOn);if(b.hidden!==!vis)b.hidden=!vis;if(!vis)return;
@@ -970,7 +973,7 @@ function update(dt){
   if(S.swipe&&!S.swipe.active){S.swipe.fade-=dt*2.5;if(S.swipe.fade<=0)S.swipe=null;}
   if(!playing())return;
   S.fadeIn=Math.max(0,(S.fadeIn||0)-dt);
-  if(S.phase==='intro'){S.introT+=dt;if(S.introT>=3.6){S.phase='idle';S.fadeIn=0.35;S.banner=null;themTurn();}return;}
+  if(S.phase==='intro'){S.introT+=dt;if(S.introT>=introLen()){S.phase='idle';S.fadeIn=0.35;S.banner=null;themTurn();}return;}
   if(S.phase==='ourKick'){updOurKick(g);return;}
   if(S.phase==='themKick'){updThemKick(g);return;}
   if(S.turn==='kick'){updKick(g);return;}
@@ -1390,7 +1393,7 @@ function draw(){
     try{glSync(S.lastDt||0.016);GL.composer.render();}
     catch(e){console.error(e);GL.ok=false;GL.failed=true;$('gl').hidden=true;if(S.turn==='kick'||S.role&&S.role!=='keeper')goHome();renderRoleUI();}
     if(GL.ok){ctx.clearRect(0,0,W,H);drawTrail3();drawKickOverlay();drawKickAid();drawAimControl();drawParts();drawTutHint();drawPressure();drawRivalChip();drawCelHint();if(!RP)drawMsg();drawReplayOverlay();
-      const fa=S.phase==='intro'?smooth(3.1,3.6,S.introT):(S.fadeIn||0)/0.35;if(fa>0){ctx.fillStyle=`rgba(0,0,0,${fa})`;ctx.fillRect(0,0,W,H);}drawBanner();return;}
+      const fa=S.phase==='intro'?smooth(introLen()-0.5,introLen(),S.introT):(S.fadeIn||0)/0.35;if(fa>0){ctx.fillStyle=`rgba(0,0,0,${fa})`;ctx.fillRect(0,0,W,H);}drawBanner();return;}
   }
   bake();
   ctx.save();ctx.fillStyle=C.ink;ctx.fillRect(0,0,W,H);
@@ -1922,8 +1925,10 @@ function glSync(dt){
   if(!GL.ball)glBuildBall();
   {const bk=CFG.ball||'clasico';if(GL.ballKey!==bk){if(GL.ballKey!=null){GL.ball.material.map=ballTexture();GL.ball.material.needsUpdate=true;}GL.ballKey=bk;}}
   GL.kview=S.turn==='kick';GL.introOn=S.phase==='intro';
-  if(GL.introOn){const u=smooth(0,1,clamp(S.introT/3.5,0,1)),c=GL.camI,a=-1.0+u*2.0,Rr=56-22*u;
-    c.position.set(Math.sin(a)*Rr,17-9*u,46-Math.cos(a)*Rr);c.lookAt(0,5-4*u,52-46*u);}
+  if(GL.introOn){const E=introEnt(),c=GL.camI;
+    if(S.introT<E){const t=S.introT;c.position.set(-17.2+0.5*t,1.15+0.1*t,49.9);c.lookAt(-30.5+2.3*t,1.25,52.5);}
+    else{const u=smooth(0,1,clamp((S.introT-E)/3.5,0,1)),a=-1.0+u*2.0,Rr=56-22*u;
+      c.position.set(Math.sin(a)*Rr,17-9*u,46-Math.cos(a)*Rr);c.lookAt(0,5-4*u,52-46*u);}}
   GL.replayOn=!!RP;if(RP)replayCam();
   crowdPhotoApply();celCam();
   GL.rp.camera=activeCam();
@@ -2106,6 +2111,20 @@ function stadium(grp,st){
   GL.adTex=adTexture();GL.adTex.repeat.set(3,1);const ad=new T.MeshBasicMaterial({map:GL.adTex,toneMapped:false});ad.color.setScalar(night?1.5:1.15);
   const board=(w,x,z,ry)=>{const b=new T.Mesh(new T.PlaneGeometry(w,0.95),ad);b.position.set(x,0.48,z);b.rotation.y=ry;grp.add(b);const bk=mesh(new T.BoxGeometry(w,0.95,0.2),M('#101318'),false);bk.position.set(x-Math.sin(ry)*0.11,0.48,z-Math.cos(ry)*0.11);bk.rotation.y=ry;grp.add(bk);return[b,bk];};
   GL.backBoard=board(44,0,-4.7,0);board(90,0,109.7,Math.PI);board(110,38.6,52.5,-Math.PI/2);board(110,-38.6,52.5,Math.PI/2);
+  // túnel de salida (manga) en la tribuna lateral: los equipos aparecen desde la boca oscura
+  {const wm=M('#eef0f2',{roughness:0.7}),dk=new T.MeshBasicMaterial({color:'#050608'}),fr=M(KITS[CFG.kit].c,{roughness:0.6}),bx=(w,hh,d,m,x,y,z)=>{const b=mesh(new T.BoxGeometry(w,hh,d),m,false);b.position.set(x,y,z);grp.add(b);return b;};
+    bx(3.9,2.7,0.14,wm,-40.25,1.35,50.72);bx(3.9,2.7,0.14,wm,-40.25,1.35,54.28);bx(3.9,0.16,3.7,wm,-40.25,2.78,52.5);
+    bx(0.16,0.34,3.9,fr,-38.3,2.72,52.5);bx(0.16,2.7,0.2,fr,-38.3,1.35,50.65);bx(0.16,2.7,0.2,fr,-38.3,1.35,54.35);
+    const pl=new T.Mesh(new T.PlaneGeometry(3.42,2.6),dk);pl.position.set(-38.36,1.3,52.5);pl.rotation.y=Math.PI/2;grp.add(pl);}
+  // torres de iluminación detrás de las tribunas de los arcos
+  {const lc=cnv(128,96),lx=lc.getContext('2d');lx.fillStyle='#262a31';lx.fillRect(0,0,128,96);for(let j=0;j<4;j++)for(let i=0;i<6;i++){const g=lx.createRadialGradient(13+i*20.4,13+j*23.3,1,13+i*20.4,13+j*23.3,9);g.addColorStop(0,'#ffffff');g.addColorStop(0.6,'#fff3c8');g.addColorStop(1,'rgba(255,240,190,0)');lx.fillStyle=g;lx.fillRect(i*20.4+2,j*23.3+2,22,22);}
+    const lt=tex(lc),lmat=new T.MeshBasicMaterial({map:lt,toneMapped:false,fog:false});lmat.color.setScalar(night?3.2:fin?1.9:1.45);const mm=M('#5d636d',{roughness:0.6,fog:false}),gt=glowTexture();
+    for(const[tx,tz]of[[-15,153],[15,153],[-15,-50],[15,-50]]){
+      for(const dx of[-0.9,0.9]){const leg=mesh(new T.BoxGeometry(0.55,45,0.55),mm,false);leg.position.set(tx+dx,22.5,tz);grp.add(leg);}
+      for(let y=6;y<45;y+=5){const br=mesh(new T.BoxGeometry(2.3,0.3,0.3),mm,false);br.position.set(tx,y,tz);grp.add(br);}
+      const hd=new T.Mesh(new T.PlaneGeometry(11,7.5),lmat);hd.position.set(tx,47,tz+(tz>50?-0.6:0.6));hd.lookAt(tx*0.6,14,52.5);grp.add(hd);
+      const bk=mesh(new T.BoxGeometry(11.4,7.9,0.5),M('#2a2e36',{fog:false}),false);bk.position.copy(hd.position);bk.quaternion.copy(hd.quaternion);bk.translateZ(-0.35);grp.add(bk);
+      const gl=new T.Sprite(new T.SpriteMaterial({map:gt,transparent:true,depthWrite:false,fog:false,blending:T.AdditiveBlending,opacity:night?0.85:fin?0.45:0.3,color:'#fff4d6'}));gl.scale.set(night?46:30,night?34:22,1);gl.position.copy(hd.position);gl.translateZ(0);grp.add(gl);}}
   // sombra del techo sobre un costado de la cancha (de día)
   if(!night){const c2=cnv(64,8),x2=c2.getContext('2d'),gr=x2.createLinearGradient(0,0,64,0);gr.addColorStop(0,'rgba(255,255,255,0)');gr.addColorStop(0.3,'rgba(255,255,255,1)');gr.addColorStop(1,'rgba(255,255,255,1)');x2.fillStyle=gr;x2.fillRect(0,0,64,8);
     const shm=new T.MeshBasicMaterial({color:'#000',transparent:true,opacity:0.28,alphaMap:tex(c2,{lin:true}),depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2});
@@ -2651,7 +2670,7 @@ function glBuildExtras(){
     const m=makeReal({shirt:side?r.color:kit.c,shorts:side?r.shorts:'#f3f2ec',socks:side?'#f3f2ec':kit.c,num:nums[i],
       skin:SKINS[(i*3+side*2)%5],hair:HAIRS[(i*2+side*3)%5],height:1.76+((i*37+side*11)%10)/45});
     m.position.set((side?1:-1)*(1.0+i*0.72),0,52.5);m.rotation.y=Math.PI+(side?-0.08:0.08);
-    m.userData.side=side;m.userData.ph=i*0.31+side*0.17;grp.add(m);GL.team.push(m);}
+    m.userData.side=side;m.userData.idx=i;m.userData.home=[m.position.x,m.position.z,m.rotation.y];m.userData.ph=i*0.31+side*0.17;grp.add(m);GL.team.push(m);}
   GL.ref=makeReal({shirt:'#161616',shorts:'#161616',socks:'#161616',skin:'#e6b896',hair:'#2a2a2a',height:1.86});
   GL.ref.position.set(3.6,0,15.8);GL.ref.rotation.y=Math.PI+0.55;grp.add(GL.ref);
   GL.scene.add(grp);GL.extras=grp;GL.exCel=null;
@@ -2659,6 +2678,11 @@ function glBuildExtras(){
 function poseExtras(dt){
   if(!GL.extras)return;
   const vis=!GL.kview||GL.introOn||GL.replayOn;GL.extras.visible=vis;if(!vis)return;
+  // entrada: los dos equipos y el árbitro salen trotando del túnel en dos filas
+  if(GL.introOn&&S.introT<introEnt()){const t=S.introT,jd=GL.ref.userData.acts.jog.getClip().duration;
+    for(const m of GL.team){m.position.set(-33-m.userData.idx*1.5+3.2*t,0,52.5+(m.userData.side?0.75:-0.75));m.rotation.y=Math.PI/2;drive(m,'jog',((t+m.userData.ph)*1.38)%jd,dt,false);}
+    GL.ref.position.set(-31.2+3.2*t,0,52.5);GL.ref.rotation.y=Math.PI/2;drive(GL.ref,'jog',(t*1.38)%jd,dt,false);GL.exCel='entrada';return;}
+  if(GL.exCel==='entrada'){for(const m of GL.team){const hm=m.userData.home;m.position.set(hm[0],0,hm[1]);m.rotation.y=hm[2];}GL.ref.position.set(3.6,0,15.8);GL.ref.rotation.y=Math.PI+0.55;GL.refEnd=null;}
   // árbitro: hace un gesto hacia el punto penal cuando empieza la carrera del pateador
   {const A=GL.ref.userData.acts,st=S.striker,go=A.rf&&playing()&&!RP&&S.turn==='save'&&S.phase==='runup'&&st&&st.t<1.5;
     if(go){drive(GL.ref,'rf',4.35+st.t*0.9,dt,false);GL.refEnd=S.time;}
@@ -3540,7 +3564,7 @@ cv.addEventListener('pointerdown',e=>{
   if(!playing())return;
   if(RP){if(RP.el>1.5)RP.skip=true;return;} // el dedo que venía jugando no corta la repetición apenas empieza
   if(GL.celOn&&(S.phase==='kafter'||S.phase==='after')){if((GL.celEl||0)>1.0)S.wait=0;return;}
-  if(S.phase==='intro'){S.introT=Math.max(S.introT,3.1);return;}
+  if(S.phase==='intro'){S.introT=Math.max(S.introT,introLen()-0.5);return;}
   if(S.turn==='kick'){if(S.phase!=='aim')return;S.input=e.pointerType==='mouse'?'mouse':'touch';const r=cv.getBoundingClientRect();
     if(kickCtrl()==='apuntar'){const k=S.kick;if(k.step==='power'){powerShot();return;}const a=aimFromScreen(e.clientX,e.clientY);if(a)k.aim=a;k.drag=e.pointerId;try{cv.setPointerCapture(e.pointerId);}catch(err){}return;}
     S.swipe={id:e.pointerId,pts:[{x:e.clientX,y:e.clientY,t:performance.now()}],active:true,fade:1,ox:r.left,oy:r.top};try{cv.setPointerCapture(e.pointerId);}catch(err){}return;}
