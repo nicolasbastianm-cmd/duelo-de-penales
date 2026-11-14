@@ -543,7 +543,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='3.1 · 14 nov 2026';
+const VERSION='3.2 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
   document.querySelector(`#d-${CFG.diff}`).checked=true;renderRoleUI();renderProgress();
@@ -2162,7 +2162,7 @@ function makeReal(o){
 /* Fija la animación y el instante exacto (la lógica del juego manda el tiempo), con fundido de 0,2 s al cambiar */
 function drive(model,name,time,dt,mirror){
   const u=model.userData,a=u.acts[name];if(!a)return;
-  if(u.cur!==a){if(u.cur){u.prev=u.cur;u.prevT=u.curT;u.fade=0;u.fl=(name==='dive'||name==='catch1')?0.07:(name==='victory'||/^[fl]\d$/.test(name))?0.25:0.14;}u.cur=a;}
+  if(u.cur!==a){if(u.cur){u.prev=u.cur;u.prevT=u.curT;u.fade=0;u.fl=/^(dive|catch1|bb|c4|sc)$/.test(name)?0.07:(name==='victory'||/^[fl]\d$/.test(name))?0.25:0.14;}u.cur=a;}
   u.curT=time;a.time=Math.min(time,a.getClip().duration-0.01);
   if(u.prev){u.fade=Math.min(1,u.fade+dt/(u.fl||0.14));u.prev.time=Math.min(u.prevT,u.prev.getClip().duration-0.01);}
   for(const k in u.acts){const x=u.acts[k];x.setEffectiveWeight(x===a?(u.prev?u.fade:1):(x===u.prev?1-u.fade:0));}
@@ -2176,11 +2176,20 @@ function poseKeeperReal(dt){
   const k=S.keeper,m=GL.meK,xm=(k.x-W/2)/GL.pxm,T=diveT(),endH=S.plan?S.plan.endH/G.hpm:1;
   let name='idle',t=S.time%4.6,mir=false,lift=0,cel=false;
   if(k.dive){const pr=clamp(k.dive.t/T,0,1);
-    if(k.dive.dir){name='dive';t=DIVE_A+pr*(DIVE_B-DIVE_A);mir=k.dive.dir>0;lift=Math.sin(Math.PI*pr)*clamp((endH-0.9)*0.75,0,0.85);}
-    else{name='catch1';t=0.35+pr*0.6;lift=Math.sin(Math.PI*pr)*0.5;}}
-  else if(k.rec>0){const r=1-k.rec/REC_T;if(k.lastDir){name='dive';t=DIVE_B+r*0.9;mir=k.lastDir>0;}else{name='catch1';t=0.95+r*0.3;}}
+    const A=m.userData.acts;
+    if(k.dive.dir){mir=k.dive.dir>0;
+      if(endH<0.55&&A.bb){name='bb';t=0.3+pr*0.75;} // tiro rasante: se tira al piso a bloquear
+      else{name='dive';t=DIVE_A+pr*(DIVE_B-DIVE_A);lift=Math.sin(Math.PI*pr)*clamp((endH-0.9)*0.75,0,0.85);}}
+    else if(endH>1.25&&A.c4){name='c4';t=0.36+pr*0.44;} // alta al medio: salta a tomarla
+    else if(endH<0.5&&A.sc){name='sc';t=0.28+pr*0.42;} // rasante al medio: se agacha a recogerla
+    else{name='catch1';t=0.35+pr*0.6;lift=Math.sin(Math.PI*pr)*0.5;}
+    k.clip=name;}
+  else if(k.rec>0){const r=1-k.rec/REC_T,c=k.clip;
+    if(k.lastDir){mir=k.lastDir>0;if(c==='bb'){name='bb';t=1.05+r*0.5;}else{name='dive';t=DIVE_B+r*0.9;}}
+    else if(c==='c4'){name='c4';t=0.8+r*0.5;}else if(c==='sc'){name='sc';t=0.7+r*0.45;}
+    else{name='catch1';t=0.95+r*0.3;}}
   else if(S.celeb&&S.celeb.who==='me'&&S.time>=S.celeb.t){name=celClip();cel=true;t=(name==='victory'?0.3:0.1)+(S.time-S.celeb.t);}
-  else if(S.celeb&&S.celeb.who==='rivS'&&S.phase==='after'&&!k.dive&&!(k.rec>0)&&S.time>=S.celeb.t+0.5&&m.userData.acts.l2){name='l2';t=S.time-S.celeb.t-0.5;}
+  else if(S.celeb&&S.celeb.who==='rivS'&&S.phase==='after'&&!k.dive&&!(k.rec>0)&&S.time>=S.celeb.t+0.5&&m.userData.acts.l2){const e=S.time-S.celeb.t-0.5;if(!k.lastDir&&m.userData.acts.gm){name='gm';t=Math.min(1.25+e,2.8);}else{name='l2';t=e;}}
   else if(k.saveT>0){name='catch1';t=0.5+(1-k.saveT/0.6)*0.7;}
   else if(S.phase==='kick'&&S.striker&&S.striker.k!=null)lift=Math.sin(clamp(S.striker.k/0.1,0,1)*Math.PI)*0.08;
   let mv=name==='idle'?clamp(Math.abs(k.vx)/(W*0.9),0,1):0;
@@ -2208,7 +2217,11 @@ function poseKickReal(dt){
   const gk=GL.rivK;let name='idle',t=S.time%4.6,mir=false,x=ai.x,lift=0;
   if(k&&k.shot){const s=k.shot,tArr=KT()+s.T;
     if(ai.dir!=null&&k.t>=ai.diveAt){const el=k.t-ai.diveAt,pr=clamp(el/0.42,0,1),e=smooth(0,1,pr);
-      if(ai.dir===0){name='catch1';t=0.35+pr*0.6;lift=Math.sin(Math.PI*pr)*0.55;}
+      if(ai.dir===0){const A=gk.userData.acts;
+        if(s.ty>1.25&&A.c4){name='c4';t=el<0.42?0.36+pr*0.44:Math.min(1.6,0.8+(el-0.42));}
+        else if(s.ty<0.5&&A.sc){name='sc';t=el<0.42?0.28+pr*0.42:Math.min(1.5,0.7+(el-0.42));}
+        else{name='catch1';t=0.35+pr*0.6;lift=Math.sin(Math.PI*pr)*0.55;}}
+      else if(s.ty<0.55&&gk.userData.acts.bb){name='bb';mir=ai.dir<0;t=el<0.42?0.3+pr*0.75:Math.min(2.55,1.05+(el-0.42));x=ai.x+ai.dir*1.7*e;}
       else{name='dive';mir=ai.dir<0;t=el<0.42?DIVE_A+pr*(DIVE_B-DIVE_A):Math.min(3.3,DIVE_B+(el-0.42));x=ai.x+ai.dir*1.7*e;lift=Math.sin(Math.PI*pr)*clamp((s.ty-0.9)*0.75,0,0.85);}}
     else if(ai.stay&&k.t>tArr-0.45){name='catch1';t=0.3+clamp((k.t-(tArr-0.45))/0.7,0,1)*0.9;}
     else if(S.phase==='krun'&&k.t>KT()-0.2&&k.t<KT()+0.05)lift=Math.sin((k.t-(KT()-0.2))/0.25*Math.PI)*0.1;}
