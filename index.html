@@ -536,7 +536,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='2.3 · 13 nov 2026';
+const VERSION='2.4 · 13 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
   document.querySelector(`#d-${CFG.diff}`).checked=true;renderRoleUI();renderProgress();
@@ -1808,7 +1808,7 @@ function glSync(dt){
   if(GL.introOn){const u=smooth(0,1,clamp(S.introT/3.5,0,1)),c=GL.camI,a=-1.0+u*2.0,Rr=56-22*u;
     c.position.set(Math.sin(a)*Rr,17-9*u,46-Math.cos(a)*Rr);c.lookAt(0,5-4*u,52-46*u);}
   GL.replayOn=!!RP;if(RP)replayCam();
-  celCam();
+  crowdPhotoApply();celCam();
   GL.rp.camera=activeCam();
   GL.meK.visible=GL.rivS.visible=!GL.kview;GL.meS.visible=GL.rivK.visible=GL.kview;
   const real=GL.meK.userData.real;
@@ -1835,7 +1835,7 @@ function drawTrail3(){
 
 /* ---------- Estadio 3D: tribunas escalonadas, hinchada, techo, pantallas y carteles LED ---------- */
 const CROWD_VS=`attribute vec3 offset;attribute vec3 tint;attribute vec4 prm;attribute float shade;
-uniform float time,excite,hideZ;varying vec2 vUv;varying vec3 vTint;varying float vShade,vDepth;
+uniform float time,excite,hideZ,big;varying vec2 vUv;varying vec3 vTint;varying float vShade,vDepth;
 void main(){
   if(offset.z<hideZ){gl_Position=vec4(2.0,2.0,2.0,1.0);return;}
   float ph=prm.x,ex=excite*prm.z,rnd=fract(sin(ph*91.7)*43758.5453);
@@ -1844,7 +1844,7 @@ void main(){
   float fr=max(up,idle);
   float jump=ex*max(0.0,sin(time*10.0+ph*6.2831))*0.34;
   vec3 tc=cameraPosition-offset;tc.y=0.0;vec3 f=normalize(tc+vec3(1e-4,0.0,0.0));vec3 r=vec3(f.z,0.0,-f.x);
-  float s=prm.w;vec3 p=offset+r*(position.x*0.62*s)+vec3(0.0,(position.y+0.5)*0.93*s+jump+0.012*sin(time*1.6+ph*6.28),0.0);
+  float s=prm.w*big;vec3 p=offset+r*(position.x*0.62*s)+vec3(0.0,(position.y+0.5)*0.93*s+jump+0.012*sin(time*1.6+ph*6.28),0.0);
   vUv=vec2((prm.y+uv.x)/8.0,(1.0-fr)*0.5+uv.y*0.5);vTint=tint;vShade=shade;
   vec4 mv=modelViewMatrix*vec4(p,1.0);vDepth=-mv.z;gl_Position=projectionMatrix*mv;}`;
 const CROWD_FS=`uniform sampler2D map,mask;uniform vec3 fogColor;uniform float fogDensity,light;
@@ -1944,7 +1944,7 @@ function stadium(grp,st){
   g.setAttribute('offset',new T.InstancedBufferAttribute(off,3));g.setAttribute('tint',new T.InstancedBufferAttribute(tnt,3));g.setAttribute('prm',new T.InstancedBufferAttribute(prm,4));g.setAttribute('shade',new T.InstancedBufferAttribute(sh,1));
   g.instanceCount=n;g.userData.n=n;
   const[at,amk]=crowdAtlas(),fog=GL.scene.fog;
-  GL.crowdU={time:{value:0},excite:{value:0.05},hideZ:{value:-1e5},map:{value:at},mask:{value:amk},fogColor:{value:fog.color.clone()},fogDensity:{value:fog.density||0},light:{value:night?0.82:fin?0.98:1}};
+  GL.crowdU={time:{value:0},excite:{value:0.05},hideZ:{value:-1e5},big:{value:1},map:{value:at},mask:{value:amk},fogColor:{value:fog.color.clone()},fogDensity:{value:fog.density||0},light:{value:night?0.82:fin?0.98:1}};
   const cm=new T.ShaderMaterial({uniforms:GL.crowdU,vertexShader:CROWD_VS,fragmentShader:CROWD_FS});
   const cmesh=new T.Mesh(g,cm);cmesh.frustumCulled=false;grp.add(cmesh);GL.crowdMesh=cmesh;GL.crowdData=crowd;GL.crowdKey=null;applyCrowdTier();
   flagsBuild(grp,flagSp,night,fin);bannersBuild(grp,banSp,night);
@@ -2141,6 +2141,10 @@ function makeReal(o){
     for(const h of[B.RightHand,B.LeftHand]){if(!h)continue;const gl=new T.Group();
       const palm=mesh(new T.CapsuleGeometry(4.6,8,6,12),gm);palm.scale.set(1.25,1,0.62);palm.position.y=8;gl.add(palm);
       const cuff=mesh(new T.CylinderGeometry(4.4,4.2,4,14),cm);cuff.position.y=1;gl.add(cuff);h.add(gl);}}
+  if(!GL.blobMat){const c=cnv(64,64),x=c.getContext('2d'),g=x.createRadialGradient(32,32,2,32,32,32);g.addColorStop(0,'rgba(0,0,0,.62)');g.addColorStop(0.55,'rgba(0,0,0,.28)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,64,64);
+    GL.blobMat=new T.MeshBasicMaterial({map:tex(c),transparent:true,depthWrite:false,toneMapped:false,color:0x000000});GL.blobGeo=new T.PlaneGeometry(1,1);}
+  {const sh=new T.Mesh(GL.blobGeo,GL.blobMat);sh.rotation.x=-Math.PI/2;sh.scale.set(1.05*f,0.8*f,1);sh.position.y=0.02;sh.renderOrder=2;
+    sh.onBeforeRender=function(){this.position.y=0.02-root.position.y;};root.add(sh);root.userData.blob=sh;}
   const mixer=new T.AnimationMixer(m),acts={};
   for(const c of g.animations){const a=mixer.clipAction(c);a.enabled=true;a.setEffectiveWeight(0);a.play();acts[c.name]=a;}
   root.userData={...root.userData,real:true,mixer,acts,cur:null,prev:null,fade:1,B,inner,f};
@@ -3038,6 +3042,50 @@ $('locker').addEventListener('change',e=>{if(e.target.name!=='voz')return;CFG.vo
 $('mute').addEventListener('click',()=>{if(CFG.muted)vozStop();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)vozStop();});
 
+/* ---------- Público con personas de verdad ----------
+   En vez de dibujitos planos, se «fotografía» al personaje 3D (8 personas con distinto tono de piel, pelo y estatura,
+   con los brazos abajo y arriba) y esas fotos se usan como hinchada. Se hace una sola vez al cargar; para el teléfono
+   el público sigue siendo igual de liviano. Una segunda foto marca dónde está la polera, para teñirla del color de cada hincha. */
+function crowdPhoto(){
+  if(GL.crowdRT)return GL.crowdRT;if(!GL.charGLB||!GL.ok||!GL.r)return null;
+  try{
+    const T=THREE,CW=160,CH=240,N=8,opt={samples:4,generateMipmaps:true,minFilter:T.LinearMipmapLinearFilter,magFilter:T.LinearFilter};
+    const rt=new T.WebGLRenderTarget(CW*N,CH*2,opt),rm=new T.WebGLRenderTarget(CW*N,CH*2,opt);
+    const sc=new T.Scene();sc.add(new T.HemisphereLight(0xffffff,0xb0b4bc,3.4));const dl=new T.DirectionalLight(0xffffff,2.6);dl.position.set(1.5,3,4);sc.add(dl);
+    const cam=new T.OrthographicCamera(-0.45,0.45,2.33,0.98,0.1,20);cam.position.set(0,0,6);
+    const white=new T.MeshBasicMaterial({color:0xffffff}),black=new T.MeshBasicMaterial({color:0x000000});
+    const skins=['#ffffff','#ecc9ae','#c99a78','#9c6f52','#74513b','#f3d6c0','#b98562','#e0b594'],hairs=['#1b130d','#3a2314','#6b4423','#c49a5a','#111111','#8a6a3a','#1b130d','#4a2c18'];
+    const r=GL.r,oldT=r.getRenderTarget(),oldC=r.getClearColor(new T.Color()),oldA=r.getClearAlpha();celInit();
+    const U=new T.Vector3(0,1,0),V=(...a)=>{const v=new T.Vector3();for(let i=0;i<a.length;i+=2)v.addScaledVector(a[i],a[i+1]);return v;};
+    r.setClearColor(0x000000,0);
+    for(const t of[rt,rm]){t.scissorTest=false;t.viewport.set(0,0,CW*N,CH*2);r.setRenderTarget(t);r.clear();t.scissorTest=true;}
+    for(let v=0;v<N;v++){
+      const m=makeReal({shirt:'#e2e2e2',shorts:'#2a2e38',socks:'#e2e2e2',skin:skins[v],hair:hairs[v],height:1.7+((v*37)%10)/45});
+      if(m.userData.blob)m.userData.blob.visible=false;m.traverse(n=>{n.castShadow=false;n.receiveShadow=false;});m.rotation.y=(((v*53)%7)-3)*0.08;sc.add(m);
+      const B=m.userData.B;
+      for(let f=0;f<2;f++){
+        drive(m,'victory',0.05+v*0.03,1,false);m.updateMatrixWorld(true);
+        const q=m.getWorldQuaternion(new T.Quaternion()),F=new T.Vector3(0,0,1).applyQuaternion(q),L=new T.Vector3(1,0,0).applyQuaternion(q),R=L.clone().negate(),o=0.25+((v*29)%10)/28;
+        if(B.Spine1&&B.Neck)aimBone(B.Spine1,B.Neck,V(U,1,F,0.03),1);
+        if(f===0){aimBone(B.LeftArm,B.LeftForeArm,V(U,-1,L,0.2,F,0.05),1);aimBone(B.LeftForeArm,B.LeftHand,V(U,-1,F,0.25,L,0.05),1);aimBone(B.RightArm,B.RightForeArm,V(U,-1,R,0.2,F,0.05),1);aimBone(B.RightForeArm,B.RightHand,V(U,-1,F,0.25,R,0.05),1);}
+        else{aimBone(B.LeftArm,B.LeftForeArm,V(U,1,L,o,F,0.15),1);aimBone(B.LeftForeArm,B.LeftHand,V(U,1,L,v%2?0.25:-0.1,F,0.1),1);aimBone(B.RightArm,B.RightForeArm,V(U,1,R,o,F,0.15),1);aimBone(B.RightForeArm,B.RightHand,V(U,1,R,v%2?0.25:-0.1,F,0.1),1);}
+        for(const[t,isMask]of[[rt,false],[rm,true]]){
+          const saved=[];if(isMask)m.traverse(n=>{if(n.isMesh){saved.push([n,n.material]);n.material=/Shirt/.test((n.parent&&n.parent.name)||'')?white:black;}});
+          t.viewport.set(v*CW,(1-f)*CH,CW,CH);t.scissor.set(v*CW,(1-f)*CH,CW,CH);r.setRenderTarget(t);r.render(sc,cam);
+          for(const[n,mt]of saved)n.material=mt;}
+      }
+      sc.remove(m);
+    }
+    r.setRenderTarget(oldT);r.setClearColor(oldC,oldA);
+    GL.crowdRT=[rt.texture,rm.texture];GL.crowdRTs=[rt,rm];
+  }catch(e){console.warn('Público: se usa el dibujo',e);GL.crowdRT=null;GL.crowdPhotoFail=true;}
+  return GL.crowdRT;
+}
+function crowdPhotoApply(){
+  if(GL.crowdPhotoFail||!GL.crowdU||!GL.charGLB||GL.crowdU.photo)return;const p=crowdPhoto();if(!p)return;
+  GL.crowdU.map.value=p[0];GL.crowdU.mask.value=p[1];GL.crowdU.big.value=1.42;GL.crowdU.photo=true;
+}
+
 /* ---------- Tienda ----------
    Las estrellas que se ganan jugando se gastan en camisetas, balones y festejos.
    Pensada para niños chicos: dibujos grandes, casi sin texto, y se compra con un toque.
@@ -3144,7 +3192,7 @@ function bannersBuild(grp,spots,night){
 function drawBanners(){
   const B=GL.banner;if(!B)return;const x=B.c.getContext('2d'),r=curRival(),kit=KITS[CFG.kit],nm=(CFG.name||'').trim().toUpperCase();
   const ours=[nm?`¡VAMOS ${nm}!`:'¡VAMOS CAMPEÓN!','DUELO DE PENALES','¡DALE CAMPEÓN!','LA BARRA','NUNCA DEJES DE ALENTAR','ACÁ ESTÁ TU HINCHADA','¡SÍ SE PUEDE!','CORAZÓN Y GARRA','¡A LA FINAL!','FUERZA EQUIPO'];
-  B.spots.forEach((s,i)=>{const y=i*64,away=s.team===1,bg=away?r.color:i%2?kit.c:'#ffffff',fg=away?'#ffffff':i%2?kit.t:kit.c;
+  B.spots.forEach((s,i)=>{const y=i*64,away=s.team===1,bg=away?r.color:i%2?kit.c:'#ffffff',fg=away?'#ffffff':i%2?kit.t:'#14181f';
     x.fillStyle=bg;x.fillRect(0,y,1024,64);x.fillStyle=away?r.shorts:i%2?'#ffffff':kit.c;x.fillRect(0,y,1024,7);x.fillRect(0,y+57,1024,7);
     const txt=away?r.team.toUpperCase():ours[(i+3)%ours.length];
     x.fillStyle=fg;x.textAlign='center';x.textBaseline='middle';let fs=44;x.font=`${fs}px ${DISPLAY}`;while(x.measureText(txt).width>960&&fs>20){fs-=2;x.font=`${fs}px ${DISPLAY}`;}
