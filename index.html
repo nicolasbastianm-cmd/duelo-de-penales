@@ -601,7 +601,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='3.6 · 14 nov 2026';
+const VERSION='3.7 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -1585,9 +1585,14 @@ function nightSkyTexture(){
 function cloudTexture(){const c=cnv(256,128),x=c.getContext('2d');for(let i=0;i<14;i++){const px=40+srand(i)*176,py=50+srand(i+5)*40,r=18+srand(i+9)*36,g=x.createRadialGradient(px,py,0,px,py,r);
   g.addColorStop(0,'rgba(255,255,255,.55)');g.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g;x.fillRect(px-r,py-r,2*r,2*r);}return tex(c);}
 function adTexture(){const c=cnv(2048,64);drawAds(c);const tt=tex(c);tt.wrapS=THREE.RepeatWrapping;return tt;}
-function drawAds(c){const x=c.getContext('2d'),g=x.createLinearGradient(0,0,0,64);g.addColorStop(0,'#1b4596');g.addColorStop(1,'#0b1d46');x.fillStyle=g;x.fillRect(0,0,2048,64);
-  x.font=`40px ${DISPLAY}`;x.textBaseline='middle';const t=['DUELO DE PENALES','ATAJA TODO','GRAN FINAL'];let px=20,i=0;
-  while(px+x.measureText(t[i%3]).width<2028){x.fillStyle=i%2?'#ffd23f':'#f6f3e8';x.fillText(t[i%3],px,34);px+=x.measureText(t[i%3]).width+70;i++;}}
+function drawAds(c){const x=c.getContext('2d');
+  // auspiciadores inventados, cada uno con su color, como en los carteles LED de un estadio
+  const ads=[['DUELO DE PENALES','#12357f','#ffd23f'],['SUPERGOL','#c62828','#ffffff'],['HELADOS POLAR','#0d7f8f','#eafcff'],['RADIO CANCHA','#f2b705','#1b1f26'],['ATAJA TODO','#14181f','#7ee04a'],['PELOTAS REBOTE','#f6f3e8','#12357f']];
+  const w=2048/ads.length;x.textBaseline='middle';x.textAlign='center';
+  ads.forEach(([t,bg,fg],i)=>{const g=x.createLinearGradient(0,0,0,64);g.addColorStop(0,bg);g.addColorStop(1,col(bg,0.62));x.fillStyle=g;x.fillRect(i*w,0,w+1,64);
+    x.fillStyle='rgba(255,255,255,.10)';x.fillRect(i*w,0,w,5);x.fillStyle='rgba(0,0,0,.35)';x.fillRect(i*w,0,3,64);
+    let fs=38;x.font=`${fs}px ${DISPLAY}`;while(x.measureText(t).width>w-36&&fs>18){fs-=2;x.font=`${fs}px ${DISPLAY}`;}x.fillStyle=fg;x.fillText(t,i*w+w/2,35);});
+}
 function fenceTexture(rep){const c=cnv(128,128),x=c.getContext('2d');x.strokeStyle='rgba(200,205,205,1)';x.lineWidth=3;
   x.beginPath();x.moveTo(0,0);x.lineTo(128,128);x.moveTo(128,0);x.lineTo(0,128);x.stroke();return tex(c,{rep});}
 function glowTexture(){const c=cnv(128,128),x=c.getContext('2d'),g=x.createRadialGradient(64,64,0,64,64,64);g.addColorStop(0,'rgba(255,252,235,1)');g.addColorStop(0.2,'rgba(255,248,220,.6)');g.addColorStop(1,'rgba(255,248,220,0)');x.fillStyle=g;x.fillRect(0,0,128,128);return tex(c);}
@@ -1911,6 +1916,7 @@ function rippleNet(){
 }
 function glSync(dt){
   JK=1-Math.exp(-dt*(S.turn==='kick'?16:22));
+  if(GL.adTex&&!reduce)GL.adTex.offset.x=(S.time*0.012)%1;
   const sk=CFG.stage;if(GL.adTex&&GL.adFont!==(G.fontsOk||0)){GL.adFont=G.fontsOk||0;drawAds(GL.adTex.image);GL.adTex.needsUpdate=true;}if(GL.stageKey!==sk){GL.stageKey=sk;glBuildStage();GL.pKey=null;}
   const pk=[CFG.kit,CFG.glove,CFG.name,CFG.num,G.fontsOk||0,curRival().code].join('|');if(GL.pKey!==pk){GL.pKey=pk;glBuildPlayers();}
   if(!GL.ball)glBuildBall();
@@ -2068,6 +2074,20 @@ function stadium(grp,st){
       grp.add(fr);grp.add(scr);GL.screens.push({c:sc,ctx:sx,tex:stx});}
   }
   flaresInit(grp,flareSpots);
+  // entorno detrás del arco: dos cámaras de TV con su operador, pelotas de repuesto y la botella y toalla del arquero
+  {const dk=M('#1a1d22',{roughness:0.6}),gy=M('#3a3f48',{roughness:0.5}),V=(a,b,c2)=>new T.Vector3(a,b,c2);
+    for(const s of[-1,1]){const cx=s*5.0,cz=-3.5,g2=new T.Group();
+      for(let k=0;k<3;k++){const a=k*2.094+0.5;g2.add(rodBetween(V(0,1.22,0),V(Math.cos(a)*0.5,0,Math.sin(a)*0.5),0.022,gy,false));}
+      const body=mesh(new T.BoxGeometry(0.3,0.3,0.62),dk,false);body.position.set(0,1.42,0.06);g2.add(body);
+      g2.add(rodBetween(V(0,1.42,0.36),V(0,1.42,0.72),0.085,dk,false));g2.add(rodBetween(V(0,1.42,0.72),V(0,1.42,0.78),0.105,gy,false));
+      const vf=mesh(new T.BoxGeometry(0.1,0.1,0.2),dk,false);vf.position.set(-0.2,1.56,-0.2);g2.add(vf);
+      const tl=new T.Mesh(new T.SphereGeometry(0.03,8,6),new T.MeshBasicMaterial({color:'#ff2b2b',toneMapped:false}));tl.position.set(0.1,1.6,0.34);g2.add(tl);
+      g2.position.set(cx,0,cz);g2.rotation.y=Math.atan2(-cx,11-cz)*0.6;grp.add(g2);
+      crowd.push([cx+s*0.05,0.42,cz-0.55,hash2(s+5,2),s>0?4:5,0.05,1.05,1,2,0.5]);
+      for(const[bx,bz]of[[s*4.3,-2.7],[s*4.6,-2.62],[s*4.45,-2.45]]){const sb=mesh(new T.SphereGeometry(0.11,14,10),M('#f1f1ee',{roughness:0.5}),false);sb.position.set(bx,0.11,bz);grp.add(sb);}}
+    const bt=mesh(new T.CylinderGeometry(0.04,0.04,0.24,10),M('#39c0e8',{roughness:0.3}),false);bt.position.set(3.95,0.12,-0.45);grp.add(bt);
+    const cap=mesh(new T.CylinderGeometry(0.025,0.025,0.05,8),M('#f4f4f4'),false);cap.position.set(3.95,0.265,-0.45);grp.add(cap);
+    const tw=mesh(new T.BoxGeometry(0.42,0.04,0.28),M('#f4f4f0',{roughness:1}),false);tw.position.set(4.3,0.02,-0.55);tw.rotation.y=0.3;grp.add(tw);}
   // fotógrafos detrás del arco
   for(let i=0;i<10;i++){const s=i<5?-1:1,xx=s*(5.6+(i%5)*0.9);crowd.push([xx,0,-3.3-hash2(i,1)*0.5,hash2(i,2),Math.floor(hash2(i,3)*8),0.05,1.05,1,2,0.5]);}
   // geometría instanciada de la hinchada (orden aleatorio para poder mostrar menos en celulares lentos)
