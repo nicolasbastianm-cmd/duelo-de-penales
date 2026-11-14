@@ -601,7 +601,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='3.9 · 14 nov 2026';
+const VERSION='3.9b · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -2277,7 +2277,7 @@ const KS=0.33,KT=()=>GL.charGLB?KICK_T-KS:0.45;
 async function loadChar(){
   try{
     const[{GLTFLoader},SU]=await Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('three/addons/utils/SkeletonUtils.js')]);
-    if(!window.JUGADOR_GLB)await new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='jugador.js';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});
+    if(!window.JUGADOR_GLB)await new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='jugador.js?v=5';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});
     const s64=window.JUGADOR_GLB,bin=new Uint8Array(s64.length*3/4|0);let raw=atob(s64);for(let i=0;i<raw.length;i++)bin[i]=raw.charCodeAt(i);raw=null;window.JUGADOR_GLB=null;
     const g=await new GLTFLoader().parseAsync(bin.buffer.slice(0,bin.length),'');GL.SU=SU;GL.charGLB=g;GL.pKey=null;
   }catch(e){console.warn('Sin modelo realista; se usan jugadores simples',e);}
