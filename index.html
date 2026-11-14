@@ -601,7 +601,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='3.9b · 14 nov 2026';
+const VERSION='4.0 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -1822,7 +1822,7 @@ function glBuildPlayers(){
   if(GL.charGLB){const kit=KITS[CFG.kit],r=curRival();
     GL.meK=makeReal({shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,name:CFG.name,numColor:kit.t,height:1.9});
     GL.meS=makeReal({shirt:kit.c,shorts:'#f3f2ec',socks:kit.c,num:CFG.num,name:CFG.name,numColor:kit.t,height:1.85});
-    GL.rivS=makeReal({shirt:r.color,shorts:r.shorts,socks:'#f3f2ec',num:9,skin:r.skin,hair:r.hair,height:2.0});
+    GL.rivS=makeReal({shirt:r.color,shorts:r.shorts,socks:'#f3f2ec',style:KIT_ST[r.code]||1,c2:r.shorts,num:9,skin:r.skin,hair:r.hair,height:2.0});
     GL.rivK=makeReal({shirt:r.gk,shorts:'#1b1f26',socks:r.gk,glove:'#f6f3e8',num:1,skin:r.gkSkin,hair:r.gkHair,height:1.92});
     for(const k of['meK','meS','rivS','rivK'])sc.add(GL[k]);glBuildExtras();return;}
   const kit=KITS[CFG.kit],r=curRival(),plate=()=>plateTexture(CFG.name,CFG.num,kit.t);
@@ -2282,15 +2282,35 @@ async function loadChar(){
     const g=await new GLTFLoader().parseAsync(bin.buffer.slice(0,bin.length),'');GL.SU=SU;GL.charGLB=g;GL.pKey=null;
   }catch(e){console.warn('Sin modelo realista; se usan jugadores simples',e);}
 }
-function kitMaterial(base,color){
-  const m=base.clone();m.userData.kit={value:new THREE.Color(color)};
-  m.onBeforeCompile=sh=>{sh.uniforms.kit=m.userData.kit;sh.fragmentShader='uniform vec3 kit;\n'+sh.fragmentShader.replace('#include <map_fragment>',
-    `#ifdef USE_MAP
+/* Camisetas con diseño: además del color, cada equipo lleva puños y cuello de otro color y, según el estilo,
+   rayas, franjas o una banda cruzada. El dibujo se calcula con la posición de la tela en la pose de reposo
+   (brazos abiertos), normalizada a la caja de la prenda: x va de muñeca a muñeca, y del borde inferior al cuello.
+   Estilos: 0 liso · 1 puños y cuello · 2 rayas · 3 franjas · 4 banda · 5 medias con vuelta. */
+function kitMaterial(base,color,o={}){
+  const m=base.clone(),T=THREE,bb=o.geo?(o.geo.boundingBox||(o.geo.computeBoundingBox(),o.geo.boundingBox)):null;
+  const sz=bb?bb.max.clone().sub(bb.min):new T.Vector3(1,1,1);
+  m.userData.kit={value:new T.Color(color)};m.userData.kit2={value:new T.Color(o.c2||color)};m.userData.kst={value:bb?(o.style||0):0};
+  m.userData.kb0={value:bb?bb.min.clone():new T.Vector3()};m.userData.kb1={value:new T.Vector3(1/(sz.x||1),1/(sz.y||1),1/(sz.z||1))};
+  m.onBeforeCompile=sh=>{for(const k of['kit','kit2','kst','kb0','kb1'])sh.uniforms[k]=m.userData[k];
+    sh.vertexShader='uniform vec3 kb0,kb1;varying vec3 vBind;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vBind=(position-kb0)*kb1;');
+    sh.fragmentShader='uniform vec3 kit,kit2;uniform float kst;varying vec3 vBind;\n'+sh.fragmentShader.replace('#include <map_fragment>',
+    `float km=0.0,ktx=abs(vBind.x-0.5),ktor=1.0-smoothstep(0.150,0.160,ktx);
+     if(kst>4.5)km=step(0.80,vBind.y);
+     else if(kst>0.5){
+       if(kst>3.5)km=ktor*(1.0-smoothstep(0.085,0.095,abs((vBind.x-0.5)*2.6+(vBind.y-0.5)*0.9)));
+       else if(kst>2.5)km=step(0.5,fract(vBind.y*4.0+0.15));
+       else if(kst>1.5)km=ktor*step(0.5,fract((vBind.x-0.5)*22.0+0.25));
+       km=max(km,step(0.462,ktx));km=max(km,ktor*step(0.955,vBind.y));}
+     vec3 kcol=mix(kit,kit2,km);
+     #ifdef USE_MAP
       vec4 sampledDiffuseColor=texture2D(map,vMapUv);float L=dot(sampledDiffuseColor.rgb,vec3(0.299,0.587,0.114));
-      L=mix(0.72,L,smoothstep(0.1,0.32,L));diffuseColor.rgb*=kit*min(1.2,L/0.78);
-    #endif`);};
-  m.customProgramCacheKey=()=>'kit';return m;
+      L=mix(0.72,L,smoothstep(0.1,0.32,L));diffuseColor.rgb*=kcol*min(1.2,L/0.78);
+     #else
+      diffuseColor.rgb*=kcol;
+     #endif`);};
+  m.customProgramCacheKey=()=>'kit3';return m;
 }
+
 function numberPlate(name,num,colr){
   const c=cnv(256,256),x=c.getContext('2d');x.textAlign='center';x.textBaseline='middle';x.fillStyle=colr;x.strokeStyle='rgba(0,0,0,.25)';x.lineWidth=4;
   const nm=(name||'').trim().toUpperCase();if(nm){let fs=40;x.font=`${fs}px ${DISPLAY}`;const w=x.measureText(nm).width;if(w>220){fs*=220/w;x.font=`${fs}px ${DISPLAY}`;}x.fillText(nm,128,34);}
@@ -2305,6 +2325,7 @@ function addRim(mat){
     {float rimF=pow(1.0-clamp(dot(normalize(vViewPosition),normal),0.0,1.0),3.0);totalEmissiveRadiance+=vec3(0.92,0.96,1.0)*rimF*0.2;}`);};
   mat.customProgramCacheKey=()=>pk+'rim';mat.needsUpdate=true;
 }
+const KIT_ST={PUM:2,HAL:3,TIB:4,CON:1,TOR:2,DEL:3,LOB:4};
 function makeReal(o){
   const T=THREE,g=GL.charGLB,m=GL.SU.clone(g.scene),root=new T.Group(),inner=new T.Group();root.add(inner);inner.add(m);
   const f=(o.height||1.9)/1.785;m.scale.setScalar(0.01*f);
@@ -2312,10 +2333,13 @@ function makeReal(o){
   m.traverse(n=>{
     if(n.isBone){for(const k of['Spine1','Spine2','Head','RightHand','LeftHand','Hips','Neck','LeftArm','LeftForeArm','RightArm','RightForeArm','LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot'])if(n.name.endsWith(k)&&!n.name.endsWith('Spine'+k))B[k]=B[k]||n;}
     if(!n.isMesh)return;n.castShadow=true;n.receiveShadow=true;n.frustumCulled=false;const part=(n.parent&&n.parent.name)||'';
-    if(/Shirt|Shorts|Socks/.test(part))n.material=kitMaterial(n.material,/Shirt/.test(part)?o.shirt:/Shorts/.test(part)?o.shorts:o.socks);
+    if(/Shirt/.test(part))n.material=kitMaterial(n.material,o.shirt,{geo:n.geometry,style:o.style==null?1:o.style,c2:o.c2||o.numColor||contrast(o.shirt)});
+    else if(/Socks/.test(part))n.material=kitMaterial(n.material,o.socks,{geo:n.geometry,style:o.style===0?0:5,c2:o.c2||o.numColor||contrast(o.socks)});
+    else if(/Shorts/.test(part))n.material=kitMaterial(n.material,o.shorts);
     else if(/Hair/.test(part)&&o.hair){n.material=n.material.clone();n.material.color.set(o.hair);}
     else if(/Body/.test(part)&&o.skin){n.material=n.material.clone();n.material.color.set(o.skin);}
-    if(n.material.isMeshStandardMaterial){n.material.envMapIntensity=GL.envI||0.6;addRim(n.material);}});
+    if(n.material.isMeshStandardMaterial){n.material.envMapIntensity=GL.envI||0.6;addRim(n.material);
+      for(const k of['map','normalMap']){const tx=n.material[k];if(tx&&tx.anisotropy<4){tx.anisotropy=Math.min(8,GL.r.capabilities.getMaxAnisotropy());tx.needsUpdate=true;}}}});
   if(o.num!=null&&B.Spine2){const p=numberPlate(o.name,o.num,o.numColor||contrast(o.shirt));p.position.set(0,-4,-15.5);p.rotation.y=Math.PI;B.Spine2.add(p);root.userData.plate=p;}
   if(o.glove){const gm=M(o.glove,{roughness:0.55}),cm=M('#1d2026',{roughness:0.6});
     for(const h of[B.RightHand,B.LeftHand]){if(!h)continue;const gl=new T.Group();
@@ -2667,11 +2691,11 @@ function glBuildExtras(){
   if(!GL.charGLB)return;
   const grp=new THREE.Group(),kit=KITS[CFG.kit],r=curRival(),n=[5,4,3][GL.tier||0],nums=[2,4,6,8,11];GL.team=[];
   for(const side of[0,1])for(let i=0;i<n;i++){
-    const m=makeReal({shirt:side?r.color:kit.c,shorts:side?r.shorts:'#f3f2ec',socks:side?'#f3f2ec':kit.c,num:nums[i],
+    const m=makeReal({shirt:side?r.color:kit.c,shorts:side?r.shorts:'#f3f2ec',socks:side?'#f3f2ec':kit.c,style:side?KIT_ST[r.code]||1:1,c2:side?r.shorts:kit.t,num:nums[i],
       skin:SKINS[(i*3+side*2)%5],hair:HAIRS[(i*2+side*3)%5],height:1.76+((i*37+side*11)%10)/45});
     m.position.set((side?1:-1)*(1.0+i*0.72),0,52.5);m.rotation.y=Math.PI+(side?-0.08:0.08);
     m.userData.side=side;m.userData.idx=i;m.userData.home=[m.position.x,m.position.z,m.rotation.y];m.userData.ph=i*0.31+side*0.17;grp.add(m);GL.team.push(m);}
-  GL.ref=makeReal({shirt:'#161616',shorts:'#161616',socks:'#161616',skin:'#e6b896',hair:'#2a2a2a',height:1.86});
+  GL.ref=makeReal({style:1,c2:'#ffd23f',shirt:'#161616',shorts:'#161616',socks:'#161616',skin:'#e6b896',hair:'#2a2a2a',height:1.86});
   GL.ref.position.set(3.6,0,15.8);GL.ref.rotation.y=Math.PI+0.55;grp.add(GL.ref);
   GL.scene.add(grp);GL.extras=grp;GL.exCel=null;
 }
@@ -3274,7 +3298,7 @@ function crowdPhoto(){
     r.setClearColor(0x000000,0);
     for(const t of[rt,rm]){t.scissorTest=false;t.viewport.set(0,0,CW*N,CH*2);r.setRenderTarget(t);r.clear();t.scissorTest=true;}
     for(let v=0;v<N;v++){
-      const m=makeReal({shirt:'#e2e2e2',shorts:'#2a2e38',socks:'#e2e2e2',skin:skins[v],hair:hairs[v],height:1.7+((v*37)%10)/45});
+      const m=makeReal({style:0,shirt:'#e2e2e2',shorts:'#2a2e38',socks:'#e2e2e2',skin:skins[v],hair:hairs[v],height:1.7+((v*37)%10)/45});
       if(m.userData.blob)m.userData.blob.visible=false;m.traverse(n=>{n.castShadow=false;n.receiveShadow=false;});m.rotation.y=(((v*53)%7)-3)*0.08;sc.add(m);
       const B=m.userData.B;
       for(let f=0;f<2;f++){
