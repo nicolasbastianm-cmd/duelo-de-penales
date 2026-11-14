@@ -543,7 +543,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='3.2 · 14 nov 2026';
+const VERSION='3.3 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
   document.querySelector(`#d-${CFG.diff}`).checked=true;renderRoleUI();renderProgress();
@@ -3112,7 +3112,24 @@ function crowdPhoto(){
   }catch(e){console.warn('Público: se usa el dibujo',e);GL.crowdRT=null;GL.crowdPhotoFail=true;}
   return GL.crowdRT;
 }
+/* Gente distinta en la tribuna: 5 personas (fotos ya hechas de otros personajes) reemplazan a 5 de las 8 variantes.
+   Llevan la polera del color de su barra igual que el resto; cambian caras, peinados, cuerpos y pantalones. */
+function genteLoad(){
+  if(GL.genteReq||!THREE)return;GL.genteReq=1;
+  try{const L=new THREE.TextureLoader();let n=0;const ok=()=>{if(++n===2)GL.gente=[a,b];};
+    const a=L.load('gente.webp',ok,undefined,()=>{}),b=L.load('gente_m.webp',ok,undefined,()=>{});a.colorSpace=THREE.SRGBColorSpace;a.generateMipmaps=b.generateMipmaps=false;a.minFilter=b.minFilter=THREE.LinearFilter;}catch(e){}
+}
+function genteBlit(){
+  if(GL.genteDone||!GL.gente||!GL.crowdRTs||!GL.r)return;GL.genteDone=true;
+  try{const T=THREE,r=GL.r,CW=160,CH=240,oldT=r.getRenderTarget(),oldC=r.getClearColor(new T.Color()),oldA=r.getClearAlpha();
+    const sc=new T.Scene(),cam=new T.OrthographicCamera(-1,1,1,-1,0,1),mat=new T.MeshBasicMaterial({blending:T.NoBlending,depthTest:false,depthWrite:false,toneMapped:false,fog:false});
+    const q=new T.Mesh(new T.PlaneGeometry(2,2),mat);q.frustumCulled=false;sc.add(q);r.setClearColor(0x000000,0);
+    GL.crowdRTs.forEach((rt,i)=>{mat.map=GL.gente[i];mat.needsUpdate=true;rt.scissorTest=true;rt.viewport.set(3*CW,0,5*CW,2*CH);rt.scissor.set(3*CW,0,5*CW,2*CH);r.setRenderTarget(rt);r.clear();r.render(sc,cam);});
+    r.setRenderTarget(oldT);r.setClearColor(oldC,oldA);q.geometry.dispose();mat.dispose();
+  }catch(e){console.warn('Gente: se deja el público anterior',e);}
+}
 function crowdPhotoApply(){
+  genteLoad();if(GL.crowdU&&GL.crowdU.photo)genteBlit();
   if(GL.crowdPhotoFail||!GL.crowdU||!GL.charGLB||GL.crowdU.photo)return;const p=crowdPhoto();if(!p)return;
   GL.crowdU.map.value=p[0];GL.crowdU.mask.value=p[1];GL.crowdU.big.value=1.42;GL.crowdU.photo=true;
 }
