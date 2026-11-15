@@ -91,6 +91,9 @@ input[type=text]:focus-visible,input[type=number]:focus-visible{outline:3px soli
 .swatch span svg{width:14px;height:14px;filter:drop-shadow(0 0 2px #000)}
 .swatch input:checked+span{border-color:var(--ink);box-shadow:0 0 0 3px var(--sun)}
 .swatch input:focus-visible+span{outline:3px solid var(--chalk);outline-offset:3px}
+.duopick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:14px 0}
+.duopick button{font-size:44px;line-height:1;padding:22px 0;border-radius:16px;border:3px solid var(--chalk);background:rgba(246,243,232,.1);color:var(--chalk);cursor:pointer}
+.duopick button:active{background:var(--sun);color:var(--ink)}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);border:2px solid var(--chalk);border-radius:12px;overflow:hidden}
 .seg label{position:relative;font-size:15px;font-weight:800}
 .seg span{display:flex;flex-direction:column;justify-content:center;height:100%;box-sizing:border-box;text-align:center;padding:7px 4px;cursor:pointer;line-height:1.15}
@@ -185,7 +188,7 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
         <span class="life"></span><span class="life"></span><span class="life"></span>
       </div>
       <div class="shoot" id="shoot" aria-label="Tanda de penales" hidden>
-        <div class="srow"><span class="tag">TÚ</span><span class="dots" id="dUs"></span></div>
+        <div class="srow"><span class="tag" id="usTag">TÚ</span><span class="dots" id="dUs"></span></div>
         <div class="srow"><span class="tag" id="rivTag">RIV</span><span class="dots" id="dThem"></span></div>
       </div>
     </div>
@@ -226,6 +229,7 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
           </div>
         </fieldset>
         <button class="go mode" id="btnTour" type="button"><span>Torneo</span><small>3 partidos de penales hasta la copa</small></button>
+        <button class="go alt mode" id="btnDuo" type="button"><span>Duelo de dos</span><small>Dos jugadores en el mismo teléfono</small></button>
         <button class="go alt mode" id="btnEndless" type="button"><span>Desafío infinito</span><small id="endlessSub">¿Cuántas atajas con 3 vidas?</small></button>
         <div class="minor">
           <button class="ghost" id="btnLocker" type="button">Vestuario</button>
@@ -321,6 +325,18 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
           <button class="go" id="iGo" type="button">¡A la cancha!</button>
           <button class="link-btn" id="iBack" type="button">Volver al menú</button>
         </div>
+      </div>
+    </div>
+
+    <div class="overlay" id="duo" hidden>
+      <div class="card">
+        <h2 id="duTitle">Duelo de dos</h2>
+        <p id="duSub"></p>
+        <div class="field" id="duNameBox"><label class="lbl" for="duName">Nombre del jugador 2</label><input id="duName" type="text" maxlength="10" autocomplete="off" placeholder="Jugador 2"></div>
+        <div class="duopick" id="duPick" hidden>
+          <button type="button" data-d="-1" aria-label="Izquierda">◀</button><button type="button" data-d="0" aria-label="Al medio">●</button><button type="button" data-d="1" aria-label="Derecha">▶</button>
+        </div>
+        <div class="btns"><button class="go" id="duGo" type="button">Empezar</button><button class="link-btn" id="duBack" type="button">Volver al menú</button></div>
       </div>
     </div>
 
@@ -557,18 +573,18 @@ function hud(){
   $('hudR').hidden=!(m==='endless'||m==='home');$('quit').hidden=!playing();
   if(m==='tour'){const sh=S.tour.sh,r=RIVALS[S.tour.round];
     $('hudLl').textContent=sh.them.length>5?'Muerte súbita':r.short;$('hudLv').textContent=`${cnt(sh.us)}–${cnt(sh.them)}`;
-    $('rivTag').textContent=r.code;dots('dUs',sh.us);dots('dThem',sh.them);}
+    $('rivTag').textContent=r.code;$('usTag').textContent=S.tour.duo?S.tour.code1:'TÚ';dots('dUs',sh.us);dots('dThem',sh.them);}
   else if(m==='tut'){$('hudLl').textContent='Tutorial';$('hudLv').textContent=`${Math.min(3,S.tut.step+1)}/3`;}
   else if(m==='endless'){$('hudLl').textContent=S.role==='kicker'?'Goles':S.role==='both'?'Puntos':'Atajadas';$('hudLv').textContent=S.saves;}
   else{$('hudLl').textContent='Total';$('hudLv').textContent=S.total;}
   $('best').textContent=S.best;$('bestLabel').textContent='Récord '+D().n.toLowerCase();
   lifeEls.forEach((el,i)=>el.classList.toggle('lost',i>=S.lives));
 }
-const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
+const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='6.1 · 15 nov 2026';
+const VERSION='6.2 · 15 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -589,7 +605,7 @@ function renderRoleUI(){
 const STAT=(()=>{let d=null;try{d=JSON.parse(lsGet('penales-stats','null'));}catch(e){}if(!d||d.v!==1)d={v:1,desde:new Date().toISOString().slice(0,10),seg:0,m:{}};return d;})();
 let statDirty=false;
 function statAdd(key,n=1){
-  const md=S.mode==='tour'?'copa':S.mode==='endless'?'infinito':null;if(!md)return;
+  const md=S.mode==='tour'?(S.tour&&S.tour.duo?'duelo':'copa'):S.mode==='endless'?'infinito':null;if(!md)return;
   const id=md+' '+(S.diff||CFG.diff||'normal')+' '+({keeper:'atajando',kicker:'pateando',both:'los dos'}[S.role]||'-'),o=STAT.m[id]||(STAT.m[id]={});o[key]=(o[key]||0)+n;statDirty=true;
 }
 function statSave(){if(!statDirty)return;statDirty=false;lsSet('penales-stats',JSON.stringify(STAT));}
@@ -603,7 +619,7 @@ function statText(){
   return`Datos de juego desde ${STAT.desde} · ${Math.round(STAT.seg/60)} min jugados · ${rows.join(' ‖ ')}${top?' ‖ fallos más repetidos: '+top:''}`;
 }
 function goHome(){
-  if(playing()&&S.mode!=='tut')statAdd('aban');statSave();
+  if(playing()&&S.mode!=='tut')statAdd('aban');statSave();duoModels(null);
   RP=null;REC=null;pressureEnd();vozStop();
   ROLE=null;S.role=null;S.kick=null;S.swipe=null;S.turn=CFG.role==='kicker'&&GL.ok?'kick':'save';
   S.mode='home';S.phase='idle';S.tour=null;S.tut=null;S.banner=null;S.msg=null;S.ball={state:'spot',u:0,trail:[]};S.striker=null;
@@ -699,7 +715,7 @@ const TUT=[
   {title:'Paso 1 de 3',sub:()=>moveHow()+' Ataja el balón.',make:()=>planShot('colocado',0,{g:sgn()*0.85,endH:0.45,clean:true,dur:2.4})},
   {title:'Paso 2 de 3',sub:()=>'Este va arriba. '+diveHow(),make:()=>planShot('alto',0,{g:sgn()*0.8,endH:1.06,clean:true,dur:2.3})},
   {title:'Paso 3 de 3',sub:()=>'Fíjate hacia dónde se inclina el pateador: para allá va el tiro.',make:()=>planShot(Math.random()<0.5?'rasante':'colocado',0,{clean:true,dur:1.9})}];
-function tutPlan(){const st=TUT[S.tut.step];S.banner={title:st.title,sub:st.sub,t:0,dur:Infinity};
+function tutPlan(){const st=TUT[S.tut.step];S.banner={title:st.title,sub:st.sub,t:0,dur:Infinity};if(!S.tut.tries)guia('tut'+S.tut.step,0.5);
   return decorate(st.make(),{honesty:1,stutter:0,feint:0,run:1.7});}
 
 /* ---------- Flujo de juego ---------- */
@@ -771,10 +787,10 @@ function resolve(){
 }
 function afterTut(out){
   const t=S.tut;
-  if(out==='save'){t.step++;t.tries=0;}
-  else{t.tries++;if(t.tries>=3){t.step++;t.tries=0;}else setTimeout(()=>{if(S.mode==='tut'&&S.msg)S.msg={text:'Otra vez',color:C.chalk,t:0};},700);}
+  if(out==='save'){t.step++;t.tries=0;if(t.step<3)guia('bien',0.5);}
+  else{t.tries++;if(t.tries<3)guia('otra',0.8);if(t.tries>=3){t.step++;t.tries=0;}else setTimeout(()=>{if(S.mode==='tut'&&S.msg)S.msg={text:'Otra vez',color:C.chalk,t:0};},700);}
   S.then=()=>{
-    if(t.step>=3){CFG.tutDone=true;saveCfg();S.banner={title:'¡Listo!',sub:'Ahora va en serio.',t:0,dur:1.8};S.phase='after';S.wait=1.6;S.then=()=>{S.banner=null;const f=S.afterTut;S.afterTut=null;f();};}
+    if(t.step>=3){CFG.tutDone=true;saveCfg();S.banner={title:'¡Listo!',sub:'Ahora va en serio.',t:0,dur:1.8};guia('tutfin',0.1);S.phase='after';S.wait=1.6;S.then=()=>{S.banner=null;const f=S.afterTut;S.afterTut=null;f();};}
     else newRound();
   };
   hud();
@@ -789,8 +805,55 @@ function nextEndlessTurn(){
   if(S.role==='keeper')newRound();else if(S.role==='kicker')newKickRound();
   else{S.tIdx=(S.tIdx+1)%2;if(S.tIdx===0)newKickRound();else newRound();}
 }
-function usTurn(){if(S.role==='kicker'||S.role==='both')newKickRound();else ourKick();}
-function themTurn(){if(S.role==='keeper'||S.role==='both')newRound();else autoThemKick();}
+/* ---------- Duelo de dos: dos jugadores en el mismo teléfono ----------
+   Tanda de 5 penales por lado, los dos pateando. Antes de cada penal, el que ataja elige en secreto hacia dónde se
+   lanza (izquierda, medio o derecha) mientras el pateador no mira; después le pasa el teléfono y el otro patea. */
+const duoAbbr=n=>(n||'').trim().toUpperCase().replace(/[^A-ZÁÉÍÓÚÑ0-9]/g,'').slice(0,3)||'J2';
+function duoSetup(){
+  S.mode='card';S.phase='idle';$('duTitle').textContent='Duelo de dos';$('duSub').textContent='Uno patea y el otro elige en secreto hacia dónde se lanza el arquero. Cinco penales cada uno.';
+  $('duNameBox').hidden=false;$('duPick').hidden=true;$('duName').value=CFG.name2||'';$('duGo').hidden=false;$('duGo').textContent='Empezar';$('duGo').onclick=duoStart;$('duBack').hidden=false;show('duo');
+}
+function duoStart(){
+  CFG.name2=$('duName').value.trim().slice(0,10);saveCfg();
+  const n1=(CFG.name||'').trim()||'Jugador 1',n2=CFG.name2||'Jugador 2',hx=h=>{const n=parseInt(h.slice(1),16);return[(n>>16)&255,(n>>8)&255,n&255];},kc=hx(KITS[CFG.kit].c),
+    t=TEAMS.slice().sort((a,b)=>{const da=hx(a.color),db=hx(b.color),f=q=>Math.abs(q[0]-kc[0])+Math.abs(q[1]-kc[1])+Math.abs(q[2]-kc[2]);return f(db)-f(da);})[0]; // el equipo del jugador 2 usa el color más distinto al del jugador 1
+  let c1=duoAbbr(n1),c2=duoAbbr(n2);if(c1===c2){c1='J1';c2='J2';}
+  S.tour={round:0,duo:true,sh:{us:[],them:[]},n1,n2,code1:c1,toldK:true};
+  RIVALS.length=0;RIVALS.push({...ROUNDS[0],...t,team:n2,code:c2,stage:'Duelo de dos',short:'Duelo',lower:'duelo',kName:n2,gkName:n2,desc:'',gkDesc:''});
+  startMatch();S.role=ROLE='kicker';S.turn='kick';S.tour.toldK=true;
+}
+function duoTurn(who){ // who: quién patea ('us' = jugador 1, 'them' = jugador 2)
+  const T=S.tour,kicker=who==='us'?T.n1:T.n2,keeper=who==='us'?T.n2:T.n1;T.who=who;T.pick=null;S.phase='duoPick';S.banner=null;S.kick=null;
+  $('duTitle').textContent='Ataja '+keeper;$('duSub').textContent=`${keeper}: elige hacia dónde te lanzas. ¡${kicker}, no mires!`;
+  $('duNameBox').hidden=true;$('duPick').hidden=false;$('duGo').hidden=true;$('duBack').hidden=true;show('duo');if(T.sh.us.length+T.sh.them.length<2)guia('duo1',0.4);
+}
+function duoPicked(dir){
+  const T=S.tour;if(!T||!T.duo||S.phase!=='duoPick'||T.pick!=null)return;T.pick=dir;const kicker=T.who==='us'?T.n1:T.n2;
+  $('duTitle').textContent='Patea '+kicker;$('duSub').textContent=`Pásale el teléfono a ${kicker}.`;$('duPick').hidden=true;
+  if(T.sh.us.length+T.sh.them.length<2)guia('duo2',0.1);
+  $('duGo').hidden=false;$('duGo').textContent='¡Listo!';$('duGo').onclick=()=>{show(null);duoModels(T.who);newKickRound();S.banner={title:'Patea '+kicker,sub:(CFG.kickCount||0)<2?kickHow:'',t:0,dur:(CFG.kickCount||0)<2?Infinity:1.4};cv.focus({preventScroll:true});};
+}
+/* Cuando patea el jugador 2 se cambian los muñecos de la vista de patear: él con la camiseta de su equipo y, al arco, el arquero del jugador 1 */
+function duoModels(who){
+  if(!GL.ok||!GL.charGLB||!GL.meS||!GL.meS.userData.real)return;
+  if(!who){if(GL.duoAlt){const a=GL.duoAlt;a.s.visible=a.k.visible=false;GL.meS=a.s0;GL.rivK=a.k0;}return;}
+  if(!GL.duoAlt||GL.duoAlt.s0.parent!==GL.scene){const kit=KITS[CFG.kit],r=curRival(),me=meLook();
+    const s=makeReal({tat:[1,0],boots:BOOTS[4],style:KIT_ST[r.code]||1,c2:r.shorts,shirt:r.color,shorts:r.shorts,socks:'#f3f2ec',num:10,name:S.tour.n2,numColor:'#ffffff',skin:r.skin,hair:r.hair,height:1.85});
+    const k=makeReal({cut:me.cut,beard:me.beard,mus:me.mus,style:7,c2:col(kit.c,0.5),shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,numColor:kit.t,height:1.92});
+    s.visible=k.visible=false;GL.scene.add(s);GL.scene.add(k);GL.duoAlt={s,k,s0:GL.meS,k0:GL.rivK};}
+  const a=GL.duoAlt;for(const m of[a.s,a.k,a.s0,a.k0])m.visible=false;
+  GL.meS=who==='us'?a.s0:a.s;GL.rivK=who==='us'?a.k0:a.k;
+}
+function duoEnd(w){
+  const T=S.tour,sh=T.sh,win=w==='us'?T.n1:T.n2;duoModels(null);
+  S.mode='card';S.phase='idle';S.banner=null;sfx.final();crowdStop();
+  $('rTitle').textContent='¡Ganó '+win+'!';$('rSub').textContent=`${T.n1} ${cnt(sh.us)} – ${cnt(sh.them)} ${T.n2}`;$('rBig').textContent=`${cnt(sh.us)}–${cnt(sh.them)}`;
+  $('rStars').hidden=true;$('rNote').textContent='';showPrizes([]);
+  setButtons([{t:'Revancha',f:duoStart2},{t:'Volver al menú',f:goHome}]);show('result');hud();
+}
+function duoStart2(){$('duName').value=CFG.name2||'';duoStart();}
+function usTurn(){if(S.tour&&S.tour.duo)return duoTurn('us');if(S.role==='kicker'||S.role==='both')newKickRound();else ourKick();}
+function themTurn(){if(S.tour&&S.tour.duo)return duoTurn('them');if(S.role==='keeper'||S.role==='both')newRound();else autoThemKick();}
 function autoThemKick(){
   const r=RIVALS[S.tour.round];S.phase='themKick';
   const p=[0.7,0.75,0.8][S.tour.round]+(CFG.diff==='facil'?-0.08:CFG.diff==='dificil'?0.05:0);
@@ -867,6 +930,7 @@ function startMatch(){
 }
 function endMatch(w){
   statAdd(w==='us'?'gan':'per');statSave();
+  if(S.tour&&S.tour.duo)return duoEnd(w);
   if(DIAG.t0){DIAG.dur=(performance.now()-DIAG.t0)/1000;DIAG.shots=S.tour.sh.us.length+S.tour.sh.them.length;DIAG.t0=0;}
   const r=RIVALS[S.tour.round],sh=S.tour.sh,score=`${cnt(sh.us)}–${cnt(sh.them)}`;
   S.mode='card';S.phase='idle';S.banner=null;sfx.final();crowdStop();vozEnd(w);
@@ -1418,7 +1482,7 @@ function draw(){
     if(!playing()&&((GL.mf=(GL.mf||0)+1)%3))return;
     try{glSync(S.lastDt||0.016);GL.composer.render();}
     catch(e){console.error(e);GL.ok=false;GL.failed=true;$('gl').hidden=true;if(S.turn==='kick'||S.role&&S.role!=='keeper')goHome();renderRoleUI();}
-    if(GL.ok){ctx.clearRect(0,0,W,H);drawTrail3();drawKickOverlay();drawKickAid();drawAimControl();drawParts();drawTutHint();drawPressure();drawRivalChip();drawCelHint();drawTvTag();if(!RP)drawMsg();drawReplayOverlay();
+    if(GL.ok){ctx.clearRect(0,0,W,H);drawTrail3();drawKickOverlay();drawKickAid();drawAimControl();drawKickHint();drawParts();drawTutHint();drawPressure();drawRivalChip();drawCelHint();drawTvTag();if(!RP)drawMsg();drawReplayOverlay();
       const fa=S.phase==='intro'?smooth(introLen()-0.5,introLen(),S.introT):(S.fadeIn||0)/0.35;if(fa>0){ctx.fillStyle=`rgba(0,0,0,${fa})`;ctx.fillRect(0,0,W,H);}drawBanner();return;}
   }
   bake();
@@ -1856,7 +1920,7 @@ function makePlayer(o){
 }
 function meLook(){const c=PEINADOS[CFG.cut]||PEINADOS.normal,b=BARBAS[CFG.beard]||BARBAS.no,t=TATS[CFG.tat]||TATS.no;return{cut:c.c,beard:b.b,mus:b.m,tat:t.t,legTat:t.l};}
 function glBuildPlayers(){
-  const sc=GL.scene;if(GL.rivPool){for(const m of GL.rivPool)sc.remove(m);GL.rivPool=null;}for(const k of['meK','meS','rivS','rivK']){if(GL[k]){sc.remove(GL[k]);if(!GL[k].userData.real)disposeTree(GL[k]);}}
+  const sc=GL.scene;if(GL.duoAlt){const a=GL.duoAlt;for(const m of[a.s,a.k,a.s0,a.k0])sc.remove(m);GL.meS=a.s0;GL.rivK=a.k0;GL.duoAlt=null;}if(GL.rivPool){for(const m of GL.rivPool)sc.remove(m);GL.rivPool=null;}for(const k of['meK','meS','rivS','rivK']){if(GL[k]){sc.remove(GL[k]);if(!GL[k].userData.real)disposeTree(GL[k]);}}
   if(GL.charGLB){const kit=KITS[CFG.kit],r=curRival(),me=meLook();
     GL.meK=makeReal({cut:me.cut,beard:me.beard,mus:me.mus,legTat:me.legTat,style:7,c2:col(kit.c,0.5),shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,name:CFG.name,numColor:kit.t,height:1.9});
     GL.meS=makeReal({...me,capt:true,boots:BOOTS[(CFG.num||1)%BOOTS.length],style:(DESIGNS[CFG.design]||DESIGNS.rayas).s,c2:kit.t,shirt:kit.c,shorts:'#f3f2ec',socks:kit.c,num:CFG.num,name:CFG.name,numColor:kit.t,height:1.85});
@@ -2194,7 +2258,7 @@ function recolorCrowd(){
 }
 function screenInfo(){
   if(S.msg&&/GO+L|ATAJ|ESTIRADA|ATRAP/.test(S.msg.text))return['big',S.msg.text.replace(/[¡!]/g,'')];
-  if(S.mode==='tour'&&S.tour&&S.tour.sh){const r=RIVALS[S.tour.round],sh=S.tour.sh;return['score',`TÚ  ${cnt(sh.us)} - ${cnt(sh.them)}  ${r.code}`,r.stage.toUpperCase()];}
+  if(S.mode==='tour'&&S.tour&&S.tour.sh){const r=RIVALS[S.tour.round],sh=S.tour.sh;return['score',`${S.tour.duo?S.tour.code1:'TÚ'}  ${cnt(sh.us)} - ${cnt(sh.them)}  ${r.code}`,r.stage.toUpperCase()];}
   if(S.mode==='endless')return['score',`${S.role==='kicker'?'GOLES':S.role==='both'?'PUNTOS':'ATAJADAS'}  ${S.saves}`,'VIDAS  '+'●'.repeat(Math.max(0,S.lives))+'○'.repeat(Math.max(0,3-S.lives))];
   return['title','DUELO DE PENALES',(STAGES[CFG.stage]||{p:''}).p.toUpperCase()];
 }
@@ -2470,6 +2534,7 @@ function poseKeeperReal(dt){
 }
 /* Antes de patear en la copa: el pateador acomoda la pelota en el punto penal y retrocede a tomar carrera (1,2 s).
    Después del remate: si no fue gol se lamenta; si fue gol gira trotando y festeja. Nunca se queda congelado. */
+const DUO_SIGN=1; // lado de la pantalla → lado del arco en la vista de patear
 const PRE_T=1.2,TURN_T=0.9,TV_T=1.3; // TV_T: primer plano del pateador, como en la tele, la primera vez que patea cada uno
 function prePose(m,R,u,dt,end){ // u: 0 → 1; end: dónde queda parado al terminar
   const A=m.userData.acts;if(!A.pl||!A.jb)return false;const px=0.02,pz=11.62;
@@ -2550,6 +2615,7 @@ function newKickRound(){
   S.kick={t:0,step:'aim',pw:0,drag:null,lvl:kickLevel(),aim:{x:0,y:1.2},ai:{x:0,dir:null,diveAt:99,stay:false},b:{x:0,y:0.11,z:11,vx:0,vy:0,vz:0,spin:0},res:null,shot:null};
   S.banner=(CFG.kickCount||0)<2||S.input==='key'?{title:'Tu turno de patear',sub:kickHow,t:0,dur:Infinity}:(S.role==='both'?{title:'¡Te toca patear!',sub:'',t:0,dur:1.4}:null);
   if(S.mode==='tour'&&S.tour&&!S.tour.toldK){S.tour.toldK=true;const r=RIVALS[S.tour.round];S.banner={title:'¿Dónde se tira '+r.gkName+'?',viz:{p:r.gkPref},t:0,dur:3.2};}
+  if((CFG.kickCount||0)<2&&S.input!=='key')guia(kickCtrl()==='apuntar'?'ap1':'des',0.9);
   pressureStart();sfx.whistle();hud();
 }
 function kickPos(s,u){
@@ -2562,7 +2628,9 @@ function shoot(p,tx,ty,curve){
   CFG.kickCount=(CFG.kickCount||0)+1;saveCfg();S.banner=null;
   const fire=S.powOn==='fire',T=clamp(0.98-0.42*Math.min(p,1.1),0.52,0.98)*(fire?0.78:1);
   k.shot={p,tx,ty,curve,T};k.fire=fire;S.phase='krun';k.t=0;S.shotN=(S.shotN||0)+1;recStart();
-  const ai=k.ai,L=k.lvl;let pRead=clamp(0.28+L*0.035+GK_READ[CFG.diff],0.15,0.72)*(1-0.35*Math.abs(curve));
+  const ai=k.ai,L=k.lvl;
+  if(S.tour&&S.tour.duo){const dd=S.tour.pick||0;ai.read=false;if(dd===0){if(ty>1.7){ai.dir=0;ai.diveAt=KT()+T*0.35;}else{ai.dir=null;ai.stay=true;}}else{ai.dir=dd*DUO_SIGN;ai.diveAt=KT()+rand(0.0,0.06);}return;}
+  let pRead=clamp(0.28+L*0.035+GK_READ[CFG.diff],0.15,0.72)*(1-0.35*Math.abs(curve));
   if(p<0.35)pRead=0.9;else if(p<0.6)pRead=Math.max(pRead,0.55+(0.6-p));
   const realDir=Math.abs(tx)<0.9?0:Math.sign(tx);ai.read=Math.random()<pRead;
   if(ai.read){if(realDir===0){if(ty>1.7){ai.dir=0;ai.diveAt=KT()+T*0.35;}else{ai.dir=null;ai.stay=true;}}
@@ -2629,7 +2697,9 @@ function afterKickEndless(goal){
   hud();S.then=()=>{if(S.lives<=0)endEndless();else nextEndlessTurn();};
 }
 function afterKickTour(goal){
-  const sh=S.tour.sh;sh.us.push(goal);if(goal)addSave();
+  const sh=S.tour.sh;
+  if(S.tour.duo){const who=S.tour.who;sh[who].push(goal);hud();S.then=()=>{const w=decided(sh);if(w)endMatch(w);else if(who==='us')themTurn();else usTurn();};return;}
+  sh.us.push(goal);if(goal)addSave();
   hud();S.then=()=>{const w=decided(sh);if(w)endMatch(w);else themTurn();};
 }
 /* Deslizar para patear: dirección = ángulo del gesto, altura = rapidez, efecto = curvatura */
@@ -2915,6 +2985,15 @@ function powerShot(){
   if(k.shot)Object.assign(k.shot,{ctrl:'apuntar',ax:a.x,ay:a.y,label,v});
   if(label==='perfecto'){say('¡Perfecto!',C.sun);dailyEv('perfect');}
 }
+/* Las dos primeras veces que se patea, un dedo muestra dónde tocar (apuntar y fuerza) o cómo deslizar */
+function drawKickHint(){
+  if(!GL.ok||RP||S.turn!=='kick'||!S.kick||S.phase!=='aim'||(CFG.kickCount||0)>=2||S.input==='key'||S.kick.drag!=null||(S.swipe&&S.swipe.active))return;
+  const k=S.kick,u=G.unit,T=(S.time%1.5)/1.5,bs=glProject(new THREE.Vector3(0,0.11,11));
+  if(kickCtrl()==='apuntar'){
+    if(k.step==='aim'){const tg=glProject(new THREE.Vector3(2.3,1.5,0)),pr=T<0.5?1:1-(T-0.5)*0.5;drawFinger(tg.x,tg.y+u*0.02*(T<0.5?1-T*2:0),T<0.85?pr:0.2);}
+    else{const bh=u*0.36,bx=Math.min(W-34,bs.x+u*0.17)+8,by=bs.y-bh*0.9+bh*0.3;drawFinger(bx+u*0.07,by,0.55+0.45*Math.abs(Math.sin(S.time*5)));}}
+  else{const e=smooth(0,0.55,T);drawFinger(bs.x+u*0.12*e,bs.y-u*0.42*e,T<0.8?1:Math.max(0,1-(T-0.8)/0.2));}
+}
 function drawAimControl(){
   if(!GL.ok||RP||S.turn!=='kick'||!S.kick||kickCtrl()!=='apuntar')return;
   const k=S.kick,u=G.unit;let a=k.aim,al=1;
@@ -2950,7 +3029,7 @@ function keeperFact(r){const[k,v]=topPref(r.gkPref);return k==='C'?`${r.gkName} 
 function pickSide(p){const x=Math.random();return x<p.L?-1:x<p.L+p.C?0:1;}
 function sideIcon(n){return n<0?'◀':n>0?'▶':'●';}
 function drawRivalChip(){
-  if(S.mode!=='tour'||!S.tour||RP||!playing())return;const r=RIVALS[S.tour.round];let name,h;
+  if(S.mode!=='tour'||!S.tour||S.tour.duo||RP||!playing())return;const r=RIVALS[S.tour.round];let name,h;
   if(S.turn==='save'&&(S.phase==='runup'||S.phase==='kick')){name=r.team;h=S.tour.hist||[];}
   else if(S.turn==='kick'&&S.phase==='aim'){name=r.gkName+' se tiró';h=S.tour.gkHist||[];}else return;
   const c={'-1':0,'0':0,'1':0};h.forEach(x=>c[x]++);
@@ -3204,7 +3283,7 @@ $('mute').addEventListener('click',()=>{if(SON.out)SON.out.gain.setTargetAtTime(
    o «Mi voz»: frases grabadas en el mismo teléfono (se guardan en el navegador, no salen del equipo).
    Cada clave tiene varias variantes y se sacan como de una bolsa: no se repite una hasta usar las demás.
    Según la jugada elige frases más precisas (al ángulo, engañó al arquero, voló, racha, marcador). */
-const VOZ_N={"inicio":6,"semi":3,"final":3,"prepara":10,"preparak":5,"primer":2,"gol":12,"golazo":5,"golengano":4,"golmedio":2,"golrasante":2,"golfuerte":3,"paloadentro":3,"golequipo":4,"atajada":10,"atajvuelo":5,"atajparado":3,"golrival":8,"golrivalengano":3,"golrivalpicada":2,"atajrival":6,"atajrivalcatch":2,"fallaequipo":4,"palo":4,"travesano":3,"afuera":4,"arriba":3,"palorival":3,"afuerarival":3,"racha2":2,"racha3":2,"rachag3":2,"dec_metewin":2,"dec_metelose":2,"dec_atajawin":2,"dec_atajalose":2,"dec_muerte":2,"dec_vida":2,"ganamos":5,"alafinal":3,"campeon":4,"perdimos":5,"findesafio":4,"record":2,"rival_PUM":2,"golr_PUM":2,"gkr_PUM":2,"rival_HAL":2,"golr_HAL":2,"gkr_HAL":2,"rival_TIB":2,"golr_TIB":2,"gkr_TIB":2,"rival_CON":2,"golr_CON":2,"gkr_CON":2,"rival_TOR":2,"golr_TOR":2,"gkr_TOR":2,"rival_DEL":2,"golr_DEL":2,"gkr_DEL":2,"rival_LOB":2,"golr_LOB":2,"gkr_LOB":2,"m_0_1":1,"m_0_2":1,"m_0_3":1,"m_1_0":1,"m_1_1":1,"m_1_2":1,"m_1_3":1,"m_1_4":1,"m_2_0":1,"m_2_1":1,"m_2_2":1,"m_2_3":1,"m_2_4":1,"m_2_5":1,"m_3_0":1,"m_3_1":1,"m_3_2":1,"m_3_3":1,"m_3_4":1,"m_3_5":1,"m_3_6":1,"m_4_1":1,"m_4_2":1,"m_4_3":1,"m_4_4":1,"m_4_5":1,"m_4_6":1,"m_4_7":1,"m_5_2":1,"m_5_3":1,"m_5_4":1,"m_5_5":1,"m_5_6":1,"m_5_7":1,"m_6_3":1,"m_6_4":1,"m_6_5":1,"m_6_6":1,"m_6_7":1,"m_7_4":1,"m_7_5":1,"m_7_6":1,"m_7_7":1};
+const VOZ_N={"g_tut0":1,"g_tut1":1,"g_tut2":1,"g_bien":3,"g_otra":1,"g_tutfin":1,"g_ap1":1,"g_ap2":1,"g_des":1,"g_duo1":1,"g_duo2":1,"inicio":6,"semi":3,"final":3,"prepara":10,"preparak":5,"primer":2,"gol":12,"golazo":5,"golengano":4,"golmedio":2,"golrasante":2,"golfuerte":3,"paloadentro":3,"golequipo":4,"atajada":10,"atajvuelo":5,"atajparado":3,"golrival":8,"golrivalengano":3,"golrivalpicada":2,"atajrival":6,"atajrivalcatch":2,"fallaequipo":4,"palo":4,"travesano":3,"afuera":4,"arriba":3,"palorival":3,"afuerarival":3,"racha2":2,"racha3":2,"rachag3":2,"dec_metewin":2,"dec_metelose":2,"dec_atajawin":2,"dec_atajalose":2,"dec_muerte":2,"dec_vida":2,"ganamos":5,"alafinal":3,"campeon":4,"perdimos":5,"findesafio":4,"record":2,"rival_PUM":2,"golr_PUM":2,"gkr_PUM":2,"rival_HAL":2,"golr_HAL":2,"gkr_HAL":2,"rival_TIB":2,"golr_TIB":2,"gkr_TIB":2,"rival_CON":2,"golr_CON":2,"gkr_CON":2,"rival_TOR":2,"golr_TOR":2,"gkr_TOR":2,"rival_DEL":2,"golr_DEL":2,"gkr_DEL":2,"rival_LOB":2,"golr_LOB":2,"gkr_LOB":2,"m_0_1":1,"m_0_2":1,"m_0_3":1,"m_1_0":1,"m_1_1":1,"m_1_2":1,"m_1_3":1,"m_1_4":1,"m_2_0":1,"m_2_1":1,"m_2_2":1,"m_2_3":1,"m_2_4":1,"m_2_5":1,"m_3_0":1,"m_3_1":1,"m_3_2":1,"m_3_3":1,"m_3_4":1,"m_3_5":1,"m_3_6":1,"m_4_1":1,"m_4_2":1,"m_4_3":1,"m_4_4":1,"m_4_5":1,"m_4_6":1,"m_4_7":1,"m_5_2":1,"m_5_3":1,"m_5_4":1,"m_5_5":1,"m_5_6":1,"m_5_7":1,"m_6_3":1,"m_6_4":1,"m_6_5":1,"m_6_6":1,"m_6_7":1,"m_7_4":1,"m_7_5":1,"m_7_6":1,"m_7_7":1};
 const VOZ={el:null,q:[],last:{},bag:{},urls:{},blob:{},ab:{},tm:0};
 const vozMode=()=>CFG.voz==='off'||CFG.voz==='mia'?CFG.voz:'juego';
 const VSLOTS=[
@@ -3252,6 +3331,12 @@ function vozPick(k){
 }
 /* relator('gol') o relator(['inicio','rival_TIB']): o.delay en segundos; o.chance para frases de relleno;
    o.low = no interrumpe si ya está hablando. */
+/* Guía hablada para los que todavía no leen: explica con voz qué hay que hacer (tutorial, primeros tiros y duelo de dos).
+   Usa la voz del juego aunque el relator esté en «Mi voz»; se calla si el relator está apagado o el sonido en silencio. */
+function guia(key,delay=0.35){
+  if(CFG.muted||vozMode()==='off')return;clearTimeout(VOZ.gt);
+  VOZ.gt=setTimeout(()=>{if(CFG.muted||!SON.ok)return;const src=vozPick('g_'+key);if(src){clearTimeout(VOZ.tm);VOZ.q=[];sonVoz(src);}},delay*1000);
+}
 function relator(keys,o={}){
   const m=vozMode();if(m==='off'||CFG.muted||S.mode==='tut')return;
   if(o.chance!=null&&Math.random()>o.chance)return;
@@ -3281,7 +3366,7 @@ function vozRacha(kind,ok){
   return null;
 }
 /* Momentos del partido */
-function vozIntro(){S.vozR={s:0,g:0};const r=vozTeam();if(!r)return;relator([['inicio','semi','final'][S.tour.round]||'inicio','rival_'+r.code],{delay:0.9});}
+function vozIntro(){S.vozR={s:0,g:0};if(S.tour&&S.tour.duo)return;const r=vozTeam();if(!r)return;relator([['inicio','semi','final'][S.tour.round]||'inicio','rival_'+r.code],{delay:0.9});}
 function vozPress(t){
   if(!t){
     if(S.mode==='tour'&&S.tour&&S.tour.sh&&!S.tour.sh.us.length&&!S.tour.sh.them.length){relator('primer',{delay:0.5,low:true});return;}
@@ -3743,7 +3828,7 @@ cv.addEventListener('pointermove',e=>{
   const dist=Math.hypot(e.clientX-gest.x0,e.clientY-gest.y0);
   if(Math.hypot(vx,vy)>1.1&&dist>24){gest.dived=true;dive(-vy>Math.abs(vx)*1.2?0:Math.sign(vx));}
 });
-const endGest=e=>{if(S.kick&&S.kick.drag!=null&&S.kick.drag===e.pointerId){S.kick.drag=null;if(e.type==='pointerup'&&S.phase==='aim'&&S.kick.step==='aim'){S.kick.step='power';S.kick.pw=0;S.banner=null;}}if(S.swipe&&S.swipe.active&&e.pointerId===S.swipe.id){S.swipe.active=false;if(e.type==='pointerup')evalSwipe(S.swipe.pts);}if(gest&&e.pointerId===gest.id)gest=null;};
+const endGest=e=>{if(S.kick&&S.kick.drag!=null&&S.kick.drag===e.pointerId){S.kick.drag=null;if(e.type==='pointerup'&&S.phase==='aim'&&S.kick.step==='aim'){S.kick.step='power';S.kick.pw=0;S.banner=null;if((CFG.kickCount||0)<2)guia('ap2',0.1);}}if(S.swipe&&S.swipe.active&&e.pointerId===S.swipe.id){S.swipe.active=false;if(e.type==='pointerup')evalSwipe(S.swipe.pts);}if(gest&&e.pointerId===gest.id)gest=null;};
 cv.addEventListener('pointerup',endGest);cv.addEventListener('pointercancel',endGest);
 const isLeft=k=>k==='ArrowLeft'||k==='a'||k==='A',isRight=k=>k==='ArrowRight'||k==='d'||k==='D';
 addEventListener('keydown',e=>{
@@ -3777,6 +3862,8 @@ $('lockerDone').addEventListener('click',()=>{renderHome();show('home');});
 $('iGo').addEventListener('click',()=>{audioInit();startMatch();});
 $('iBack').addEventListener('click',goHome);
 $('quit').addEventListener('click',goHome);
+$('btnDuo').addEventListener('click',()=>{audioInit();duoSetup();});$('duBack').addEventListener('click',goHome);
+$('duPick').addEventListener('click',e=>{const b=e.target.closest('button');if(b)duoPicked(+b.dataset.d);});
 
 glLoad();
 new ResizeObserver(resize).observe(stage);
