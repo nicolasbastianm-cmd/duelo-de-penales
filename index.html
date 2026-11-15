@@ -561,7 +561,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='5.6 · 14 nov 2026';
+const VERSION='5.7 · 15 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -1329,9 +1329,10 @@ function drawBanner(){
   const a=b.dur===Infinity?clamp(b.t/0.2,0,1):clamp(Math.min(b.t/0.2,(b.dur-b.t)/0.3),0,1);if(a<=0)return;
   const w=Math.min(W-24,380),pad=12,tf=Math.round(clamp(G.unit*0.06,18,26)),sf=Math.round(clamp(G.unit*0.042,14,17));
   const sub=typeof b.sub==='function'?b.sub():b.sub;ctx.font=`600 ${sf}px ${BODY}`;const lines=sub?wrapText(sub,w-pad*2):[];
-  const vz=b.viz?66:0,h=pad*2+tf+(lines.length?6+lines.length*sf*1.25:0)+vz,x=(W-w)/2,y=8;
+  const vz=b.viz?66:0,ih=b.ico?58:0,h=pad*2+tf+(lines.length?6+lines.length*sf*1.25:0)+vz+ih,x=(W-w)/2,y=8;
   ctx.save();ctx.globalAlpha=a;ctx.fillStyle='rgba(15,42,23,.92)';roundRect(x,y,w,h,14);ctx.fill();ctx.strokeStyle=C.chalk;ctx.lineWidth=2;ctx.stroke();
-  ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle=C.sun;ctx.font=`${tf}px ${DISPLAY}`;ctx.fillText(b.title,W/2,y+pad);
+  ctx.textAlign='center';ctx.textBaseline='top';if(b.ico)drawIco(b.ico,W/2,y+pad+26,50);
+  ctx.fillStyle=C.sun;{let f=tf;ctx.font=`${f}px ${DISPLAY}`;while(f>13&&ctx.measureText(b.title).width>w-pad*2){f--;ctx.font=`${f}px ${DISPLAY}`;}}ctx.fillText(b.title,W/2,y+pad+ih);
   ctx.fillStyle=C.chalk;ctx.font=`600 ${sf}px ${BODY}`;lines.forEach((l,i)=>ctx.fillText(l,W/2,y+pad+tf+6+i*sf*1.25));
   if(b.viz){ // tres casillas (izquierda, medio, derecha): la más probable va en amarillo, con cuántos de cada 10
     const p=b.viz.p,ks=['L','C','R'],ic=['◀','●','▶'],mx=Math.max(p.L,p.C,p.R),bw=Math.min(92,(w-pad*2-16)/3),y0=y+pad+tf+8,x0=W/2-(bw*3+16)/2;
@@ -1340,6 +1341,27 @@ function drawBanner(){
       ctx.font=`800 ${top?15:13}px ${BODY}`;ctx.fillText(Math.round(p[k]*10)+' de 10',bx+bw/2,y0+42);});
     if(b.viz.high){ctx.fillStyle=C.sun;ctx.font=`800 12px ${BODY}`;ctx.textAlign='right';ctx.fillText('▲ alta',x+w-10,y+pad+8);}}
   ctx.restore();
+}
+/* Dibujos de los consejos: se entienden sin leer (flechas, arco con los rincones marcados, barra de fuerza, ojo...) */
+function drawIco(k,cx,cy,s){
+  const c=ctx,u=s/50;c.save();c.translate(cx,cy);c.scale(u,u);c.lineCap='round';c.lineJoin='round';c.strokeStyle=C.sun;c.fillStyle=C.sun;c.lineWidth=6;
+  const arrow=(x0,y0,x1,y1,hd=11)=>{const a=Math.atan2(y1-y0,x1-x0);c.beginPath();c.moveTo(x0,y0);c.lineTo(x1,y1);c.stroke();
+    c.beginPath();c.moveTo(x1+Math.cos(a)*5,y1+Math.sin(a)*5);c.lineTo(x1-hd*Math.cos(a-0.6),y1-hd*Math.sin(a-0.6));c.lineTo(x1-hd*Math.cos(a+0.6),y1-hd*Math.sin(a+0.6));c.closePath();c.fill();c.stroke();};
+  const goal=()=>{c.save();c.strokeStyle=C.chalk;c.lineWidth=5;c.beginPath();c.moveTo(-34,22);c.lineTo(-34,-18);c.lineTo(34,-18);c.lineTo(34,22);c.stroke();c.restore();};
+  const dot=(x,y,r=6)=>{c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fill();};
+  if(k==='U')arrow(0,20,0,-14);
+  else if(k==='D')arrow(0,-20,0,14);
+  else if(k==='LR'){arrow(-4,0,-26,0);arrow(4,0,26,0);}
+  else if(k==='in'){goal();arrow(-24,4,-10,4,9);arrow(24,4,10,4,9);}
+  else if(k==='swap'){arrow(-22,-9,20,-9);arrow(22,10,-20,10);}
+  else if(k==='fast'){for(const x of[-16,2]){c.beginPath();c.moveTo(x,-16);c.lineTo(x+16,0);c.lineTo(x,16);c.stroke();}}
+  else if(k==='wait'){c.lineWidth=10;c.beginPath();c.moveTo(-9,-15);c.lineTo(-9,15);c.moveTo(9,-15);c.lineTo(9,15);c.stroke();}
+  else if(k==='corners'){goal();dot(-24,-8,7);dot(24,-8,7);}
+  else if(k==='mid'){goal();dot(0,-2,7);c.lineWidth=5;c.beginPath();c.moveTo(0,6);c.lineTo(0,20);c.moveTo(-9,11);c.lineTo(9,11);c.stroke();}
+  else if(k==='bar'){c.fillStyle='rgba(246,243,232,.25)';c.fillRect(-8,-24,16,48);c.fillStyle='#58d26b';c.fillRect(-8,-15,16,13);c.strokeStyle=C.chalk;c.lineWidth=3;c.strokeRect(-8,-24,16,48);
+    c.fillStyle=C.sun;c.beginPath();c.moveTo(11,-8.5);c.lineTo(27,-17);c.lineTo(27,0);c.closePath();c.fill();}
+  else if(k==='eye'){c.lineWidth=5;c.beginPath();c.moveTo(-28,0);c.quadraticCurveTo(0,-24,28,0);c.quadraticCurveTo(0,24,-28,0);c.closePath();c.stroke();dot(0,0,8);}
+  c.restore();
 }
 function drawFinger(x,y,a){
   const r=G.unit*0.035;ctx.save();ctx.globalAlpha=a;
@@ -2732,33 +2754,34 @@ function poseExtras(dt){
 
 /* ---------- Consejos: por qué se falló ---------- */
 function showTip(text){
-  if(!text||S.mode==='tut')return;if(S.lastTip===text){S.lastTip=null;return;}S.lastTip=text;
-  S.banner={title:'Consejo',sub:text,t:-0.6,dur:3.0};S.tipUntil=S.time+2.5;
+  if(!text||S.mode==='tut')return;{const key=String(text);if(S.lastTip===key){S.lastTip=null;return;}S.lastTip=key;}
+  const[ico,txt]=Array.isArray(text)?text:[null,text];
+  S.banner=ico?{title:txt,ico,sub:'',t:-0.6,dur:3.0}:{title:'Consejo',sub:txt,t:-0.6,dur:3.0};S.tipUntil=S.time+2.5;
 }
 function keeperTip(b,p){
   const k=S.keeper,side=Math.sign(p.x-k.x)||1,far=Math.abs(p.x-k.x)>G.reach*0.55,high=b.endH>0.85*G.kH;
-  if(b.type==='picadita'&&((k.dive&&k.dive.dir)||(k.rec>0&&k.lastDir)))return'Te picaron la pelota: en las picaditas quédate al medio.';
-  if(k.dive){if(k.dive.dir&&k.dive.dir!==side)return'Te lanzaste al lado equivocado. Fíjate hacia dónde se inclina el pateador.';return'Te lanzaste un poco tarde: anticípate apenas patee.';}
-  if(k.rec>0){if(k.lastDir&&k.lastDir!==side)return'Te lanzaste al lado equivocado. Fíjate hacia dónde se inclina el pateador.';return'Te lanzaste muy temprano: espera a que patee.';}
-  if(high)return'Iba alta: para esas hay que lanzarse.';
-  if(far)return'Estabas lejos: muévete hacia donde se inclina el pateador, o lánzate.';
-  return'¡Por poco! Lánzate hacia el balón.';
+  if(b.type==='picadita'&&((k.dive&&k.dive.dir)||(k.rec>0&&k.lastDir)))return['mid','¡Picadita! Quédate al medio'];
+  if(k.dive){if(k.dive.dir&&k.dive.dir!==side)return['eye','Era al otro lado: mira al pateador'];return['fast','Lánzate antes'];}
+  if(k.rec>0){if(k.lastDir&&k.lastDir!==side)return['eye','Era al otro lado: mira al pateador'];return['wait','Espera a que patee'];}
+  if(high)return['U','Iba alta: ¡lánzate!'];
+  if(far)return['LR','Muévete hacia el balón'];
+  return['LR','¡Por poco! Lánzate'];
 }
 function kickTip(out,s,k){
   if(s.ctrl==='apuntar'){
-    if(out==='out'||out==='bar'){if(s.ay>2.3)return'Apuntaste muy arriba: baja un poco la mira.';if(Math.abs(s.ax)>3.5)return'Apuntaste afuera: pon la mira dentro del arco.';
-      return s.label==='fuerte'?'Te pasaste de fuerza y se desvió: detén la barra en la zona verde.':'Se desvió: en la zona verde el tiro sale justo donde apuntas.';}
-    if(out==='post')return'¡Por poquito! Apunta un pelo más adentro.';
-    if(out==='save'||out==='catch'){if(s.p<0.6)return'Muy suave: detén la barra más arriba, en la zona verde.';if(Math.abs(s.tx)<1.6)return'Muy al centro: apunta a los rincones.';
-      if(k.ai.read)return'El arquero adivinó el lado. Fíjate hacia dónde suele tirarse.';return'¡Gran atajada! Apunta más arriba, al ángulo.';}
+    if(out==='out'||out==='bar'){if(s.ay>2.3)return['D','Apunta más abajo'];if(Math.abs(s.ax)>3.5)return['in','Apunta dentro del arco'];
+      return s.label==='fuerte'?['bar','Para la barra en el verde']:['bar','Para la barra en el verde'];}
+    if(out==='post')return['in','¡Casi! Un poco más adentro'];
+    if(out==='save'||out==='catch'){if(s.p<0.6)return['bar','Muy suave: llega al verde'];if(Math.abs(s.tx)<1.6)return['corners','Apunta a los rincones'];
+      if(k.ai.read)return['swap','Te adivinó: cambia de lado'];return['corners','Arriba, al ángulo'];}
     return null;}
-  if(out==='out'||out==='bar')return s.ty>2.3?'Muy fuerte: salió por arriba. Desliza un poco más lento.':'Muy abierto: apunta un poco más adentro del palo.';
-  if(out==='post')return'¡Por poquito! Apunta un pelo más adentro.';
+  if(out==='out'||out==='bar')return s.ty>2.3?['D','Muy fuerte: desliza más lento']:['in','Un poco más adentro'];
+  if(out==='post')return['in','¡Casi! Un poco más adentro'];
   if(out==='save'||out==='catch'){
-    if(s.p<0.4)return'Muy suave: desliza más rápido para que no alcance a llegar.';
-    if(Math.abs(s.tx)<1.6)return'Muy al centro: busca los rincones.';
-    if(k.ai.read)return'El arquero adivinó el lado. Prueba el otro rincón o dale efecto.';
-    return'¡Gran atajada! Los tiros altos al ángulo son los más difíciles de atajar.';}
+    if(s.p<0.4)return['fast','Muy suave: desliza más rápido'];
+    if(Math.abs(s.tx)<1.6)return['corners','Busca los rincones'];
+    if(k.ai.read)return['swap','Te adivinó: cambia de lado'];
+    return['corners','Arriba, al ángulo'];}
   return null;
 }
 
