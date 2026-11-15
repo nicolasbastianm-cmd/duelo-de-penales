@@ -756,7 +756,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo']
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='6.4 · 15 nov 2026';
+const VERSION='6.5 · 15 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -2465,11 +2465,18 @@ const KS=0.33,KT=()=>GL.charGLB?KICK_T-KS:0.45;
 /* Caras distintas: cabezas (cara y pelo) de otros personajes, que se montan sobre el cuello del jugador.
    color = cuánto hay que teñir la piel del cuerpo para que cuello y manos igualen el tono de esa cara. */
 const HEADS={leo:[0.991,1.002,0.985],josh:[1.303,1.174,1.239],c28:[0.372,0.204,0.096],c42:[1.139,1.083,1.027],c01:[1.292,1.321,1.504]},HEAD_IDS=Object.keys(HEADS);
+/* Los modelos van como archivos binarios (.glb) en el sitio publicado, un 25% más livianos que en texto. Si el .glb no
+   está (como en la copia de Claude), se usa la versión en texto (.js). El número de versión evita usar una copia vieja guardada. */
+const MODEL_V={jugador:7,cabezas:1};
+async function loadBin(name,glob){
+  try{const r=await fetch(name+'.glb?v='+MODEL_V[name]);if(r.ok){const b=await r.arrayBuffer();if(b.byteLength>100000)return b;}}catch(e){}
+  if(!window[glob])await new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=name+'.js';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});
+  const s64=window[glob],bin=new Uint8Array(s64.length*3/4|0);let raw=atob(s64);for(let i=0;i<raw.length;i++)bin[i]=raw.charCodeAt(i);raw=null;window[glob]=null;
+  return bin.buffer.slice(0,bin.length);
+}
 async function loadHeads(GLTFLoader){
   try{
-    if(!window.CABEZAS_GLB)await new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='cabezas.js?v=1';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});
-    const s64=window.CABEZAS_GLB,bin=new Uint8Array(s64.length*3/4|0);let raw=atob(s64);for(let i=0;i<raw.length;i++)bin[i]=raw.charCodeAt(i);raw=null;window.CABEZAS_GLB=null;
-    const g=await new GLTFLoader().parseAsync(bin.buffer.slice(0,bin.length),''),hs={};
+    const g=await new GLTFLoader().parseAsync(await loadBin('cabezas','CABEZAS_GLB'),''),hs={};
     g.scene.traverse(o=>{if(HEADS[o.name])hs[o.name]=o;});
     for(const k in hs)hs[k].traverse(n=>{if(n.isMesh){const hair=/hair/i.test(n.name+' '+(n.material.name||''));n.material.roughness=hair?0.8:0.72;n.material.metalness=0;n.material.envMapIntensity=GL.envI||0.6;
       if(hair){n.material.alphaTest=0.4;n.material.transparent=false;n.material.side=THREE.DoubleSide;}n.userData.hair=hair;n.frustumCulled=false;n.castShadow=false;}});
@@ -2479,9 +2486,7 @@ async function loadHeads(GLTFLoader){
 async function loadChar(){
   try{
     const[{GLTFLoader},SU]=await Promise.all([import('three/addons/loaders/GLTFLoader.js'),import('three/addons/utils/SkeletonUtils.js')]);
-    if(!window.JUGADOR_GLB)await new Promise((res,rej)=>{const sc=document.createElement('script');sc.src='jugador.js?v=7';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});
-    const s64=window.JUGADOR_GLB,bin=new Uint8Array(s64.length*3/4|0);let raw=atob(s64);for(let i=0;i<raw.length;i++)bin[i]=raw.charCodeAt(i);raw=null;window.JUGADOR_GLB=null;
-    const g=await new GLTFLoader().parseAsync(bin.buffer.slice(0,bin.length),'');GL.SU=SU;GL.charGLB=g;GL.pKey=null;
+    const g=await new GLTFLoader().parseAsync(await loadBin('jugador','JUGADOR_GLB'),'');GL.SU=SU;GL.charGLB=g;GL.pKey=null;
     loadHeads(GLTFLoader); // las caras extra llegan después; mientras tanto todos usan la cara original
   }catch(e){console.warn('Sin modelo realista; se usan jugadores simples',e);}
 }
