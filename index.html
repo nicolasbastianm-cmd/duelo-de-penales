@@ -95,7 +95,7 @@ input[type=text]:focus-visible,input[type=number]:focus-visible{outline:3px soli
 .seg{display:grid;grid-template-columns:repeat(3,1fr);border:2px solid var(--chalk);border-radius:12px;overflow:hidden}
 .seg label{position:relative;font-size:15px;font-weight:800}
 .seg span{display:flex;flex-direction:column;justify-content:center;height:100%;box-sizing:border-box;text-align:center;padding:7px 4px;cursor:pointer;line-height:1.15}
-#ctrlSeg,#sonSeg{grid-template-columns:repeat(2,1fr)}#stageSeg,#qSeg,#disSeg{grid-template-columns:repeat(2,1fr)}#stageSeg label:nth-child(odd) span,#qSeg label:nth-child(odd) span,#disSeg label:nth-child(odd) span{border-left:0}#stageSeg label:nth-child(n+3) span,#qSeg label:nth-child(n+3) span,#disSeg label:nth-child(n+3) span{border-top:2px solid var(--chalk)}
+#ctrlSeg,#sonSeg,#langSeg{grid-template-columns:repeat(2,1fr)}#stageSeg,#qSeg,#disSeg{grid-template-columns:repeat(2,1fr)}#stageSeg label:nth-child(odd) span,#qSeg label:nth-child(odd) span,#disSeg label:nth-child(odd) span{border-left:0}#stageSeg label:nth-child(n+3) span,#qSeg label:nth-child(n+3) span,#disSeg label:nth-child(n+3) span{border-top:2px solid var(--chalk)}
 .seg span small{font-size:11px;font-weight:600;opacity:.85}
 .seg label+label span{border-left:2px solid var(--chalk)}
 .seg input:checked+span{background:var(--chalk);color:var(--ink)}
@@ -256,6 +256,10 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
           <fieldset><legend>Barba</legend><div class="seg" id="beardSeg"></div></fieldset>
           <fieldset><legend>Tatuajes</legend><div class="seg" id="tatSeg"></div></fieldset>
           <fieldset><legend>Cancha</legend><div class="seg" id="stageSeg"></div></fieldset>
+          <fieldset><legend>Idioma</legend><div class="seg" id="langSeg" data-notr>
+            <label><input type="radio" name="lang" id="lg-es" value="es"><span>Español</span></label>
+            <label><input type="radio" name="lang" id="lg-en" value="en"><span>English</span></label>
+          </div></fieldset>
           <fieldset><legend>Control para patear</legend><div class="seg" id="ctrlSeg">
             <label><input type="radio" name="kickctrl" id="kc-apuntar" value="apuntar"><span>Apuntar y fuerza</span></label>
             <label><input type="radio" name="kickctrl" id="kc-deslizar" value="deslizar"><span>Deslizar</span></label>
@@ -355,6 +359,176 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js","three/addons/":"./lib/jsm/"}}</script>
 <script>
 (()=>{
+/* ---------- Idioma ----------
+   El juego está escrito en español. Cuando el idioma es inglés, cada texto se traduce justo antes de mostrarse
+   (en la página y en lo que se dibuja en la cancha) con este diccionario: primero frases exactas, después patrones
+   para las frases que llevan números o nombres. Lo que no está aquí se muestra en español. */
+const LANG=(()=>{try{const q=new URLSearchParams(location.search).get('lang');if(q==='en'||q==='es')return q;
+  const c=JSON.parse(localStorage.getItem('arquerito-cfg')||'{}').lang;if(c==='en'||c==='es')return c;}catch(e){}
+  return /^es/i.test(navigator.language||'es')?'es':'en';})();
+const EN={
+// menú principal
+'Duelo de Penales':'Penalty Duel','Tanda de penales':'Penalty shootout','Cancha: mueve al arquero para atajar los penales':'Pitch: move the goalkeeper to save the penalties',
+'¿Qué quieres hacer?':'What do you want to do?','Atajar':'Save','Patear':'Shoot','Los dos':'Both','Dificultad':'Difficulty','Fácil':'Easy','Normal':'Normal','Difícil':'Hard',
+'Torneo':'Tournament','3 partidos de penales hasta la copa':'3 shootouts to win the cup','Duelo de dos':'Two-player duel','Dos jugadores en el mismo teléfono':'Two players on the same phone',
+'Desafío infinito':'Endless challenge','¿Cuántas atajas con 3 vidas?':'How many can you save with 3 lives?','¿Cuántos goles haces con 3 vidas?':'How many can you score with 3 lives?','Pateas y atajas: ¿cuántos puntos haces?':'Shoot and save: how many points can you get?',
+'Vestuario':'Locker room','Tienda':'Shop','Vitrina':'Trophy cabinet','Tutorial':'Tutorial','Total':'Total','Récord':'Best','Silenciar':'Mute','Volver al menú':'Back to menu','Goles que te quedan':'Goals you have left','Poder':'Power',
+'Sube de nivel atajando, metiendo goles y ganando.':'Level up by saving, scoring and winning.','Desafío de hoy':"Today's challenge",'✓ Listo':'✓ Done','Nivel máximo':'Max level',
+'Copa del Barrio':'Neighbourhood Cup','Copa de la Ciudad':'City Cup','Copa Nacional':'National Cup','Copa de Campeones':'Champions Cup',
+'Torneo ganado':'Tournament won','Torneo sin ganar':'Tournament not won yet','TÚ':'YOU','RIV':'RIV','vs':'vs',
+// vestuario
+'Nombre':'Name','Número':'Number','Arquero':'Keeper','Camiseta':'Shirt','Diseño de la camiseta':'Shirt design','Guantes':'Gloves','Peinado':'Haircut','Barba':'Beard','Tatuajes':'Tattoos','Cancha':'Stadium',
+'Control para patear':'Shooting control','Apuntar y fuerza':'Aim and power','Deslizar':'Swipe','Relator':'Commentator','Apagado':'Off','Voz del juego':'Game voice','Mi voz':'My voice','Grabada aquí':'Recorded here','Grabar mi voz':'Record my voice',
+'Calidad gráfica':'Graphics quality','Automática':'Automatic','Se ajusta sola':'Adjusts itself','Alta':'High','Media':'Medium','Baja':'Low','Más fluida':'Smoother','Listo':'Done','Idioma':'Language',
+'Rayas':'Stripes','Franjas':'Hoops','Banda':'Sash','Lisa con vivos':'Plain with trim','Clásico':'Classic','Degradado':'Fade','Rapado':'Buzz cut','Cresta':'Mohawk','Moño':'Bun',
+'Sin barba':'No beard','Corta':'Short','Tupida':'Full','Bigote':'Moustache','Sin tatuajes':'No tattoos','Un brazo':'One arm','Dos brazos':'Both arms','Brazos y pierna':'Arms and leg',
+'Estadio':'Stadium','Noche':'Night','La final':'The final','Barrio':'Street','Estadio de noche':'Night stadium','Estadio de la final':'Final stadium','Cancha del barrio':'Street pitch',
+'Naranja':'Orange','Roja':'Red','Celeste':'Sky blue','Morada':'Purple','Rosada':'Pink','Negra':'Black','Dorada':'Gold','Verde':'Green','Azul':'Blue','Blanca':'White','Amarillos':'Yellow','Blancos':'White','Verdes':'Green','Rojos':'Red','Azules':'Blue','Negros':'Black','Rosados':'Pink','Dorados':'Gold',
+'Camiseta naranja':'Orange shirt','Camiseta roja':'Red shirt','Camiseta celeste':'Sky-blue shirt','Camiseta morada':'Purple shirt','Camiseta rosada':'Pink shirt','Camiseta negra':'Black shirt','Camiseta dorada':'Gold shirt','Camiseta verde':'Green shirt',
+'Ya tienes todos los premios por atajadas.':'You already have every prize for saves.','Gana un torneo para la camiseta dorada y el estadio de la final.':'Win a tournament for the gold shirt and the final stadium.',
+'Ganar un torneo':'Win a tournament','Datos de juego: todavía no hay partidos registrados.':'Play data: no matches recorded yet.',
+// grabar la voz
+'Graba tu voz':'Record your voice','Graba cada frase con tu voz y el juego la usa como relato. Toca «Grabar», habla y toca de nuevo para terminar (máximo 6 segundos). Se guarda solo en este teléfono.':'Record each line in your own voice and the game uses it as commentary. Tap “Record”, speak, and tap again to stop (6 seconds max). It is saved only on this phone.',
+'Con «Mi voz», las frases que no grabes quedan en silencio.':'With “My voice”, lines you have not recorded stay silent.','● Grabar':'● Record','▶ Oír':'▶ Play','Borrar':'Delete',
+'Este navegador no permite grabar. Abre el juego en Safari o Chrome actualizado.':'This browser cannot record. Open the game in an up-to-date Safari or Chrome.','No se escuchó nada. Acerca el teléfono y habla más fuerte.':'Nothing was heard. Hold the phone closer and speak louder.',
+'No se pudo empezar a grabar en este teléfono.':'Recording could not start on this phone.','No se pudo usar el micrófono. Dale permiso al micrófono para esta página y prueba de nuevo.':'The microphone could not be used. Allow microphone access for this page and try again.',
+'Se grabó, pero no se pudo guardar en este teléfono (quizás estás en modo privado).':'It was recorded, but could not be saved on this phone (maybe you are in private mode).',
+'Empieza el partido':'Match start','Ganamos el partido':'We win the match','Se terminó / perdimos':'It is over / we lost','Gol del rival':'Rival goal','Nos atajan el penal':'Our penalty is saved',
+// tienda y vitrina
+'Gana partidos y desafíos para juntar estrellas.':'Win matches and challenges to collect stars.','✓ En uso':'✓ In use','Usar':'Use','✓ Tuyo':'✓ Yours','¡Listo! Ya lo estás usando.':'Done! You are using it now.','ya es tuyo':'already yours',
+'Cámara lenta':'Slow motion','Tiro de fuego':'Fire shot','¡Cámara lenta!':'Slow motion!','¡Tiro de fuego!':'Fire shot!','¡Activado!':'Activated!','Arcoíris':'Rainbow','Océano':'Ocean','El puño':'Fist pump',
+'Cada medalla nueva te da 3 estrellas para la tienda.':'Each new medal gives you 3 stars for the shop.','en juego':'in play','Ver la vitrina':'See the trophy cabinet','Campeón de temporada':'Season champion',
+'Ataja 100 penales en total':'Save 100 penalties in total','Ataja 3 penales en un partido':'Save 3 penalties in one match','Ataja 3 penales lanzándote':'Save 3 penalties by diving','Gana las 4 copas de una temporada':'Win all 4 cups in a season',
+'Gana un partido con 3 estrellas':'Win a match with 3 stars','Gana un partido de la copa':'Win a cup match','Gana un torneo en fácil, normal y difícil':'Win a tournament on easy, normal and hard','Llega a 10 en el desafío infinito':'Reach 10 in the endless challenge',
+'Llega a 25 en el desafío infinito':'Reach 25 in the endless challenge','Mete 2 goles al ángulo':'Score 2 goals in the top corner','Mete 5 goles en un partido sin fallar':'Score 5 goals in a match without missing',
+'¡Nuevo premio!':'New prize!','Póntelo en el vestuario.':'Put it on in the locker room.','¡Desafío de hoy completado!':"Today's challenge complete!",
+// partido
+'Cuartos de final':'Quarter-final','Semifinal':'Semi-final','Final':'Final','Cuartos':'Quarters','Duelo':'Duel','Muerte súbita':'Sudden death','¡A la cancha!':'Kick off!','¡Fin del partido!':'Full time!','Empezar':'Start',
+'cuartos de final':'quarter-final','semifinal':'semi-final','final':'final','tanda de cuartos':'quarter-final shootout','tú atajas':'you save','tú pateas':'you shoot','tú pateas y atajas':'you shoot and save',
+'Paso 1 de 3':'Step 1 of 3','Paso 2 de 3':'Step 2 of 3','Paso 3 de 3':'Step 3 of 3','¡Listo!':'Ready!','Ahora va en serio.':'Now it is for real.','Otra vez':'Try again',
+'Arrastra el dedo para moverte.':'Drag your finger to move.','Usa las flechas para moverte.':'Use the arrow keys to move.','Mueve el mouse para moverte.':'Move the mouse to move.','Ataja el balón.':'Save the ball.',
+'Este va arriba.':'This one goes high.','Desliza rápido el dedo hacia el balón para lanzarte.':'Swipe fast towards the ball to dive.','Lánzate con la barra espaciadora.':'Dive with the space bar.','Haz clic mientras mueves el mouse para lanzarte.':'Click while moving the mouse to dive.',
+'Fíjate hacia dónde se inclina el pateador: para allá va el tiro.':'Watch which way the taker leans: that is where the shot goes.',
+'¡Te toca atajar!':'Your turn to save!','¡Te toca patear!':'Your turn to shoot!','Tu turno de patear':'Your turn to shoot','Ataja tu arquero.':'Your keeper is in goal.','Patea tu equipo…':'Your team shoots…',
+'Toca el arco donde quieres patear y suelta. Después toca cuando la barra esté en la zona verde.':'Tap the goal where you want to shoot and let go. Then tap when the bar is in the green zone.',
+'En la zona verde el tiro sale fuerte y justo donde apuntaste.':'In the green zone the shot is strong and goes right where you aimed.','Mueve la mira con las flechas. Barra espaciadora para la fuerza y otra vez para patear.':'Move the sight with the arrow keys. Space bar for power, and again to shoot.',
+'Apunta con las flechas y patea con la barra espaciadora.':'Aim with the arrow keys and shoot with the space bar.','Desliza el dedo desde el balón hacia donde quieres patear.':'Swipe from the ball towards where you want to shoot.',
+'Desliza más rápido para patear más alto. Curva el dedo para darle efecto.':'Swipe faster to shoot higher. Curve your finger to add spin.','MUY ARRIBA':'TOO HIGH','AFUERA':'WIDE','¡TOCA!':'TAP!','suave':'soft','fuerte':'hard',
+'¡GOL!':'GOAL!','¡GOOOL!':'GOOOAL!','¡GOL NUESTRO!':'WE SCORE!','¡ATAJADA!':'SAVED!','¡QUÉ ESTIRADA!':'WHAT A DIVE!','¡Al palo!':'Off the post!','¡Al travesaño!':'Off the bar!','¡Afuera!':'Wide!','¡Por arriba!':'Over the bar!',
+'¡La atrapó!':'Caught it!','¡Atajó el arquero!':'Keeper saves!','¡Atajó tu arquero!':'Your keeper saves!','¡Tu equipo falló!':'Your team missed!','¡PALO Y ADENTRO!':'IN OFF THE POST!','¡Perfecto!':'Perfect!',
+'Rasante':'Low shot','Colocado':'Placed shot','Bombazo':'Rocket','Al ángulo':'Top corner','Con efecto':'Curler','Picadita':'Chip',
+'Va pegado al pasto.':'It stays low on the grass.','Va justo al lado del palo.':'It goes right next to the post.','Sale muy rápido: muévete apenas patee.':'It is very fast: move as soon as he shoots.','Va arriba y parado no llegas.':'It goes high and you cannot reach it standing.',
+'Se curva en el aire: fíjate dónde termina.':'It curves in the air: watch where it ends up.','Sale suave al medio. Si te lanzas antes, te pasa por arriba.':'A soft one down the middle. If you dive early, it goes over you.',
+'¡Atención, este penal define todo!':'This penalty decides everything!','¡Si atajas, ganan!':'Save it and you win!','¡Si fallas, pierden!':'Miss and you lose!','¡Si la metes, ganan!':'Score and you win!','¡Si te hacen gol, pierden!':'Concede and you lose!',
+'Respira y apunta.':'Breathe and aim.','Concéntrate en el pateador.':'Focus on the taker.','¡Última vida!':'Last life!','REPETICIÓN':'REPLAY','Toca para saltar':'Tap to skip','Toca para seguir':'Tap to continue',
+'Consejo':'Tip','¡Picadita! Quédate al medio':'Chip! Stay in the middle','Era al otro lado: mira al pateador':'Other side: watch the taker','Lánzate antes':'Dive earlier','Espera a que patee':'Wait for the shot','Iba alta: ¡lánzate!':'It was high: dive!',
+'Muévete hacia el balón':'Move towards the ball','¡Por poco! Lánzate':'So close! Dive','Apunta más abajo':'Aim lower','Apunta dentro del arco':'Aim inside the goal','Para la barra en el verde':'Stop the bar in the green',
+'¡Casi! Un poco más adentro':'Almost! A bit further in','Muy suave: llega al verde':'Too soft: reach the green','Apunta a los rincones':'Aim for the corners','Te adivinó: cambia de lado':'He guessed: switch sides','Arriba, al ángulo':'High, top corner',
+'Muy fuerte: desliza más lento':'Too hard: swipe slower','Un poco más adentro':'A bit further in','Muy suave: desliza más rápido':'Too soft: swipe faster','Busca los rincones':'Go for the corners',
+// resultados
+'ATAJADA':'SAVED','GOOOL':'GOOOAL','GOL':'GOAL','QUÉ ESTIRADA':'WHAT A DIVE','GOL NUESTRO':'WE SCORE','PALO Y ADENTRO':'IN OFF THE POST','LA ATRAPÓ':'CAUGHT IT','Ganaste':'You won','Zona verde más ancha':'Wider green zone','metiste todos tus penales':'you scored all your penalties',
+'Reintentar partido':'Replay match','Goles.':'Goals.','Puntos.':'Points.','Atajadas.':'Saves.',
+'¡Ganaste!':'You won!','¡CAMPEONES!':'CHAMPIONS!','¡Fin del desafío!':'Challenge over!','Siguiente partido':'Next match','Jugar de nuevo':'Play again','Reintentar':'Try again','Revancha':'Rematch','Perdiste':'You lost',
+'Puedes repetir este partido sin empezar el torneo de nuevo.':'You can replay this match without restarting the tournament.','atajaste 2 o más':'you saved 2 or more','atajaste y metiste todos':'you saved and scored them all','ganaste por 2 o más':'you won by 2 or more',
+'Goles':'Goals','Puntos':'Points','Atajadas':'Saves','Atajaste':'You saved','Metiste':'You scored','Hiciste':'You got',
+// duelo de dos
+'Jugador 1':'Player 1','Jugador 2':'Player 2','Nombre del jugador 2':'Player 2 name','Uno patea y el otro elige en secreto hacia dónde se lanza el arquero. Cinco penales cada uno.':'One shoots and the other secretly picks where the keeper dives. Five penalties each.',
+'Izquierda':'Left','Al medio':'Middle','Derecha':'Right','a tu izquierda':'to your left','a tu derecha':'to your right','al medio':'down the middle',
+// frases de ejemplo al grabar la voz, tienda y vitrina
+'¡Comienza la tanda de penales!':'The penalty shootout begins!','Escuchar':'Listen','Gol nuestro':'Our goal','nuestro equipo':'our team','Atajada nuestra':'Our save','¡Qué atajada! ¡Qué manos!':'What a save! What hands!',
+'Uy… gol de ellos.':'Oh… goal for them.','¡Lo atajó el arquero!':'The keeper saved it!','Palo o afuera':'Post or wide','¡Uyyy, por poquito!':'Ohhh, so close!','Penal decisivo':'Deciding penalty',
+'¡Ganamos! ¡A la siguiente ronda!':'We won! On to the next round!','Campeones':'Champions','¡Campeones! ¡La copa es nuestra!':'Champions! The cup is ours!','¡Otra vez será! ¡Vamos de nuevo!':'Next time! Let us go again!',
+'Camisetas':'Shirts','Amarilla':'Yellow','Balones':'Balls','Fuego':'Fire','De oro':'Golden','Festejos':'Celebrations','La voltereta':'Backflip','El baile':'The dance',
+'Muralla':'The Wall','Goleador':'Top scorer','Partido perfecto':'Perfect match','Imparable':'Unstoppable','Leyenda':'Legend','Cien atajadas':'A hundred saves','Triple corona':'Triple crown',
+'COPA EL ARQUERITO':'LITTLE KEEPER CUP','GRAN FINAL':'GRAND FINAL','RIVALES':'RIVALS','baja':'low','media':'medium','alta':'high','sí':'yes','no':'no',
+'amaga, la pica al medio y la clava al ángulo.':'feints, chips it down the middle and finds the top corner.',
+'picadita':'chip','lado equivocado':'wrong side','tarde o suave':'late or soft','se lanza antes':'dives early','tiro alto':'high shot','lejos del balón':'far from the ball','apunta alto':'aims high','apunta afuera':'aims wide','barra de fuerza':'power bar','muy al centro':'too central','arquero adivina':'keeper guesses',
+// lienzos de la hinchada y varios
+'ACÁ ESTÁ TU HINCHADA':'YOUR FANS ARE HERE','CORAZÓN Y GARRA':'HEART AND GRIT','¡DALE CAMPEÓN!':'COME ON CHAMP!','¡VAMOS CAMPEÓN!':'GO CHAMP!','¡SÍ SE PUEDE!':'YES WE CAN!','¡A LA FINAL!':'TO THE FINAL!','LA BARRA':'THE FANS','NUNCA DEJES DE ALENTAR':'NEVER STOP CHEERING','FUERZA EQUIPO':'GO TEAM','DUELO DE PENALES':'PENALTY DUEL',
+'CUARTOS DE FINAL':'QUARTER-FINAL','SEMIFINAL':'SEMI-FINAL','FINAL':'FINAL','DUELO DE DOS':'TWO-PLAYER DUEL','ESTADIO':'STADIUM',
+'Para patear se necesita el modo 3D, que no pudo cargar en este equipo.':'Shooting needs 3D mode, which could not load on this device.',
+// rivales: cómo patea el goleador y cómo ataja el arquero
+'patea suave y no sabe disimular: mira hacia dónde se inclina.':'shoots softly and cannot hide it: watch which way he leans.','le pega fuerte y a veces amaga. Si se frena antes de patear, ¡ojo!':'hits it hard and sometimes feints. If he slows before shooting, watch out!',
+'es el mejor del torneo: amaga, la pica al medio y la clava al ángulo.':'is the best in the tournament: he feints, chips it down the middle and finds the top corner.','le encanta tirarla al medio cuando el arquero se mueve.':'loves going down the middle when the keeper moves.',
+'le pega con todo y casi siempre arriba.':'smashes it, almost always high.','casi siempre cruza el tiro, rasante y colocado.':'almost always goes across goal, low and placed.','es frío como el hielo: amaga y espera que te muevas.':'is ice cold: he feints and waits for you to move.',
+'se tira tarde: patea fuerte a un rincón.':'dives late: shoot hard into a corner.','a veces adivina el lado: usa el efecto para engañarlo.':'sometimes guesses the side: use spin to fool him.','lee casi todo: busca los ángulos de arriba.':'reads almost everything: go for the top corners.',
+'se queda parado hasta el final: los rincones bajos le cuestan.':'stands still until the end: low corners trouble him.','se lanza muy temprano: un tiro suave al medio lo descoloca.':'dives very early: a soft shot down the middle catches him out.',
+'se tira casi siempre al mismo lado.':'almost always dives the same way.','es alto y llega a todo arriba: búscale los rincones bajos.':'is tall and reaches everything high: go for the low corners.',
+};
+/* Patrones que abarcan varias oraciones o varias partes unidas con « · »: se prueban antes de separar la frase */
+const EN_RX1=[
+[/^Ej\.: «(.+)»$/,'E.g. “$1”'],
+[/^Temporada (\d+) · copa (\d+) de 4 · 3 partidos$/,'Season $1 · cup $2 of 4 · 3 matches'],
+[/^Alcance del arquero \+(\d+)% · Zona verde más ancha$/,'Keeper reach +$1% · Wider green zone'],
+[/^(.+) · temporada (\d+) · (.+) · 5 penales por lado$/,'$1 · season $2 · $3 · 5 penalties each'],
+[/^(.+): elige hacia dónde te lanzas\. ¡(.+), no mires!$/,'$1: pick where you dive. $2, no peeking!'],
+[/^La (.+) es tuya \(\+2 ★\)\. Ahora viene la (.+)\.$/,'The $1 is yours (+2 ★). Next up: the $2.'],
+[/^¡La (.+) es tuya y ganaste la temporada (\d+)! \+12 ★\. Empieza la temporada (\d+), con rivales más difíciles\.$/,'The $1 is yours and you won season $2! +12 ★. Season $3 begins, with tougher rivals.'],
+[/^Récord en (.+): (\d+)( \+(\d+) de experiencia\.)?$/,k=>'Best on '+tr(k[1].replace(/^./,c=>c.toUpperCase())).toLowerCase()+': '+k[2]+(k[3]?' +'+k[4]+' experience.':'')],
+[/^(Medalla nueva|Medallas nuevas): (.+) \(\+(\d+) ★\)\.?$/,k=>(k[1]==='Medalla nueva'?'New medal: ':'New medals: ')+k[2].split(', ').map(tr).join(', ')+' (+'+k[3]+' ★).'],
+];
+const EN_RX=[
+[/^Versión (.+)$/,'Version $1'],[/^Nivel (\d+)$/,'Level $1'],[/^Tienda ★ (\d+)$/,'Shop ★ $1'],[/^(\d+)\/(\d+) para el nivel (\d+)$/,'$1/$2 to level $3'],
+[/^Récord (.+)$/,k=>'Best on '+tr(k[1].replace(/^./,c=>c.toUpperCase())).toLowerCase()],
+[/^¡Nuevo récord en (.+)!$/,k=>'New best on '+tr(k[1].replace(/^./,c=>c.toUpperCase())).toLowerCase()+'!'],
+[/^Alcance del arquero \+(\d+)%$/,'Keeper reach +$1%'],
+[/^Llevas (\d+) puntos \(cada atajada o gol suma 1\)\.$/,'You have $1 points (each save or goal adds 1).'],[/^Próximo premio: (.+) a las (\d+)\.$/,k=>'Next prize: '+tr(k[1].replace(/^./,c=>c.toUpperCase())).toLowerCase()+' at '+k[2]+'.'],
+[/^\(se gana con (.+)\)$/,'(unlock: $1)'],[/^(.+) \(se gana con (.+)\)$/,'$1 (unlock: $2)'],[/^Temporada (\d+)$/,'Season $1'],[/^(\d+) copas? ganadas?$/,'$1 cups won'],[/^TÚ vs (.+)$/,'YOU vs $1'],[/^TÚ  (\d+) - (\d+)  (.+)$/,'YOU  $1 - $2  $3'],[/^¡Goooool de (.+)!$/,'Goooal by $1!'],
+[/^Diagnóstico técnico: versión (.+)$/,'Diagnostics: version $1'],[/^último partido (.+)$/,'last match $1'],[/^(\d+) s \((\d+) penales\)$/,'$1 s ($2 penalties)'],[/^audio atrasado (\d+) veces$/,'audio late $1 times'],[/^pausas del sistema (\d+)$/,'system pauses $1'],
+[/^tirones de imagen (\d+)$/,'frame hitches $1'],[/^(\S+) cuadros\/s$/,'$1 fps'],[/^resolución (.+)$/,'resolution $1'],[/^calidad (baja|media|alta)( \(30 cuadros\/s\))?$/,k=>'quality '+tr(k[1])+(k[2]?' (30 fps)':'')],[/^partió en (.+), bajó (\d+)$/,'started at $1, dropped $2'],
+[/^dibujo (.+) ms \(máx (.+)\)$/,'draw $1 ms (max $2)'],[/^núcleos (.+)$/,'cores $1'],[/^jugado (\d+) s$/,'played $1 s'],[/^repeticiones (\d+)$/,'replays $1'],[/^movimiento reducido (.+)$/,'reduced motion $1'],[/^pantalla (.+)$/,'screen $1'],[/^SESIÓN ANTERIOR: (.+)$/,'PREVIOUS SESSION: $1'],
+[/^Datos de juego desde (\S+)$/,'Play data since $1'],[/^(\d+) min jugados$/,'$1 min played'],[/^(copa|infinito|duelo) (\S+) (atajando|pateando|los dos|-): (\d+) partidos \((.+)\)$/,k=>({copa:'cup',infinito:'endless',duelo:'duel'})[k[1]]+' '+({facil:'easy',normal:'normal',dificil:'hard'}[k[2]]||k[2])+' '+({atajando:'saving',pateando:'shooting','los dos':'both'}[k[3]]||k[3])+': '+k[4]+' matches ('+k[5].replace('ganó','won').replace('perdió','lost').replace('abandonó','quit').replace('terminó','finished')+')'],
+[/^atajó (.+)$/,k=>'saved '+k[1].replace(' de ',' of ')],[/^metió (.+)$/,k=>'scored '+k[1].replace(' de ',' of ')],[/^fallos más repetidos: (.+)$/,k=>'most repeated mistakes: '+k[1].split(', ').map(x=>{const m=/^(.+) ×(\d+)$/.exec(x);return m?tr(m[1])+' ×'+m[2]:x;}).join(', ')],[/^(\d+) ★ en la tienda$/,'$1 ★ in the shop'],[/^(\d+) atajadas$/,'$1 saves'],[/^(\d+) puntos$/,'$1 points'],[/^(\d+) estrellas$/,'$1 stars'],
+[/^Te faltan (\d+) ★ para (.+)\.$/,'You need $1 more ★ for $2.'],[/^¡(.+) es tuyo!$/,'$1 is yours!'],[/^(\d+) de (\d+) frases grabadas$/,'$1 of $2 lines recorded'],
+[/^Tu equipo vs (.+)$/,'Your team vs $1'],
+[/^Su goleador, (.+?), (.+)$/,'Their striker, $1, $2'],[/^Su arquero, (.+?), (.+)$/,'Their keeper, $1, $2'],
+[/^([^.!?]+) patea (a tu izquierda|a tu derecha|al medio) (\d+) de cada 10( y le gusta tirarla alta| y casi nunca la tira alta)?\.$/,k=>`${k[1]} shoots ${tr(k[2])} ${k[3]} times out of 10${k[4]?(/gusta/.test(k[4])?' and likes to go high':' and almost never goes high'):''}.`],
+[/^([^.!?]+) se tira (a tu izquierda|a tu derecha|al medio) (\d+) de cada 10\.$/,k=>`${k[1]} dives ${tr(k[2])} ${k[3]} times out of 10.`],[/^([^.!?]+) suele quedarse parado al medio\.$/,'$1 usually stays in the middle.'],
+[/^¿Dónde patean (.+)\?$/,'Where do $1 shoot?'],[/^¿Dónde se tira (.+)\?$/,'Where does $1 dive?'],[/^(\d+) de 10$/,'$1 of 10'],[/^▲ alta$/,'▲ high'],
+[/^Patea (.+)…$/,'$1 shoot…'],[/^Patea (.+)$/,'$1 shoots'],[/^Ataja (.+)$/,'$1 in goal'],[/^Gol de (.+)$/,'Goal for $1'],[/^Nuevo tiro: (.+)$/,'New shot: $1'],[/^(.+) se tiró:(.*)$/,'$1 dived:$2'],
+[/^Pásale el teléfono a (.+)\.$/,'Pass the phone to $1.'],[/^¡Ganó (.+)!$/,'$1 wins!'],
+[/^¡Subiste a nivel (\d+)!$/,'You reached level $1!'],[/^\+(\d+) de experiencia\.$/,'+$1 experience.'],[/^Le ganaste a (.+)\.$/,'You beat $1.'],[/^Ganaste la final a (.+)\.$/,'You beat $1 in the final.'],
+[/^Pasas a la (.+)\.$/,'You go through to the $1.'],[/^(.+) ganó la (.+)\.$/,'$1 won the $2.'],
+
+[/^(.+) atajó$/,'$1 saved'],[/^(.+) metió$/,'$1 scored'],[/^(.+) hizo$/,'$1 got'],[/^¡VAMOS (.+)!$/,'GO $1!'],[/^Torneo (ganado|sin ganar) en (.+)$/,k=>'Tournament '+(k[1]==='ganado'?'won':'not won yet')+' on '+tr(k[2].replace(/^./,c=>c.toUpperCase())).toLowerCase()],
+[/^(.+), ya es tuyo$/,'$1, already yours'],[/^(.+), (\d+) estrellas$/,'$1, $2 stars'],[/^★ (\d+)$/,'★ $1'],[/^■ (\d+)$/,'■ $1'],[/^✓ (.+)$/,'✓ $1'],
+];
+/* Textos que son nombres propios o datos y no se traducen */
+const EN_KEEP=/^(Los |LOS |\d+ nov \d+$|\d+\.\d+ · |[A-ZÁÉÍÓÚÑ0-9]{2,4} vs [A-ZÁÉÍÓÚÑ0-9]{2,4}$|J\d$|[A-ZÁÉÍÓÚÑ]{2,4}$|Diagnóstico|Datos de juego desde|SUPERGOL|HELADOS POLAR|RADIO CANCHA|ATAJA TODO|PELOTAS REBOTE|English$|Español$)/;
+const TRC=new Map(),TROUT=new Set();
+function tr(s){
+  if(LANG!=='en'||typeof s!=='string'||!s)return s;let r=TRC.get(s);if(r!==undefined)return r;
+  r=tr0(s);if(TRC.size>5000)TRC.clear();TRC.set(s,r);if(r!==s)TROUT.add(r);return r;
+}
+function tr0(s){
+  const m=/^(\s*)([\s\S]*?)(\s*)$/.exec(s),core=m[2];if(!core||!/[A-Za-zÁÉÍÓÚÑáéíóúñ]{2}/.test(core)||TROUT.has(s)||TROUT.has(core))return s;
+  let o=EN[core];
+  const rx=L=>{for(const[r,t]of L){const k=r.exec(core);if(k){o=typeof t==='function'?t(k):t.replace(/\$(\d)/g,(_,i)=>tr(k[+i]||''));return;}}};
+  if(o==null)rx(EN_RX1);
+  if(o==null){ // partes unidas con « · » o varias oraciones seguidas: se traduce cada parte por separado
+    for(const sep of[' ‖ ',' · ']){if(core.includes(sep)){const ps=core.split(sep),qs=ps.map(tr);if(qs.some((q,i)=>q!==ps[i]))o=qs.join(sep);break;}}
+    if(o==null){const ps=core.split(/(?<=[.!?…])\s+/);if(ps.length>1){const qs=ps.map(tr);if(qs.some((q,i)=>q!==ps[i]))o=qs.join(' ');}}}
+  if(o==null)rx(EN_RX);
+  if(o==null){if(window.__i18nMiss&&!EN_KEEP.test(core))window.__i18nMiss.add(core);return s;}
+  return m[1]+o+m[3];
+}
+if(LANG==='en'){
+  document.documentElement.lang='en';
+  // lo que se dibuja en la cancha y en las texturas (marcador, lienzos, carteles)
+  const P=CanvasRenderingContext2D.prototype;for(const fn of['fillText','strokeText']){const o=P[fn];P[fn]=function(t,...a){return o.call(this,tr(t),...a);};}
+  {const o=P.measureText;P.measureRaw=o;P.measureText=function(t){return o.call(this,tr(t));};}
+  // lo que se escribe en la página: se traduce cada texto cuando aparece o cambia
+  const seen=new WeakMap(),AT=['placeholder','aria-label','title'];
+  const doText=n=>{const v=n.nodeValue;if(!v||seen.get(n)===v)return;const p=n.parentNode;if(p&&(p.nodeName==='SCRIPT'||p.nodeName==='STYLE'||p.closest&&p.closest('[data-notr]')))return;const t=tr(v);seen.set(n,t);if(t!==v)n.nodeValue=t;};
+  const doEl=e=>{if(e.nodeType===3){doText(e);return;}if(e.nodeType!==1||e.nodeName==='SCRIPT'||e.nodeName==='STYLE')return;
+    for(const a of AT){const v=e.getAttribute(a);if(v){const t=tr(v);if(t!==v)e.setAttribute(a,t);}}
+    const w=document.createTreeWalker(e,NodeFilter.SHOW_TEXT);let n;while((n=w.nextNode()))doText(n);
+    if(e.querySelectorAll)for(const q of e.querySelectorAll('[placeholder],[aria-label],[title]'))for(const a of AT){const v=q.getAttribute(a);if(v){const t=tr(v);if(t!==v)q.setAttribute(a,t);}}};
+  const start=()=>{doEl(document.body);document.title=tr(document.title);
+    new MutationObserver(ms=>{for(const m of ms){if(m.type==='characterData')doText(m.target);else if(m.type==='attributes')doEl(m.target);else for(const n of m.addedNodes)doEl(n);}})
+      .observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:AT});};
+  if(document.body)start();else addEventListener('DOMContentLoaded',start);
+}
 const $=id=>document.getElementById(id);
 const stage=$('stage'),cv=$('pitch'),ctx=cv.getContext('2d');
 const lifeEls=[...document.querySelectorAll('.life')];
@@ -582,7 +756,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo']
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='6.3 · 15 nov 2026';
+const VERSION='6.4 · 15 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -632,6 +806,7 @@ function swatches(elId,set,name,cur){
 }
 function renderLocker(){
   if(!isUnlocked(KITS[CFG.kit]))CFG.kit='naranjo';if(!isUnlocked(GLOVES[CFG.glove]))CFG.glove='amarillo';if(!isUnlocked(STAGES[CFG.stage]))CFG.stage='estadio';
+  {const lg=$('lg-'+LANG);if(lg)lg.checked=true;}
   $('name').value=CFG.name;$('num').value=CFG.num;{const q=$('q-'+CFG.quality);if(q)q.checked=true;const kc=$('kc-'+kickCtrl());if(kc)kc.checked=true;renderVozCfg();}
   swatches('kitSw',KITS,'kit',CFG.kit);swatches('gloveSw',GLOVES,'glove',CFG.glove);
   if(!DESIGNS[CFG.design])CFG.design='rayas';$('disSeg').innerHTML=Object.entries(DESIGNS).map(([k,v])=>`<label><input type="radio" name="design" value="${k}"${k===CFG.design?' checked':''}><span>${v.n}</span></label>`).join('');
@@ -650,7 +825,7 @@ function renderLocker(){
 $('name').addEventListener('input',e=>{CFG.name=e.target.value.slice(0,10);saveCfg();});
 $('num').addEventListener('input',e=>{const n=parseInt(e.target.value,10);if(n>=1&&n<=99){CFG.num=n;saveCfg();}});
 $('num').addEventListener('blur',e=>{e.target.value=CFG.num;});
-$('locker').addEventListener('change',e=>{const t=e.target;if(t.name==='kit')CFG.kit=t.value;else if(t.name==='glove')CFG.glove=t.value;else if(t.name==='design')CFG.design=t.value;else if(t.name==='cut'||t.name==='beard'||t.name==='tat')CFG[t.name]=t.value;else if(t.name==='stage')CFG.stage=t.value;else if(t.name==='kickctrl'){CFG.kickCtrl=t.value;}else if(t.name==='quality'){CFG.quality=t.value;if(GL.ok){const nt=initialTier();if(nt!==GL.tier){GL.tier=nt;glApplyTier();}}}saveCfg();});
+$('locker').addEventListener('change',e=>{const t=e.target;if(t.name==='kit')CFG.kit=t.value;else if(t.name==='glove')CFG.glove=t.value;else if(t.name==='design')CFG.design=t.value;else if(t.name==='cut'||t.name==='beard'||t.name==='tat')CFG[t.name]=t.value;else if(t.name==='lang'){CFG.lang=t.value;saveCfg();location.reload();return;}else if(t.name==='stage')CFG.stage=t.value;else if(t.name==='kickctrl'){CFG.kickCtrl=t.value;}else if(t.name==='quality'){CFG.quality=t.value;if(GL.ok){const nt=initialTier();if(nt!==GL.tier){GL.tier=nt;glApplyTier();}}}saveCfg();});
 function newPrizes(){const now=unlockedIds(),base=S.prizeBase||now;const fresh=now.filter(x=>!base.includes(x));S.prizeBase=now;return fresh;}
 function showPrizes(list){
   const el=$('rPrizes');
@@ -1416,8 +1591,8 @@ function drawMsg(){
   ctx.lineWidth=fs*0.16;ctx.strokeStyle=C.ink;ctx.lineJoin='round';ctx.strokeText(m.text,0,0);
   ctx.shadowColor='transparent';ctx.fillStyle=m.color;ctx.fillText(m.text,0,0);ctx.restore();
 }
-function wrapText(text,maxW){const words=text.split(' '),lines=[];let cur='';
-  for(const w of words){const t=cur?cur+' '+w:w;if(ctx.measureText(t).width>maxW&&cur){lines.push(cur);cur=w;}else cur=t;}if(cur)lines.push(cur);return lines;}
+function wrapText(text,maxW){text=tr(text);const words=text.split(' '),lines=[],mt=ctx.measureRaw||ctx.measureText;let cur=''; // se traduce antes de cortar en líneas
+  for(const w of words){const t=cur?cur+' '+w:w;if(mt.call(ctx,t).width>maxW&&cur){lines.push(cur);cur=w;}else cur=t;}if(cur)lines.push(cur);if(LANG==='en')lines.forEach(l=>TROUT.add(l));return lines;}
 function drawBanner(){
   const b=S.banner;if(!b)return;
   const a=b.dur===Infinity?clamp(b.t/0.2,0,1):clamp(Math.min(b.t/0.2,(b.dur-b.t)/0.3),0,1);if(a<=0)return;
@@ -3282,6 +3457,7 @@ $('mute').addEventListener('click',()=>{if(SON.out)SON.out.gain.setTargetAtTime(
    Cada clave tiene varias variantes y se sacan como de una bolsa: no se repite una hasta usar las demás.
    Según la jugada elige frases más precisas (al ángulo, engañó al arquero, voló, racha, marcador). */
 const VOZ_N={"g_tut0":1,"g_tut1":1,"g_tut2":1,"g_bien":3,"g_otra":1,"g_tutfin":1,"g_ap1":1,"g_ap2":1,"g_des":1,"g_duo1":1,"g_duo2":1,"inicio":6,"semi":3,"final":3,"prepara":10,"preparak":5,"primer":2,"gol":12,"golazo":5,"golengano":4,"golmedio":2,"golrasante":2,"golfuerte":3,"paloadentro":3,"golequipo":4,"atajada":10,"atajvuelo":5,"atajparado":3,"golrival":8,"golrivalengano":3,"golrivalpicada":2,"atajrival":6,"atajrivalcatch":2,"fallaequipo":4,"palo":4,"travesano":3,"afuera":4,"arriba":3,"palorival":3,"afuerarival":3,"racha2":2,"racha3":2,"rachag3":2,"dec_metewin":2,"dec_metelose":2,"dec_atajawin":2,"dec_atajalose":2,"dec_muerte":2,"dec_vida":2,"ganamos":5,"alafinal":3,"campeon":4,"perdimos":5,"findesafio":4,"record":2,"rival_PUM":2,"golr_PUM":2,"gkr_PUM":2,"rival_HAL":2,"golr_HAL":2,"gkr_HAL":2,"rival_TIB":2,"golr_TIB":2,"gkr_TIB":2,"rival_CON":2,"golr_CON":2,"gkr_CON":2,"rival_TOR":2,"golr_TOR":2,"gkr_TOR":2,"rival_DEL":2,"golr_DEL":2,"gkr_DEL":2,"rival_LOB":2,"golr_LOB":2,"gkr_LOB":2,"m_0_1":1,"m_0_2":1,"m_0_3":1,"m_1_0":1,"m_1_1":1,"m_1_2":1,"m_1_3":1,"m_1_4":1,"m_2_0":1,"m_2_1":1,"m_2_2":1,"m_2_3":1,"m_2_4":1,"m_2_5":1,"m_3_0":1,"m_3_1":1,"m_3_2":1,"m_3_3":1,"m_3_4":1,"m_3_5":1,"m_3_6":1,"m_4_1":1,"m_4_2":1,"m_4_3":1,"m_4_4":1,"m_4_5":1,"m_4_6":1,"m_4_7":1,"m_5_2":1,"m_5_3":1,"m_5_4":1,"m_5_5":1,"m_5_6":1,"m_5_7":1,"m_6_3":1,"m_6_4":1,"m_6_5":1,"m_6_6":1,"m_6_7":1,"m_7_4":1,"m_7_5":1,"m_7_6":1,"m_7_7":1};
+const VOZ_DIR=LANG==='en'?'voz_en':'voz'; // el relator tiene sus frases grabadas en cada idioma
 const VOZ={el:null,q:[],last:{},bag:{},urls:{},blob:{},ab:{},tm:0};
 const vozMode=()=>CFG.voz==='off'||CFG.voz==='mia'?CFG.voz:'juego';
 const VSLOTS=[
@@ -3312,7 +3488,7 @@ function vozUnlock(){
 }
 function vozWarm(){
   if(VOZ.warm||typeof fetch!=='function')return;VOZ.warm=true;
-  const list=[];for(const[k,n]of Object.entries(VOZ_N))for(let i=0;i<n;i++)list.push(`voz/${k}_${i}.mp3`);
+  const list=[];for(const[k,n]of Object.entries(VOZ_N))for(let i=0;i<n;i++)list.push(`${VOZ_DIR}/${k}_${i}.mp3`);
   let i=0;const next=()=>{const s=list[i++];if(!s)return;
     fetch(s).then(r=>r.ok?r.arrayBuffer():null).then(ab=>{if(ab&&ab.byteLength){VOZ.ab[s]=ab;}}).catch(()=>{}).then(next);};
   for(let j=0;j<6;j++)next(); // 6 descargas a la vez
@@ -3325,7 +3501,7 @@ function vozPick(k){
   const n=VOZ_N[k];if(!n)return null;let bag=VOZ.bag[k];
   if(!bag||!bag.length){bag=[...Array(n).keys()];for(let i=n-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]];}
     if(n>1&&bag[0]===VOZ.last[k])bag.push(bag.shift());VOZ.bag[k]=bag;}
-  const i=bag.shift();VOZ.last[k]=i;return`voz/${k}_${i}.mp3`;
+  const i=bag.shift();VOZ.last[k]=i;return`${VOZ_DIR}/${k}_${i}.mp3`;
 }
 /* relator('gol') o relator(['inicio','rival_TIB']): o.delay en segundos; o.chance para frases de relleno;
    o.low = no interrumpe si ya está hablando. */
@@ -3774,7 +3950,7 @@ function diagFrame(now,raw){
 function diagText(){const cur=diagNow();if(DIAG.fps)return cur;const old=lsGet('penales-diag','');return old?cur+' ‖ SESIÓN ANTERIOR: '+old.replace(/^.*?versión/,'versión'):cur;}
 function diagNow(){
   const ios=(navigator.userAgent.match(/OS (\d+)_(\d+)/)||[]).slice(1).join('.'),q=['alta','media','baja'][GL.tier]||'-';
-  return`Diagnóstico (mándale una captura a Claude): versión ${VERSION} · último partido ${DIAG.dur?Math.round(DIAG.dur)+' s ('+DIAG.shots+' penales)':'-'} · audio atrasado ${DIAG.a} veces · pausas del sistema ${DIAG.st} · tirones de imagen ${DIAG.img} · ${DIAG.fps||'-'} cuadros/s · resolución ×${glPR().toFixed(2)} · calidad ${q}${GL.phoneCap?' (30 cuadros/s)':''} · partió en ${['alta','media','baja'][GL.tier0]||'-'}, bajó ${DIAG.baja||0} · dibujo ${DIAG.ms?DIAG.ms.toFixed(1):'-'} ms (máx ${DIAG.mx?Math.round(DIAG.mx):'-'}) · núcleos ${navigator.hardwareConcurrency||'-'}${ios?' · iOS '+ios:''} · jugado ${DIAG.sec||0} s · repeticiones ${DIAG.rp||0} · movimiento reducido ${reduce?'sí':'no'} · pantalla ${Math.round(W)}×${Math.round(H)} ×${window.devicePixelRatio||1}`;
+  return`Diagnóstico técnico: versión ${VERSION} · último partido ${DIAG.dur?Math.round(DIAG.dur)+' s ('+DIAG.shots+' penales)':'-'} · audio atrasado ${DIAG.a} veces · pausas del sistema ${DIAG.st} · tirones de imagen ${DIAG.img} · ${DIAG.fps||'-'} cuadros/s · resolución ×${glPR().toFixed(2)} · calidad ${q}${GL.phoneCap?' (30 cuadros/s)':''} · partió en ${['alta','media','baja'][GL.tier0]||'-'}, bajó ${DIAG.baja||0} · dibujo ${DIAG.ms?DIAG.ms.toFixed(1):'-'} ms (máx ${DIAG.mx?Math.round(DIAG.mx):'-'}) · núcleos ${navigator.hardwareConcurrency||'-'}${ios?' · iOS '+ios:''} · jugado ${DIAG.sec||0} s · repeticiones ${DIAG.rp||0} · movimiento reducido ${reduce?'sí':'no'} · pantalla ${Math.round(W)}×${Math.round(H)} ×${window.devicePixelRatio||1}`;
 }
 
 /* ---------- Bucle ---------- */
