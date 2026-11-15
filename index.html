@@ -561,7 +561,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='5.7 · 15 nov 2026';
+const VERSION='5.8 · 15 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -1825,10 +1825,10 @@ function makePlayer(o){
 function glBuildPlayers(){
   const sc=GL.scene;if(GL.rivPool){for(const m of GL.rivPool)sc.remove(m);GL.rivPool=null;}for(const k of['meK','meS','rivS','rivK']){if(GL[k]){sc.remove(GL[k]);if(!GL[k].userData.real)disposeTree(GL[k]);}}
   if(GL.charGLB){const kit=KITS[CFG.kit],r=curRival();
-    GL.meK=makeReal({shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,name:CFG.name,numColor:kit.t,height:1.9});
+    GL.meK=makeReal({style:7,c2:col(kit.c,0.5),shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,name:CFG.name,numColor:kit.t,height:1.9});
     GL.meS=makeReal({capt:true,boots:BOOTS[(CFG.num||1)%BOOTS.length],style:(DESIGNS[CFG.design]||DESIGNS.rayas).s,c2:kit.t,shirt:kit.c,shorts:'#f3f2ec',socks:kit.c,num:CFG.num,name:CFG.name,numColor:kit.t,height:1.85});
     GL.rivS=makeReal({head:HEAD_IDS[((r.code||'A').charCodeAt(1)||0)%HEAD_IDS.length],beard:0.5,boots:BOOTS[3],shirt:r.color,shorts:r.shorts,socks:'#f3f2ec',style:KIT_ST[r.code]||1,c2:r.shorts,num:9,skin:r.skin,hair:r.hair,height:2.0});
-    GL.rivK=makeReal({head:HEAD_IDS[((r.code||'A').charCodeAt(2)||1)%HEAD_IDS.length],beard:0.85,pants:true,cap:(r.code||'').charCodeAt(0)%2?col(r.gk,0.55):null,shirt:r.gk,shorts:'#1b1f26',socks:r.gk,glove:'#f6f3e8',num:1,skin:r.gkSkin,hair:r.gkHair,height:1.92});
+    GL.rivK=makeReal({head:HEAD_IDS[((r.code||'A').charCodeAt(2)||1)%HEAD_IDS.length],style:7,c2:col(r.gk,0.5),beard:0.85,pants:true,cap:(r.code||'').charCodeAt(0)%2?col(r.gk,0.55):null,shirt:r.gk,shorts:'#1b1f26',socks:r.gk,glove:'#f6f3e8',num:1,skin:r.gkSkin,hair:r.gkHair,height:1.92});
     /* En una tanda cada penal lo patea un jugador distinto: cinco pateadores rivales que se turnan. El primero es la figura
        del equipo; los otros cuatro son los mismos compañeros que esperan en el círculo central (mismo número y mismo aspecto). */
     GL.rivPool=[GL.rivS];GL.rivS.userData.num=9;
@@ -1943,6 +1943,7 @@ function glSync(dt){
   GL.replayOn=!!RP;if(RP)replayCam();
   crowdPhotoApply();celCam();
   GL.rp.camera=activeCam();
+  if(GL.net){const near=GL.rp.camera===GL.cam;GL.net.material.opacity=near?0.4:0.78;if(GL.net.children[0])GL.net.children[0].visible=!near;} // al atajar se mira a través de la red: se dibuja más fina para que no tape al arquero
   GL.meK.visible=GL.rivS.visible=!GL.kview;GL.meS.visible=GL.rivK.visible=GL.kview;if(GL.wkUs&&!GL.entOn){GL.wkUs.visible=GL.kview;GL.wkThem.visible=!GL.kview;}
   const real=GL.meK.userData.real;
   if(GL.kview){if(real)poseKickReal(dt);else poseKickScene();}else if(real){poseKeeperReal(dt);poseRivalReal(dt);}else{poseKeeperMe();poseRivalStriker();}
@@ -2226,15 +2227,20 @@ function kitMaterial(base,color,o={}){
   m.onBeforeCompile=sh=>{for(const k of['kit','kit2','kst','kb0','kb1','kcap'])sh.uniforms[k]=m.userData[k];
     sh.vertexShader='uniform vec3 kb0,kb1;varying vec3 vBind;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vBind=(position-kb0)*kb1;');
     sh.fragmentShader='uniform vec3 kit,kit2;uniform float kst,kcap;varying vec3 vBind;\n'+sh.fragmentShader.replace('#include <map_fragment>',
-    `float km=0.0,ktx=abs(vBind.x-0.5),ktor=1.0-smoothstep(0.150,0.160,ktx);
-     if(kst>5.5)km=step(0.435,ktx);
+    `float km=0.0,kpat=0.0,ktx=abs(vBind.x-0.5),ktor=1.0-smoothstep(0.150,0.160,ktx);
+     if(kst>6.5){ // arquero: antebrazos acolchados y paneles laterales en el tono oscuro, trama tono sobre tono en el pecho
+       float fore=smoothstep(0.322,0.332,ktx),side=ktor*smoothstep(0.112,0.120,ktx)*(1.0-step(0.84,vBind.y));
+       km=max(max(fore,side),max(step(0.462,ktx),ktor*step(0.955,vBind.y)));
+       kpat=ktor*(1.0-side)*step(0.5,fract((vBind.y+ktx*1.5)*13.0))*0.10+fore*step(0.78,fract(ktx*64.0))*0.22
+           +(1.0-ktor)*(1.0-fore)*(1.0-smoothstep(0.012,0.02,abs(fract(ktx*9.0+0.3)-0.5)))*0.0;}
+     else if(kst>5.5)km=step(0.435,ktx);
      else if(kst>4.5)km=step(0.80,vBind.y);
      else if(kst>0.5){
        if(kst>3.5)km=ktor*(1.0-smoothstep(0.085,0.095,abs((vBind.x-0.5)*2.6+(vBind.y-0.5)*0.9)));
        else if(kst>2.5)km=step(0.5,fract(vBind.y*4.0+0.15));
        else if(kst>1.5)km=ktor*step(0.5,fract((vBind.x-0.5)*22.0+0.25));
        km=max(km,step(0.462,ktx));km=max(km,ktor*step(0.955,vBind.y));}
-     vec3 kcol=mix(kit,kit2,km);
+     vec3 kcol=mix(kit,kit2,km)*(1.0-kpat);
      kcol=mix(kcol,vec3(1.0,0.82,0.12),kcap*step(vBind.x,0.5)*step(0.262,ktx)*step(ktx,0.292));
      #ifdef USE_MAP
       vec4 sampledDiffuseColor=texture2D(map,vMapUv);float L=dot(sampledDiffuseColor.rgb,vec3(0.299,0.587,0.114));
@@ -2242,7 +2248,7 @@ function kitMaterial(base,color,o={}){
      #else
       diffuseColor.rgb*=kcol;
      #endif`);};
-  m.customProgramCacheKey=()=>'kit4';return m;
+  m.customProgramCacheKey=()=>'kit5';return m;
 }
 
 function numberPlate(name,num,colr){
@@ -2263,12 +2269,11 @@ function addRim(mat){
    cerrada o bigote, dibujados sobre la cara con la posición de la piel en la pose de reposo (misma idea que las camisetas). */
 function skinMaterial(base,geo,o){
   const m=base.clone(),T=THREE;if(o.skin)m.color.set(o.skin);const hd=o.head&&GL.heads&&GL.heads[o.head]?HEADS[o.head]:null;if(hd){m.color.setRGB(hd[0],hd[1],hd[2]);o=Object.assign({},o,{beard:0,mus:0,band:null});}
-  if(!(o.beard>0)&&!(o.mus>0)&&!o.band&&!o.pants&&!hd)return m;
   const bb=geo.boundingBox||(geo.computeBoundingBox(),geo.boundingBox),sz=bb.max.clone().sub(bb.min);
-  const U={sb0:{value:bb.min.clone()},sb1:{value:new T.Vector3(1/(sz.x||1),1/(sz.y||1),1/(sz.z||1))},sbe:{value:new T.Vector2(o.beard||0,o.mus||0)},sbd:{value:new T.Vector4(o.band?1:0,o.pants?1:0,hd?0.825:9,0)},spc:{value:new T.Color(o.pants?o.shorts:'#000000')},sbc:{value:new T.Color(o.band===true?'#f4f4f0':(o.band||'#f4f4f0'))}};
+  const U={sb0:{value:bb.min.clone()},sb1:{value:new T.Vector3(1/(sz.x||1),1/(sz.y||1),1/(sz.z||1))},sbe:{value:new T.Vector2(o.beard||0,o.mus||0)},sbd:{value:new T.Vector4(o.band?1:0,o.pants?1:0,hd?0.825:9,0)},spc:{value:new T.Color(o.pants?o.shorts:'#000000')},sgl:{value:new T.Color(o.glove||'#000000')},sgf:{value:new T.Vector2(o.glove?1:0,o.glove?85:0)},slt:{value:(o.skin||hd)?new T.Vector3(1,0.93,0.86):new T.Vector3(1,0.88,0.78)},sbc:{value:new T.Color(o.band===true?'#f4f4f0':(o.band||'#f4f4f0'))}};
   m.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U);
-    sh.vertexShader='uniform vec3 sb0,sb1;varying vec3 vSk;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vSk=(position-sb0)*sb1;');
-    sh.fragmentShader='uniform vec2 sbe;uniform vec4 sbd;uniform vec3 spc,sbc;varying vec3 vSk;\n'+sh.fragmentShader.replace('#include <map_fragment>',`if(vSk.y>sbd.z)discard;
+    sh.vertexShader='uniform vec3 sb0,sb1;uniform vec2 sgf;varying vec3 vSk;varying float vSkN;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vSk=(position-sb0)*sb1;vSkN=objectNormal.y;if(sgf.x>0.5&&abs(vSk.x-0.5)>0.386)transformed+=normalize(objectNormal)*sgf.y;');
+    sh.fragmentShader='uniform vec2 sbe,sgf;uniform vec4 sbd;uniform vec3 spc,sbc,sgl,slt;varying vec3 vSk;varying float vSkN;\n'+sh.fragmentShader.replace('#include <map_fragment>',`if(vSk.y>sbd.z)discard;
      #include <map_fragment>
      {float ax=abs(vSk.x-0.5),topY=0.8690+ax*0.32,by=vSk.y,zf=smoothstep(0.56,0.66,vSk.z);
       float jaw=smoothstep(topY+0.003,topY-0.004,by)*smoothstep(0.8385,0.8445,by)*zf;
@@ -2279,8 +2284,16 @@ function skinMaterial(base,geo,o){
       diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(0.30,0.25,0.22),clamp(sk,0.,1.));
       float bnd=smoothstep(0.9280,0.9292,by)*smoothstep(0.9372,0.9360,by)*(1.0-smoothstep(0.07,0.08,ax))*sbd.x; // cintillo en la frente
       float pnt=smoothstep(0.364,0.356,by)*(1.0-smoothstep(0.13,0.15,ax))*sbd.y; // pantalón largo: la pierna entre el short y la media
-      diffuseColor.rgb=mix(diffuseColor.rgb,sbc,bnd);diffuseColor.rgb=mix(diffuseColor.rgb,spc,pnt);}`);};
-  m.customProgramCacheKey=()=>'skin3';return m;
+      diffuseColor.rgb=mix(diffuseColor.rgb,sbc,bnd);
+      if(by<0.40)diffuseColor.rgb*=slt; // las piernas del modelo son más grises que la cara: se entibian
+      diffuseColor.rgb=mix(diffuseColor.rgb,spc,pnt);
+      if(sgf.x>0.5&&ax>0.386){ // guantes de arquero: dorso del color del guante, palma de látex clara, correa oscura en la muñeca
+        float palm=smoothstep(-0.05,-0.35,vSkN),Lg=dot(diffuseColor.rgb,vec3(0.3333));
+        vec3 gc=mix(sgl,vec3(0.93,0.93,0.90),palm*0.92);
+        gc*=1.0-(1.0-palm)*smoothstep(0.425,0.435,ax)*step(0.55,fract(vSk.z*7.0))*0.16;
+        gc=mix(gc,vec3(0.09,0.10,0.12),1.0-smoothstep(0.399,0.403,ax));
+        diffuseColor.rgb=gc*clamp(0.62+Lg*0.75,0.7,1.08);}}`);};
+  m.customProgramCacheKey=()=>'skin4';return m;
 }
 const BOOTS=['#16181c','#f4f4ef','#e6f23c','#ff4a3d','#2f7bff','#16181c','#ff8a1f'];
 const KIT_ST={PUM:2,HAL:3,TIB:4,CON:1,TOR:2,DEL:3,LOB:4};
@@ -2308,10 +2321,7 @@ function makeReal(o){
   if(o.head&&GL.heads&&GL.heads[o.head]&&B.Head){const hg=GL.heads[o.head].clone(true);hg.position.set(0,0,0);hg.rotation.set(0,0,0);hg.scale.setScalar(1);if(o.cap)hg.traverse(q=>{if(q.userData.hair)q.visible=false;});B.Head.add(hg);}
   if(o.cap&&B.Head){const cm=M(o.cap,{roughness:0.85}),r=11.3,dome=mesh(new T.SphereGeometry(r,18,10,0,Math.PI*2,0,Math.PI*0.5),cm);dome.position.set(0,14.5,5.5);dome.scale.set(0.86,0.74,1.06);B.Head.add(dome);
     const vis=mesh(new T.CylinderGeometry(r*0.9,r*0.9,0.8,18),cm);vis.position.set(0,14.8,5.5+r*1.06*1.2);vis.scale.set(0.8,1,0.6);vis.rotation.x=0.16;B.Head.add(vis);}
-  if(o.glove){const gm=M(o.glove,{roughness:0.55}),cm=M('#1d2026',{roughness:0.6});
-    for(const h of[B.RightHand,B.LeftHand]){if(!h)continue;const gl=new T.Group();
-      const palm=mesh(new T.CapsuleGeometry(4.6,8,6,12),gm);palm.scale.set(1.5,1.18,0.72);palm.position.y=9;gl.add(palm);
-      const cuff=mesh(new T.CylinderGeometry(4.4,4.2,4,14),cm);cuff.position.y=1;gl.add(cuff);h.add(gl);}}
+  if(o.glove)for(const h of[B.RightHand,B.LeftHand])if(h)h.scale.setScalar(1.32); // los guantes de arquero son bastante más grandes que la mano
   if(!GL.blobMat){const c=cnv(64,64),x=c.getContext('2d'),g=x.createRadialGradient(32,32,2,32,32,32);g.addColorStop(0,'rgba(0,0,0,.62)');g.addColorStop(0.55,'rgba(0,0,0,.28)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,64,64);
     GL.blobMat=new T.MeshBasicMaterial({map:tex(c),transparent:true,depthWrite:false,toneMapped:false,color:0x000000});GL.blobGeo=new T.PlaneGeometry(1,1);}
   {const sh=new T.Mesh(GL.blobGeo,GL.blobMat);sh.rotation.x=-Math.PI/2;sh.scale.set(1.05*f,0.8*f,1);sh.position.y=0.02;sh.renderOrder=2;
@@ -2335,6 +2345,12 @@ function drive(model,name,time,dt,mirror){
   if(u.prev&&u.fade>=1)u.prev=null;
   u.mixer.update(0);
   u.inner.scale.x=mirror?-1:1;if(u.plate)u.plate.scale.x=mirror?-1:1;
+}
+/* El arquero "se hace grande" mientras el pateador toma carrera: abre los brazos, los mueve y rebota sobre la punta de los pies */
+function keeperReady(m,w,ph){
+  if(!(w>0.01))return 0;const B=m.userData.B,s=Math.sin(S.time*5.2+ph)*0.08;
+  if(B.LeftArm)B.LeftArm.rotation.z+=(0.40+s)*w;if(B.RightArm)B.RightArm.rotation.z-=(0.40-s)*w;
+  return Math.abs(Math.sin(S.time*6.5+ph))*0.035*w;
 }
 function handsMid(model){const B=model.userData.B,a=new THREE.Vector3(),b=new THREE.Vector3();B.RightHand.getWorldPosition(a);B.LeftHand.getWorldPosition(b);return a.add(b).multiplyScalar(0.5);}
 function kickRoot(f){return{x:TOE[0]*f,z:11.15+TOE[2]*f};} // con el jugador mirando al arco (giro de 180°)
@@ -2366,7 +2382,9 @@ function poseKeeperReal(dt){
     if(A.ss1&&A.ss2){ // paso lateral de arquero de verdad (Mixamo) en vez del saltito
       name=k.vx>0?'ss2':'ss1';const du=A[name].getClip().duration;k.ssT=((k.ssT||0)+dt*(0.9+0.9*mv))%du;t=k.ssT;mv=0;}
     else{lift+=Math.abs(Math.sin(S.time*15))*0.06*mv;t=1.2+Math.sin(S.time*15)*0.15;}}
-  drive(m,name,t,dt,mir);m.position.set(-xm,lift,0);const turn=false;m.rotation.set(0,turn?Math.PI*smooth(0,0.6,S.time-k.celT0):0,name==='idle'?-k.lean*0.12*mv:0);
+  drive(m,name,t,dt,mir);m.position.set(-xm,lift,0);const turn=false;
+  {const st=S.striker,tg=(name==='idle'||name==='ss1'||name==='ss2')&&S.turn==='save'&&st&&!(st.pre>0)&&(S.phase==='runup'||S.phase==='kick')?1:0;
+    k.rdy=(k.rdy||0)+(tg-(k.rdy||0))*Math.min(1,dt*5);m.position.y+=keeperReady(m,k.rdy,0);}m.rotation.set(0,turn?Math.PI*smooth(0,0.6,S.time-k.celT0):0,name==='idle'?-k.lean*0.12*mv:0);
   if(cel){const ct=S.time-k.celT0;celRoot(m,S.celStyle,ct);celPose(m,S.celStyle,ct);}
 }
 /* Antes de patear en la copa: el pateador acomoda la pelota en el punto penal y retrocede a tomar carrera (1,2 s).
@@ -2424,6 +2442,8 @@ function poseKickReal(dt){
     else if(S.phase==='krun'&&k.t>KT()-0.2&&k.t<KT()+0.05)lift=Math.sin((k.t-(KT()-0.2))/0.25*Math.PI)*0.1;}
   if(k&&S.celeb&&S.celeb.who==='rivK'&&S.time>=S.celeb.t&&!(ai.dir&&name==='dive'&&k.t<ai.diveAt+1.95)){name=RIV_CEL[(S.shotN||0)%RIV_CEL.length];if(!gk.userData.acts[name])name='victory';t=(name==='victory'?0.3:0.1)+(S.time-S.celeb.t);mir=false;lift=0;x=ai.dir?ai.x+ai.dir*1.7:ai.x;}
   drive(gk,name,t,dt,mir);gk.position.set(x,lift,0.3);gk.rotation.set(0,0,0);
+  {const tg=(name==='idle'||name==='ss1'||name==='ss2')&&k&&(S.phase==='aim'||S.phase==='krun')?(S.phase==='krun'?1:0.55):0;
+    GL.rkRdy=(GL.rkRdy||0)+(tg-(GL.rkRdy||0))*Math.min(1,dt*5);gk.position.y+=keeperReady(gk,GL.rkRdy,1.7);}
   if(k&&k.res==='catch'){const h=handsMid(gk);k.b.x=h.x;k.b.y=h.y;k.b.z=h.z+0.12;}
   // pateador propio
   const me=GL.meS,f=me.userData.f,R=kickRoot(f),A=me.userData.acts;
@@ -2721,8 +2741,8 @@ function glBuildExtras(){
     const ar=still(makeReal({head:'leo',style:1,c2:'#ffd23f',shirt:'#161616',shorts:'#161616',socks:'#161616',skin:'#c99a78',hair:'#1b130d',height:1.8}),-4.75,0.1,Math.PI/2,2.1);
     {const hd=ar.userData.B.RightHand;if(hd){const fl=new THREE.Group(),st=mesh(new THREE.CylinderGeometry(0.9,0.9,46,8),M('#d8d8d8'),false);st.position.y=20;fl.add(st);
       const pn=new THREE.Mesh(new THREE.PlaneGeometry(26,19),new THREE.MeshBasicMaterial({color:'#ffd23f',side:THREE.DoubleSide}));pn.position.set(13,33,0);fl.add(pn);hd.add(fl);}}
-    GL.wkThem=still(makeReal({head:HEAD_IDS[((r.code||'A').charCodeAt(2)||1)%HEAD_IDS.length],beard:0.85,pants:true,cap:(r.code||'').charCodeAt(0)%2?col(r.gk,0.55):null,shirt:r.gk,shorts:'#1b1f26',socks:r.gk,glove:'#f6f3e8',num:1,skin:r.gkSkin,hair:r.gkHair,height:1.92}),4.85,-0.9,Math.PI+0.35,0.9);
-    GL.wkUs=still(makeReal({shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,numColor:kit.t,height:1.9}),4.85,-0.9,Math.PI+0.35,1.6);
+    GL.wkThem=still(makeReal({head:HEAD_IDS[((r.code||'A').charCodeAt(2)||1)%HEAD_IDS.length],style:7,c2:col(r.gk,0.5),beard:0.85,pants:true,cap:(r.code||'').charCodeAt(0)%2?col(r.gk,0.55):null,shirt:r.gk,shorts:'#1b1f26',socks:r.gk,glove:'#f6f3e8',num:1,skin:r.gkSkin,hair:r.gkHair,height:1.92}),4.85,-0.9,Math.PI+0.35,0.9);
+    GL.wkUs=still(makeReal({style:7,c2:col(kit.c,0.5),shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,numColor:kit.t,height:1.9}),4.85,-0.9,Math.PI+0.35,1.6);
     GL.scene.add(sg);GL.sideGrp=sg;}
 }
 function poseExtras(dt){
