@@ -59,6 +59,7 @@ body{background:var(--ink);color:var(--chalk);font-family:var(--body);overflow:h
 .icon-btn svg{width:19px;height:19px}
 .stage{position:relative;flex:1;min-height:0;user-select:none;-webkit-user-select:none}
 canvas{display:block;position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+#pitch{outline:none}
 .overlay{position:absolute;inset:0;display:flex;align-items:flex-start;justify-content:center;overflow-y:auto;padding-top:12px;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));box-sizing:border-box}
 .card{background:var(--panel);border:3px solid var(--chalk);border-radius:20px;padding:18px 18px 20px;max-width:360px;width:100%;box-sizing:border-box;
@@ -473,7 +474,7 @@ const EN_RX=[
 [/^¡Nuevo récord en (.+)!$/,k=>'New best on '+tr(k[1].replace(/^./,c=>c.toUpperCase())).toLowerCase()+'!'],
 [/^Alcance del arquero \+(\d+)%$/,'Keeper reach +$1%'],
 [/^Llevas (\d+) puntos \(cada atajada o gol suma 1\)\.$/,'You have $1 points (each save or goal adds 1).'],[/^Próximo premio: (.+) a las (\d+)\.$/,k=>'Next prize: '+tr(k[1].replace(/^./,c=>c.toUpperCase())).toLowerCase()+' at '+k[2]+'.'],
-[/^\(se gana con (.+)\)$/,'(unlock: $1)'],[/^(.+) \(se gana con (.+)\)$/,'$1 (unlock: $2)'],[/^Temporada (\d+)$/,'Season $1'],[/^(\d+) copas? ganadas?$/,'$1 cups won'],[/^TÚ vs (.+)$/,'YOU vs $1'],[/^TÚ  (\d+) - (\d+)  (.+)$/,'YOU  $1 - $2  $3'],[/^¡Goooool de (.+)!$/,'Goooal by $1!'],
+[/^\(se gana con (.+)\)$/,'(unlock: $1)'],[/^(.+) \(se gana con (.+)\)$/,'$1 (unlock: $2)'],[/^Temporada (\d+)$/,'Season $1'],[/^(\d+) copas? ganadas?$/,'$1 cups won'],[/^TÚ vs (.+)$/,'YOU vs $1'],[/^(GOLES|PUNTOS|ATAJADAS)  (\d+)$/,k=>({GOLES:'GOALS',PUNTOS:'POINTS',ATAJADAS:'SAVES'})[k[1]]+'  '+k[2]],[/^VIDAS  (.+)$/,'LIVES  $1'],[/^TÚ  (\d+) - (\d+)  (.+)$/,'YOU  $1 - $2  $3'],[/^¡Goooool de (.+)!$/,'Goooal by $1!'],
 [/^Diagnóstico técnico: versión (.+)$/,'Diagnostics: version $1'],[/^último partido (.+)$/,'last match $1'],[/^(\d+) s \((\d+) penales\)$/,'$1 s ($2 penalties)'],[/^audio atrasado (\d+) veces$/,'audio late $1 times'],[/^pausas del sistema (\d+)$/,'system pauses $1'],
 [/^tirones de imagen (\d+)$/,'frame hitches $1'],[/^(\S+) cuadros\/s$/,'$1 fps'],[/^resolución (.+)$/,'resolution $1'],[/^calidad (baja|media|alta)( \(30 cuadros\/s\))?$/,k=>'quality '+tr(k[1])+(k[2]?' (30 fps)':'')],[/^partió en (.+), bajó (\d+)$/,'started at $1, dropped $2'],
 [/^dibujo (.+) ms \(máx (.+)\)$/,'draw $1 ms (max $2)'],[/^núcleos (.+)$/,'cores $1'],[/^jugado (\d+) s$/,'played $1 s'],[/^repeticiones (\d+)$/,'replays $1'],[/^movimiento reducido (.+)$/,'reduced motion $1'],[/^pantalla (.+)$/,'screen $1'],[/^SESIÓN ANTERIOR: (.+)$/,'PREVIOUS SESSION: $1'],
@@ -756,7 +757,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo']
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='6.6 · 15 nov 2026';
+const VERSION='6.7 · 15 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -1731,12 +1732,16 @@ function initialTier(){
 }
 function glResize(){
   if(!GL.ok||!W)return;const pr=glPR();
-  GL.r.setPixelRatio(pr);GL.r.setSize(W,H,false);GL.composer.setPixelRatio(pr);GL.composer.setSize(W,H);
+  /* En pantallas más anchas que la columna del juego (computador, teléfono acostado) el estadio en 3D se dibuja a todo el
+     ancho de la ventana. La jugada sigue ocupando la columna central, igual que siempre: solo se agrega estadio a los lados. */
+  const Wf=Math.max(W,Math.round(window.innerWidth||W)),ox=Wf>W+2?(Wf-W)/2:0,gc=$('gl');GL.wf=ox?Wf:W;GL.ox=ox;
+  gc.style.width=GL.wf+'px';gc.style.left=(-ox)+'px';
+  GL.r.setPixelRatio(pr);GL.r.setSize(GL.wf,H,false);GL.composer.setPixelRatio(pr);GL.composer.setSize(GL.wf,H);
   const pxm=0.55*W*G.mx,Z0=1/(2.2*G.m),f=Z0*pxm,hc=(G.lineY-G.hz)*Z0/f,Hf=2*Math.max(G.hz,H-G.hz);
   Object.assign(GL,{pxm,Z0,f,hc,Hf,voy:Hf/2-G.hz});
   const c=GL.cam;c.fov=2*Math.atan((Hf/2)/f)*180/Math.PI;c.aspect=W/Hf;
-  c.position.set(0,hc,-Z0);c.lookAt(0,hc,50);c.setViewOffset(W,Hf,0,GL.voy,W,H);c.updateProjectionMatrix();
-  GL.camI.aspect=W/H;GL.camI.updateProjectionMatrix();GL.camR.aspect=W/H;GL.camR.fov=W/H<0.8?48:38;GL.camR.updateProjectionMatrix();const k=GL.camK,asp=W/H;k.aspect=asp;k.fov=asp<0.8?52:asp<1.2?44:36;GL.kFov0=k.fov;k.position.set(-0.25,2.6,19.2);k.lookAt(0,0.8,0);k.updateProjectionMatrix();
+  c.position.set(0,hc,-Z0);c.lookAt(0,hc,50);c.setViewOffset(W,Hf,-GL.ox,GL.voy,GL.wf,H);c.updateProjectionMatrix();
+  GL.camI.aspect=GL.wf/H;GL.camI.updateProjectionMatrix();GL.camR.aspect=GL.wf/H;GL.camR.fov=W/H<0.8?48:38;GL.camR.updateProjectionMatrix();const k=GL.camK,asp=W/H;k.aspect=GL.wf/H;k.fov=asp<0.8?52:asp<1.2?44:36;GL.kFov0=k.fov;k.position.set(-0.25,2.6,19.2);k.lookAt(0,0.8,0);k.updateProjectionMatrix();
 }
 function glApplyTier(){
   if(GL.charGLB&&GL.extras)glBuildExtras();
@@ -1747,7 +1752,7 @@ function glApplyTier(){
 }
 const V3=(xm,hm,dm)=>new THREE.Vector3(-xm,hm,dm);
 const activeCam=()=>GL.replayOn?GL.camR:GL.introOn?GL.camI:GL.celOn&&GL.camC?GL.camC:GL.kview?GL.camK:GL.cam;
-function glProject(v){const p=v.clone().project(activeCam());return{x:(p.x+1)/2*W,y:(1-p.y)/2*H};}
+function glProject(v){const p=v.clone().project(activeCam()),wf=GL.wf||W;return{x:(p.x+1)/2*wf-(GL.ox||0),y:(1-p.y)/2*H};}
 function ballWorld(p){
   const s=Math.max(0.05,(p.gy-G.hz)/(G.lineY-G.hz)),d=(1/s-1)/2.2;
   return V3((p.x-W/2)/(GL.pxm*s),Math.max(0,(p.gy-p.y)/(s*G.hpm))+R3,d/G.m);
@@ -2228,7 +2233,7 @@ function glSync(dt){
     for(const cm of GL.crowdMats)if(cm.map!==m){cm.map=m;cm.needsUpdate=true;}
     GL.crowdTex.forEach(t=>t.repeat.set(10,5));}
   let ox=0,oy=0;if(S.shake>0){const k=S.shake*G.unit*0.04;ox=rand(-k,k);oy=rand(-k,k);}
-  if(GL.kview){GL.camK.position.set(-0.25+ox*0.004,2.6+oy*0.004,19.2);}else GL.cam.setViewOffset(W,GL.Hf,ox,GL.voy+oy,W,H);
+  if(GL.kview){GL.camK.position.set(-0.25+ox*0.004,2.6+oy*0.004,19.2);}else GL.cam.setViewOffset(W,GL.Hf,ox-(GL.ox||0),GL.voy+oy,GL.wf||W,H);
   if(GL.kFov0){const tf=GL.kFov0*(S.press&&S.turn==='kick'?0.86:1);if(Math.abs(GL.camK.fov-tf)>0.05){GL.camK.fov+=(tf-GL.camK.fov)*Math.min(1,dt*3);GL.camK.updateProjectionMatrix();}}
   GL.grade.uniforms.time.value=S.time%10;
 }
@@ -3146,7 +3151,7 @@ try{if('serviceWorker' in navigator&&/github\.io$/.test(location.hostname))addEv
 const PZ={facil:{lo:0.55,hi:0.88,P:1.7},normal:{lo:0.64,hi:0.84,P:1.3},dificil:{lo:0.70,hi:0.82,P:1.0}};
 const kickCtrl=()=>CFG.kickCtrl==='deslizar'?'deslizar':'apuntar';
 function aimFromScreen(cx,cy){
-  const r=cv.getBoundingClientRect(),cam=GL.camK,v=new THREE.Vector3(((cx-r.left)/r.width)*2-1,-((cy-r.top)/r.height)*2+1,0.5).unproject(cam).sub(cam.position);
+  const r=cv.getBoundingClientRect(),cam=GL.camK,v=new THREE.Vector3(((cx-r.left)*(W/r.width)+(GL.ox||0))/(GL.wf||W)*2-1,-((cy-r.top)/r.height)*2+1,0.5).unproject(cam).sub(cam.position);
   if(Math.abs(v.z)<1e-4)return null;const t=-cam.position.z/v.z;if(t<=0)return null;
   return{x:clamp(cam.position.x+v.x*t,-5.2,5.2),y:clamp(cam.position.y+v.y*t,0.12,3.3)};
 }
@@ -3926,7 +3931,7 @@ function drawCelHint(){if(!GL.celOn||RP||(GL.celEl||0)<1.0)return;ctx.save();ctx
 /* Cámara de festejo */
 function celCam(){
   if(!GL.camC){GL.camC=new THREE.PerspectiveCamera(42,1,0.1,6000);}
-  const c=GL.camC,asp=W/H;if(Math.abs(c.aspect-asp)>1e-3){c.aspect=asp;c.fov=asp<0.8?40:30;c.updateProjectionMatrix();}
+  const c=GL.camC,asp=W/H,aw=(GL.wf||W)/H;if(Math.abs(c.aspect-aw)>1e-3){c.aspect=aw;c.fov=asp<0.8?40:30;c.updateProjectionMatrix();}
   let m=null,el=0,k=S.kick;
   if(!RP&&playing()&&GL.meK&&GL.meK.userData.real){
     if(GL.kview&&S.phase==='kafter'&&k&&(k.res==='goal'||k.res==='postin')&&k.t+KS>1.6){m=GL.meS;el=k.t+KS-1.6;}
