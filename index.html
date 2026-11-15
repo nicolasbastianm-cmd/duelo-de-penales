@@ -271,6 +271,7 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
           </div></fieldset>
           <p class="progress" id="progress"></p>
           <p class="small diag" id="diag"></p>
+          <p class="small diag" id="stats"></p>
         </div>
         <button class="go" id="lockerDone" type="button">Listo</button>
       </div>
@@ -567,7 +568,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='6.0 · 15 nov 2026';
+const VERSION='6.1 · 15 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -582,7 +583,27 @@ function renderRoleUI(){
   $('endlessSub').textContent=CFG.role==='kicker'?'¿Cuántos goles haces con 3 vidas?':CFG.role==='both'?'Pateas y atajas: ¿cuántos puntos haces?':'¿Cuántas atajas con 3 vidas?';
   if(S.mode==='home'){S.turn=CFG.role==='kicker'&&GL.ok?'kick':'save';S.best=getBest();hud();}
 }
+/* ---------- Estadísticas de juego (quedan solo en este equipo, no se envían a ninguna parte) ----------
+   Sirven para calibrar la dificultad con datos: cuánto ataja y cuánto mete, cuántos partidos gana, pierde o abandona,
+   y qué consejos se repiten más. Se muestran en Vestuario, bajo el diagnóstico. */
+const STAT=(()=>{let d=null;try{d=JSON.parse(lsGet('penales-stats','null'));}catch(e){}if(!d||d.v!==1)d={v:1,desde:new Date().toISOString().slice(0,10),seg:0,m:{}};return d;})();
+let statDirty=false;
+function statAdd(key,n=1){
+  const md=S.mode==='tour'?'copa':S.mode==='endless'?'infinito':null;if(!md)return;
+  const id=md+' '+(S.diff||CFG.diff||'normal')+' '+({keeper:'atajando',kicker:'pateando',both:'los dos'}[S.role]||'-'),o=STAT.m[id]||(STAT.m[id]={});o[key]=(o[key]||0)+n;statDirty=true;
+}
+function statSave(){if(!statDirty)return;statDirty=false;lsSet('penales-stats',JSON.stringify(STAT));}
+function statText(){
+  const ids=Object.keys(STAT.m);if(!ids.length)return'Datos de juego: todavía no hay partidos registrados.';
+  const pc=(a,b)=>b?`${a||0} de ${b} (${Math.round(100*(a||0)/b)}%)`:'-',tips={};
+  const rows=ids.map(id=>{const o=STAT.m[id];for(const k in o)if(k.startsWith('c_'))tips[k.slice(2)]=(tips[k.slice(2)]||0)+o[k];
+    return`${id}: ${o.part||0} partidos${id.startsWith('copa')?` (ganó ${o.gan||0}, perdió ${o.per||0}, abandonó ${o.aban||0})`:` (terminó ${o.fin||0}, abandonó ${o.aban||0})`} · atajó ${pc(o.ataj,o.tiros)} · metió ${pc(o.gol,o.pat)}`;});
+  const TN={mid:'picadita',eye:'lado equivocado',fast:'tarde o suave',wait:'se lanza antes',U:'tiro alto',LR:'lejos del balón',D:'apunta alto',in:'apunta afuera',bar:'barra de fuerza',corners:'muy al centro',swap:'arquero adivina'};
+  const top=Object.entries(tips).sort((a,b)=>b[1]-a[1]).slice(0,4).map(([k,v])=>`${TN[k]||k} ×${v}`).join(', ');
+  return`Datos de juego desde ${STAT.desde} · ${Math.round(STAT.seg/60)} min jugados · ${rows.join(' ‖ ')}${top?' ‖ fallos más repetidos: '+top:''}`;
+}
 function goHome(){
+  if(playing()&&S.mode!=='tut')statAdd('aban');statSave();
   RP=null;REC=null;pressureEnd();vozStop();
   ROLE=null;S.role=null;S.kick=null;S.swipe=null;S.turn=CFG.role==='kicker'&&GL.ok?'kick':'save';
   S.mode='home';S.phase='idle';S.tour=null;S.tut=null;S.banner=null;S.msg=null;S.ball={state:'spot',u:0,trail:[]};S.striker=null;
@@ -610,7 +631,7 @@ function renderLocker(){
   txt+=next?`Próximo premio: ${next.p.toLowerCase()} a las ${next.need.saves}.`:'Ya tienes todos los premios por atajadas.';
   if(!anyTrophy())txt+=' Gana un torneo para la camiseta dorada y el estadio de la final.';
   $('progress').textContent=txt;
-  $('diag').textContent=diagText();
+  $('diag').textContent=diagText();$('stats').textContent=statText();
 }
 $('name').addEventListener('input',e=>{CFG.name=e.target.value.slice(0,10);saveCfg();});
 $('num').addEventListener('input',e=>{const n=parseInt(e.target.value,10);if(n>=1&&n<=99){CFG.num=n;saveCfg();}});
@@ -724,7 +745,8 @@ function resolve(){
   let out;
   const wasPress=S.press;pressureEnd();
   if(b.res==='out')out='out';else if(canCatch(p.x,b.endH,p.r))out='save';else out=b.res==='in'?'goal':b.res;
-  if(S.mode!=='tut'){if(out==='save'){dailyEv('save');if(k.dive)dailyEv('divesave');if(S.mode==='tour'&&S.tour.st)S.tour.st.saves++;}else if(out==='goal')dailyEv('conceded');}
+  if(S.mode!=='tut'){statAdd('tiros');if(out==='save')statAdd('ataj');
+    if(out==='save'){dailyEv('save');if(k.dive)dailyEv('divesave');if(S.mode==='tour'&&S.tour.st)S.tour.st.saves++;}else if(out==='goal')dailyEv('conceded');}
   if(REC){REC.worthy=out==='save'?'atajada':(out==='post'||out==='bar')?'palo':false;REC.key=out==='save'&&wasPress;}
   if(out==='save'){S.celeb={who:'me',t:S.time+(k.dive?0.95:0.55)};S.celStyle=pickCel(CEL_A);S.celSide=Math.random()<0.5?-1:1;if(k.dive)confettiBurst(350);}else if(out==='goal')S.celeb={who:'rivS',t:S.time};
   if(out==='save'){
@@ -813,9 +835,10 @@ function startEndless(){
   S.role=roleNow();ROLE=S.role;
   S.xpGain=0;S.lvUp=null;
   S.mode='endless';S.pow=1;S.powOn=null;S.vozVida=false;S.saves=0;S.lives=3;S.lvlSave=0;S.lvlKick=0;S.tIdx=-1;S.best=getBest();S.tour=null;S.seen=new Set(['rasante','colocado']);S.prizeBase=unlockedIds();
-  resetKeeper();show(null);crowdStart();hud();nextEndlessTurn();cv.focus({preventScroll:true});
+  statAdd('part');resetKeeper();show(null);crowdStart();hud();nextEndlessTurn();cv.focus({preventScroll:true});
 }
 function endEndless(){
+  statAdd('fin');statSave();
   S.mode='card';S.phase='idle';sfx.final();crowdStop();S.banner=null;relator(S.saves>0&&S.saves>=S.best?'record':'findesafio',{delay:1.0});
   const who=CFG.name.trim();
   const rl=S.role,unit=rl==='kicker'?'Goles':rl==='both'?'Puntos':'Atajadas';
@@ -839,10 +862,11 @@ function showIntro(){
 }
 function startMatch(){
   DIAG.t0=performance.now();
-  S.mode='tour';S.pow=1;S.powOn=null;S.role=roleNow();ROLE=S.role;S.lvlSave=0;S.tour.sh={us:[],them:[]};Object.assign(S.tour,{hist:[],gkHist:[],toldS:false,toldK:false,vozMS:false,st:{saves:0,kicks:0,miss:0}});S.xpGain=0;S.lvUp=null;resetKeeper();show(null);crowdStart();hud();
+  S.mode='tour';S.pow=1;S.powOn=null;S.role=roleNow();ROLE=S.role;S.lvlSave=0;S.tour.sh={us:[],them:[]};Object.assign(S.tour,{hist:[],gkHist:[],toldS:false,toldK:false,vozMS:false,st:{saves:0,kicks:0,miss:0}});statAdd('part');S.xpGain=0;S.lvUp=null;resetKeeper();show(null);crowdStart();hud();
   if(GL.ok&&!reduce){const r=RIVALS[S.tour.round];S.phase='intro';S.introT=0;S.banner={title:r.stage,sub:'Tu equipo vs '+r.team,t:0,dur:introLen()-0.3};ambReact('entrance');}else themTurn();vozIntro();cv.focus({preventScroll:true});
 }
 function endMatch(w){
+  statAdd(w==='us'?'gan':'per');statSave();
   if(DIAG.t0){DIAG.dur=(performance.now()-DIAG.t0)/1000;DIAG.shots=S.tour.sh.us.length+S.tour.sh.them.length;DIAG.t0=0;}
   const r=RIVALS[S.tour.round],sh=S.tour.sh,score=`${cnt(sh.us)}–${cnt(sh.them)}`;
   S.mode='card';S.phase='idle';S.banner=null;sfx.final();crowdStop();vozEnd(w);
@@ -2578,6 +2602,7 @@ function kickResolve(){
     sfx.save();ambReact('uyy');
   }else if(out==='post'||out==='bar'){b.vx=out==='bar'?b.vx*0.3:Math.sign(s.tx)*rand(3,6);b.vy=out==='bar'?rand(3,5):rand(1,3);b.vz=rand(4,8);say(out==='bar'?'¡Al travesaño!':'¡Al palo!',C.chalk);sfx.post();ambReact('uyy');}
   else{say(s.ty>Hh?'¡Por arriba!':'¡Afuera!',C.chalk);ambReact('uyy');}
+  statAdd('pat');if(out==='goal'||out==='postin')statAdd('gol');
   if(out!=='goal'&&out!=='postin')showTip(kickTip(out,s,k));
   vozKicker(out,s);S.phase='kafter';S.wait=1.7;const goal=out==='goal'||out==='postin';
   if(goal){S.celStyle=pickCel(CEL_K);S.celSide=Math.random()<0.5?-1:1;}
@@ -2834,7 +2859,7 @@ function poseExtras(dt){
 /* ---------- Consejos: por qué se falló ---------- */
 function showTip(text){
   if(!text||S.mode==='tut')return;{const key=String(text);if(S.lastTip===key){S.lastTip=null;return;}S.lastTip=key;}
-  const[ico,txt]=Array.isArray(text)?text:[null,text];
+  const[ico,txt]=Array.isArray(text)?text:[null,text];if(ico)statAdd('c_'+ico);
   S.banner=ico?{title:txt,ico,sub:'',t:-0.6,dur:3.0}:{title:'Consejo',sub:txt,t:-0.6,dur:3.0};S.tipUntil=S.time+2.5;
 }
 function keeperTip(b,p){
@@ -3658,7 +3683,7 @@ const DIAG={a:0,st:0,img:0,lw:0,la:0,fw:0,fn:0,fps:0};
 function diagFrame(now,raw){
   if(!playing()||document.hidden){DIAG.lw=0;DIAG.fw=0;return;}
   if(raw>120)DIAG.img++;
-  if(!DIAG.fw){DIAG.fw=now;DIAG.fn=0;}else if(now-DIAG.fw>=2000){DIAG.fps=Math.round(DIAG.fn*1000/(now-DIAG.fw));DIAG.fw=now;DIAG.fn=0;if(now-(DIAG.sv||0)>8000){DIAG.sv=now;DIAG.sec=(DIAG.sec||0)+8;lsSet('penales-diag',diagNow());}}
+  if(!DIAG.fw){DIAG.fw=now;DIAG.fn=0;}else if(now-DIAG.fw>=2000){DIAG.fps=Math.round(DIAG.fn*1000/(now-DIAG.fw));DIAG.fw=now;DIAG.fn=0;if(now-(DIAG.sv||0)>8000){DIAG.sv=now;DIAG.sec=(DIAG.sec||0)+8;STAT.seg+=8;statDirty=true;statSave();lsSet('penales-diag',diagNow());}}
   if(AC){if(AC.state!=='running'){DIAG.lw=0;return;}
     if(!DIAG.lw){DIAG.lw=now;DIAG.la=AC.currentTime;}else if(now-DIAG.lw>=1000){const w=now-DIAG.lw,a=(AC.currentTime-DIAG.la)*1000;if(w-a>45)DIAG.a++;if(w-a>140)audioLagged();DIAG.lw=now;DIAG.la=AC.currentTime;}}
 }
