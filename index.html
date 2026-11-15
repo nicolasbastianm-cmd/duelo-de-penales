@@ -757,7 +757,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo']
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='6.7 · 15 nov 2026';
+const VERSION='6.8 · 15 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -1740,7 +1740,8 @@ function glResize(){
   const pxm=0.55*W*G.mx,Z0=1/(2.2*G.m),f=Z0*pxm,hc=(G.lineY-G.hz)*Z0/f,Hf=2*Math.max(G.hz,H-G.hz);
   Object.assign(GL,{pxm,Z0,f,hc,Hf,voy:Hf/2-G.hz});
   const c=GL.cam;c.fov=2*Math.atan((Hf/2)/f)*180/Math.PI;c.aspect=W/Hf;
-  c.position.set(0,hc,-Z0);c.lookAt(0,hc,50);c.setViewOffset(W,Hf,-GL.ox,GL.voy,GL.wf,H);c.updateProjectionMatrix();
+  /* en pantallas bajas la cámara queda más abajo y dentro de la tribuna de atrás del arco: se recorta lo que está entre la cámara y el arco */
+  c.near=hc<7.4?Z0-6:0.5;c.position.set(0,hc,-Z0);c.lookAt(0,hc,50);c.setViewOffset(W,Hf,-GL.ox,GL.voy,GL.wf,H);c.updateProjectionMatrix();
   GL.camI.aspect=GL.wf/H;GL.camI.updateProjectionMatrix();GL.camR.aspect=GL.wf/H;GL.camR.fov=W/H<0.8?48:38;GL.camR.updateProjectionMatrix();const k=GL.camK,asp=W/H;k.aspect=GL.wf/H;k.fov=asp<0.8?52:asp<1.2?44:36;GL.kFov0=k.fov;k.position.set(-0.25,2.6,19.2);k.lookAt(0,0.8,0);k.updateProjectionMatrix();
 }
 function glApplyTier(){
