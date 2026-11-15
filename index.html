@@ -376,11 +376,11 @@ const DIFF={
   dificil:{n:'Difícil',dur:1.20,decay:0.94,min:0.50,speed:0.95,reach:0.92,run:0.85,diveT:0.42,team:0.70}};
 const RIVALS=[
   {stage:'Cuartos de final',short:'Cuartos',lower:'cuartos de final',team:'Los Pumas',code:'PUM',kName:'Tito',gkName:'Pancho',pref:{L:0.7,C:0.1,R:0.2},high:0.05,gkPref:{L:0.2,C:0.15,R:0.65},skin:'#c99a78',hair:'#1b130d',gkSkin:'#ecc9ae',gkHair:'#3a2314',color:'#e0a526',shorts:'#5a3b10',gk:'#2fbf71',gkDesc:'Su arquero, Pancho, se tira tarde: patea fuerte a un rincón.',
-   desc:'Su pateador, Tito, patea suave y no sabe disimular: mira hacia dónde se inclina.',lvl:1,types:['rasante','colocado'],honesty:1,stutter:0,feint:0},
+   desc:'Su goleador, Tito, patea suave y no sabe disimular: mira hacia dónde se inclina.',lvl:1,types:['rasante','colocado'],honesty:1,stutter:0,feint:0},
   {stage:'Semifinal',short:'Semifinal',lower:'semifinal',team:'Los Halcones',code:'HAL',kName:'Benja',gkName:'Rulo',pref:{L:0.25,C:0.1,R:0.65},high:0.35,gkPref:{L:0.5,C:0.3,R:0.2},skin:'#ffffff',hair:'#c49a5a',gkSkin:'#9c6f52',gkHair:'#111111',color:'#2f5fd8',shorts:'#f6f3e8',gk:'#ff7a2f',gkDesc:'Su arquero, Rulo, a veces adivina el lado: usa el efecto para engañarlo.',
-   desc:'Su pateador, Benja, le pega fuerte y a veces amaga. Si se frena antes de patear, ¡ojo!',lvl:5,types:['rasante','colocado','potente','alto','efecto'],honesty:0.8,stutter:0.25,feint:0.8},
+   desc:'Su goleador, Benja, le pega fuerte y a veces amaga. Si se frena antes de patear, ¡ojo!',lvl:5,types:['rasante','colocado','potente','alto','efecto'],honesty:0.8,stutter:0.25,feint:0.8},
   {stage:'Final',short:'Final',lower:'final',team:'Los Tiburones',code:'TIB',kName:'Maxi',gkName:'Muro',pref:{L:0.45,C:0.1,R:0.45},high:0.45,gkPref:{L:0.45,C:0.1,R:0.45},skin:'#8a5f45',hair:'#111111',gkSkin:'#ffffff',gkHair:'#6b4423',color:'#1b9aaa',shorts:'#0d3b45',gk:'#e63946',gkDesc:'Su arquero, Muro, lee casi todo: busca los ángulos de arriba.',
-   desc:'Su pateador, Maxi, es el mejor del torneo: amaga, la pica al medio y la clava al ángulo.',lvl:9,types:['rasante','colocado','potente','alto','efecto','picadita'],honesty:0.62,stutter:0.4,feint:0.7}];
+   desc:'Su goleador, Maxi, es el mejor del torneo: amaga, la pica al medio y la clava al ángulo.',lvl:9,types:['rasante','colocado','potente','alto','efecto','picadita'],honesty:0.62,stutter:0.4,feint:0.7}];
 const DEF_RIVAL={team:'Rivales',code:'RIV',skin:'#ecc9ae',hair:'#2a1a10',gkSkin:'#c99a78',gkHair:'#5a3a22',color:'#2f5fd8',shorts:'#f6f3e8',gk:'#2fbf71'};
 const TYPES={
   rasante:{n:'Rasante',w:1,tip:()=>'Va pegado al pasto.'},
@@ -561,7 +561,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='5.5 · 14 nov 2026';
+const VERSION='5.6 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -679,10 +679,10 @@ function newRound(){
   if(S.mode!=='tut'&&S.keeper)S.keeper.target=W/2; // el arquero vuelve solo al centro del arco antes de cada penal
   if(S.mode==='tut')plan=tutPlan();else if(S.mode==='endless')plan=endlessPlan();else plan=tourPlan();
   if(S.mode!=='tut')S.banner=plan.banner||(S.role==='both'?{title:'¡Te toca atajar!',sub:'',t:0,dur:1.4}:null);
-  S.plan=plan;
+  S.plan=plan;rivPick(S.mode==='tut'?0:S.mode==='tour'&&S.tour&&S.tour.sh?S.tour.sh.them.length:(S.shotN||0));
   S.striker={pre:S.mode==='tour'&&GL.ok?PRE_T:0,t:0,k:null,run:plan.run,stutter:plan.stutter,feint:plan.feint,honesty:plan.honesty,tell:plan.tell};
   S.ball={state:'spot',u:0,trail:[]};S.phase='runup';sfx.whistle();if(S.mode!=='tut'){ambWhistles();S.shotN=(S.shotN||0)+1;recStart();}
-  if(S.mode==='tour'&&S.tour&&!S.tour.toldS){S.tour.toldS=true;const r=RIVALS[S.tour.round];S.banner={title:'¿Dónde patea '+r.kName+'?',viz:{p:r.pref,high:r.high>=0.3},t:0,dur:3.2};}
+  if(S.mode==='tour'&&S.tour&&!S.tour.toldS){S.tour.toldS=true;const r=RIVALS[S.tour.round];S.banner={title:'¿Dónde patean '+r.team+'?',viz:{p:r.pref,high:r.high>=0.3},t:0,dur:3.2};}
   pressureStart();
 }
 function launch(){
@@ -1801,13 +1801,18 @@ function makePlayer(o){
   root.userData.P=P;return root;
 }
 function glBuildPlayers(){
-  const sc=GL.scene;for(const k of['meK','meS','rivS','rivK']){if(GL[k]){sc.remove(GL[k]);if(!GL[k].userData.real)disposeTree(GL[k]);}}
+  const sc=GL.scene;if(GL.rivPool){for(const m of GL.rivPool)sc.remove(m);GL.rivPool=null;}for(const k of['meK','meS','rivS','rivK']){if(GL[k]){sc.remove(GL[k]);if(!GL[k].userData.real)disposeTree(GL[k]);}}
   if(GL.charGLB){const kit=KITS[CFG.kit],r=curRival();
     GL.meK=makeReal({shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,name:CFG.name,numColor:kit.t,height:1.9});
     GL.meS=makeReal({capt:true,boots:BOOTS[(CFG.num||1)%BOOTS.length],style:(DESIGNS[CFG.design]||DESIGNS.rayas).s,c2:kit.t,shirt:kit.c,shorts:'#f3f2ec',socks:kit.c,num:CFG.num,name:CFG.name,numColor:kit.t,height:1.85});
     GL.rivS=makeReal({head:HEAD_IDS[((r.code||'A').charCodeAt(1)||0)%HEAD_IDS.length],beard:0.5,boots:BOOTS[3],shirt:r.color,shorts:r.shorts,socks:'#f3f2ec',style:KIT_ST[r.code]||1,c2:r.shorts,num:9,skin:r.skin,hair:r.hair,height:2.0});
     GL.rivK=makeReal({head:HEAD_IDS[((r.code||'A').charCodeAt(2)||1)%HEAD_IDS.length],beard:0.85,pants:true,cap:(r.code||'').charCodeAt(0)%2?col(r.gk,0.55):null,shirt:r.gk,shorts:'#1b1f26',socks:r.gk,glove:'#f6f3e8',num:1,skin:r.gkSkin,hair:r.gkHair,height:1.92});
-    for(const k of['meK','meS','rivS','rivK'])sc.add(GL[k]);glBuildExtras();return;}
+    /* En una tanda cada penal lo patea un jugador distinto: cinco pateadores rivales que se turnan. El primero es la figura
+       del equipo; los otros cuatro son los mismos compañeros que esperan en el círculo central (mismo número y mismo aspecto). */
+    GL.rivPool=[GL.rivS];GL.rivS.userData.num=9;
+    for(const num of[10,7,11,8]){const i=EX_NUMS.indexOf(num),m=makeReal({...exLook(i,1),shirt:r.color,shorts:r.shorts,socks:'#f3f2ec',style:KIT_ST[r.code]||1,c2:r.shorts,num,height:1.93+((i*37+11)%10)/90});
+      m.userData.num=num;m.visible=false;GL.rivPool.push(m);}
+    for(const k of['meK','meS','rivS','rivK'])sc.add(GL[k]);for(const m of GL.rivPool)if(m!==GL.rivS)sc.add(m);glBuildExtras();return;}
   const kit=KITS[CFG.kit],r=curRival(),plate=()=>plateTexture(CFG.name,CFG.num,kit.t);
   GL.meK=makePlayer({shirt:kit.c,trim:col(kit.c,0.5),shorts:col(kit.c,0.45),socks:kit.c,band:col(kit.c,0.45),hair:'#3a2414',glove:GLOVES[CFG.glove].c,keeper:true,plate:plate()});GL.meK.scale.setScalar(1.17);
   GL.meS=makePlayer({shirt:kit.c,trim:col(kit.c,0.5),shorts:'#f3f2ec',socks:kit.c,band:'#f3f2ec',hair:'#3a2414',plate:plate(),sole:kit.c});GL.meS.scale.setScalar(1.12);
@@ -2666,15 +2671,23 @@ function drawKickAid(){
    Como en una tanda real: los dos equipos esperan en la línea central y el árbitro junto al área.
    Se ven desde la cámara del arquero, en la presentación y en las repeticiones. */
 const SKINS=['#f4dcc8','#e6c2a4','#c99a78','#9c6f52','#74513b'],HAIRS=['#1b130d','#3a2314','#6b4423','#c49a5a','#111111'];
+const EX_NUMS=[2,3,4,5,6,7,8,10,11];
+function exLook(i,side){return{boots:BOOTS[(i*3+side*2)%BOOTS.length],skin:SKINS[(i*3+side*2)%5],hair:HAIRS[(i*2+side*3)%5],head:[null,'leo','c28',null,'josh','c42','c01','leo','c28'][(i*2+side*3+(side?4:0))%9],hairVol:[1,1.13,1,1.22,1,1.08,1.16][(i*3+side*5)%7],band:(i*7+side*2)%9===4,beard:[0,0.5,0,0.9,0,0.45,0,0,0.8][(i*4+side*3)%9],mus:[0,0,0.8,0,0,0,0.7,0,0][(i*5+side)%9],build:0.93+((i*53+side*17)%10)/62,bald:(i*2+side)%5===3};}
+/* Elige al pateador rival de este penal y saca del círculo central al compañero que tiene su número (es él quien fue a patear) */
+function rivPick(i){
+  const P=GL.rivPool;if(!P||!P.length)return;const m=P[((i%P.length)+P.length)%P.length];
+  if(m!==GL.rivS){m.visible=GL.rivS.visible;GL.rivS.visible=false;GL.rivS=m;}rivMark();
+}
+function rivMark(){if(!GL.team||!GL.rivS)return;const n=GL.rivS.userData.num;for(const q of GL.team)if(q.userData.side===1)q.visible=q.userData.num!==n;}
 function glBuildExtras(){
   if(GL.extras){GL.scene.remove(GL.extras);GL.extras=null;}if(GL.sideGrp){GL.scene.remove(GL.sideGrp);GL.sideGrp=null;}
   if(!GL.charGLB)return;
-  const grp=new THREE.Group(),kit=KITS[CFG.kit],r=curRival(),n=[9,9,6][GL.tier||0],nums=[2,3,4,5,6,7,8,10,11];GL.team=[];
+  const grp=new THREE.Group(),kit=KITS[CFG.kit],r=curRival(),n=[9,9,6][GL.tier||0],nums=EX_NUMS;GL.team=[];
   for(const side of[0,1])for(let i=0;i<n;i++){
-    const m=makeReal({boots:BOOTS[(i*3+side*2)%BOOTS.length],shirt:side?r.color:kit.c,shorts:side?r.shorts:'#f3f2ec',socks:side?'#f3f2ec':kit.c,style:side?KIT_ST[r.code]||1:(DESIGNS[CFG.design]||DESIGNS.rayas).s,c2:side?r.shorts:kit.t,num:nums[i],
-      skin:SKINS[(i*3+side*2)%5],hair:HAIRS[(i*2+side*3)%5],head:[null,'leo','c28',null,'josh','c42','c01','leo','c28'][(i*2+side*3+(side?4:0))%9],capt:i===0&&side===1,hairVol:[1,1.13,1,1.22,1,1.08,1.16][(i*3+side*5)%7],band:(i*7+side*2)%9===4,beard:[0,0.5,0,0.9,0,0.45,0,0,0.8][(i*4+side*3)%9],mus:[0,0,0.8,0,0,0,0.7,0,0][(i*5+side)%9],height:1.72+((i*37+side*11)%10)/38,build:0.93+((i*53+side*17)%10)/62,bald:(i*2+side)%5===3});
+    const m=makeReal({...exLook(i,side),shirt:side?r.color:kit.c,shorts:side?r.shorts:'#f3f2ec',socks:side?'#f3f2ec':kit.c,style:side?KIT_ST[r.code]||1:(DESIGNS[CFG.design]||DESIGNS.rayas).s,c2:side?r.shorts:kit.t,num:nums[i],capt:i===0&&side===1,height:1.72+((i*37+side*11)%10)/38});m.userData.num=nums[i];
     m.position.set((side?1:-1)*(0.9+i*0.7),0,52.5);m.rotation.y=Math.PI+(side?-0.08:0.08);
     m.traverse(q=>{if(q.isMesh)q.castShadow=false;});m.userData.side=side;m.userData.idx=i;m.userData.home=[m.position.x,m.position.z,m.rotation.y];m.userData.ph=i*0.31+side*0.17;grp.add(m);GL.team.push(m);}
+  rivMark();
   GL.ref=makeReal({head:'c01',style:1,c2:'#ffd23f',shirt:'#161616',shorts:'#161616',socks:'#161616',skin:'#e6b896',hair:'#2a2a2a',height:1.86});
   GL.ref.position.set(3.6,0,15.8);GL.ref.rotation.y=Math.PI+0.55;grp.add(GL.ref);
   for(const[zc,ry,sk,hr]of[[49.3,Math.PI/2+0.25,'#c99a78','#2a2a2a'],[55.7,Math.PI/2-0.25,'#8d5524','#1b130d']]){ // los dos directores técnicos, de buzo, en su zona
@@ -2811,7 +2824,7 @@ function pickSide(p){const x=Math.random();return x<p.L?-1:x<p.L+p.C?0:1;}
 function sideIcon(n){return n<0?'◀':n>0?'▶':'●';}
 function drawRivalChip(){
   if(S.mode!=='tour'||!S.tour||RP||!playing())return;const r=RIVALS[S.tour.round];let name,h;
-  if(S.turn==='save'&&(S.phase==='runup'||S.phase==='kick')){name=r.kName;h=S.tour.hist||[];}
+  if(S.turn==='save'&&(S.phase==='runup'||S.phase==='kick')){name=r.team;h=S.tour.hist||[];}
   else if(S.turn==='kick'&&S.phase==='aim'){name=r.gkName+' se tiró';h=S.tour.gkHist||[];}else return;
   const c={'-1':0,'0':0,'1':0};h.forEach(x=>c[x]++);
   const txt=`${name}:  ◀ ${c[-1]}   ● ${c[0]}   ▶ ${c[1]}`,fs=Math.round(clamp(G.unit*0.036,12,15));
@@ -2862,7 +2875,7 @@ const ROUNDS=[
   {stage:'Cuartos de final',short:'Cuartos',lower:'cuartos de final',lvl:1,types:['rasante','colocado'],honesty:1,stutter:0,feint:0},
   {stage:'Semifinal',short:'Semifinal',lower:'semifinal',lvl:5,types:['rasante','colocado','potente','alto','efecto'],honesty:0.8,stutter:0.25,feint:0.8},
   {stage:'Final',short:'Final',lower:'final',lvl:9,types:['rasante','colocado','potente','alto','efecto','picadita'],honesty:0.62,stutter:0.4,feint:0.7}];
-function rivalFor(t,i){return{...ROUNDS[i],...t,desc:`Su pateador, ${t.kName}, ${t.kStyle}`,gkDesc:`Su arquero, ${t.gkName}, ${t.gkStyle}`};}
+function rivalFor(t,i){return{...ROUNDS[i],...t,desc:`Su goleador, ${t.kName}, ${t.kStyle}`,gkDesc:`Su arquero, ${t.gkName}, ${t.gkStyle}`};}
 function simScore(){const w=2+Math.floor(Math.random()*4),l=Math.max(0,w-1-Math.floor(Math.random()*2));return[w,l];}
 function simMatch(a,b){const[w,l]=simScore(),aw=Math.random()<0.5;return{a,b,win:aw?a:b,sa:aw?w:l,sb:aw?l:w};}
 function newCup(){
