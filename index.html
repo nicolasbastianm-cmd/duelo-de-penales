@@ -10,7 +10,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Penales">
+<meta name="apple-mobile-web-app-title" content="Arquerito">
 <style>
 html{box-sizing:border-box;height:100vh;padding-top:env(safe-area-inset-top,0px);-webkit-text-size-adjust:100%}
 *,*::before,*::after{box-sizing:inherit}
@@ -18,7 +18,7 @@ body{margin:0;font-size:14px}
 img{max-width:100%}
 [hidden]{display:none!important}
 </style>
-<title>Duelo de Penales</title>
+<title>El Arquerito</title>
 <style>@font-face{font-family:'Baloo 2';font-style:normal;font-weight:600;font-display:swap;src:url(fonts/baloo-2-latin-600-normal.woff2) format('woff2')}@font-face{font-family:'Baloo 2';font-style:normal;font-weight:800;font-display:swap;src:url(fonts/baloo-2-latin-800-normal.woff2) format('woff2')}@font-face{font-family:'Lilita One';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/lilita-one-latin-400-normal.woff2) format('woff2')}</style>
 <style>
 /* Layout: juego de una pantalla — marcador arriba, cancha en canvas, tarjetas (menú, vestuario, torneo) superpuestas */
@@ -206,7 +206,7 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
 
     <div class="overlay" id="home">
       <div class="card">
-        <h1>Duelo de Penales</h1>
+        <h1>El Arquerito</h1>
         <div class="cups" id="cups"></div>
         <div class="prog" id="prog"></div>
         <fieldset>
@@ -368,7 +368,7 @@ const LANG=(()=>{try{const q=new URLSearchParams(location.search).get('lang');if
   return /^es/i.test(navigator.language||'es')?'es':'en';})();
 const EN={
 // menú principal
-'Duelo de Penales':'Penalty Duel','Tanda de penales':'Penalty shootout','Cancha: mueve al arquero para atajar los penales':'Pitch: move the goalkeeper to save the penalties',
+'El Arquerito':'Little Keeper','EL ARQUERITO':'LITTLE KEEPER','Tanda de penales':'Penalty shootout','Cancha: mueve al arquero para atajar los penales':'Pitch: move the goalkeeper to save the penalties',
 '¿Qué quieres hacer?':'What do you want to do?','Atajar':'Save','Patear':'Shoot','Los dos':'Both','Dificultad':'Difficulty','Fácil':'Easy','Normal':'Normal','Difícil':'Hard',
 'Torneo':'Tournament','3 partidos de penales hasta la copa':'3 shootouts to win the cup','Duelo de dos':'Two-player duel','Dos jugadores en el mismo teléfono':'Two players on the same phone',
 'Desafío infinito':'Endless challenge','¿Cuántas atajas con 3 vidas?':'How many can you save with 3 lives?','¿Cuántos goles haces con 3 vidas?':'How many can you score with 3 lives?','Pateas y atajas: ¿cuántos puntos haces?':'Shoot and save: how many points can you get?',
@@ -444,7 +444,7 @@ const EN={
 'amaga, la pica al medio y la clava al ángulo.':'feints, chips it down the middle and finds the top corner.',
 'picadita':'chip','lado equivocado':'wrong side','tarde o suave':'late or soft','se lanza antes':'dives early','tiro alto':'high shot','lejos del balón':'far from the ball','apunta alto':'aims high','apunta afuera':'aims wide','barra de fuerza':'power bar','muy al centro':'too central','arquero adivina':'keeper guesses',
 // lienzos de la hinchada y varios
-'ACÁ ESTÁ TU HINCHADA':'YOUR FANS ARE HERE','CORAZÓN Y GARRA':'HEART AND GRIT','¡DALE CAMPEÓN!':'COME ON CHAMP!','¡VAMOS CAMPEÓN!':'GO CHAMP!','¡SÍ SE PUEDE!':'YES WE CAN!','¡A LA FINAL!':'TO THE FINAL!','LA BARRA':'THE FANS','NUNCA DEJES DE ALENTAR':'NEVER STOP CHEERING','FUERZA EQUIPO':'GO TEAM','DUELO DE PENALES':'PENALTY DUEL',
+'ACÁ ESTÁ TU HINCHADA':'YOUR FANS ARE HERE','CORAZÓN Y GARRA':'HEART AND GRIT','¡DALE CAMPEÓN!':'COME ON CHAMP!','¡VAMOS CAMPEÓN!':'GO CHAMP!','¡SÍ SE PUEDE!':'YES WE CAN!','¡A LA FINAL!':'TO THE FINAL!','LA BARRA':'THE FANS','NUNCA DEJES DE ALENTAR':'NEVER STOP CHEERING','FUERZA EQUIPO':'GO TEAM',
 'CUARTOS DE FINAL':'QUARTER-FINAL','SEMIFINAL':'SEMI-FINAL','FINAL':'FINAL','DUELO DE DOS':'TWO-PLAYER DUEL','ESTADIO':'STADIUM',
 'Para patear se necesita el modo 3D, que no pudo cargar en este equipo.':'Shooting needs 3D mode, which could not load on this device.',
 // rivales: cómo patea el goleador y cómo ataja el arquero
@@ -756,7 +756,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo']
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='6.5 · 15 nov 2026';
+const VERSION='6.6 · 15 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -1863,7 +1863,7 @@ function cloudTexture(){const c=cnv(256,128),x=c.getContext('2d');for(let i=0;i<
 function adTexture(){const c=cnv(2048,64);drawAds(c);const tt=tex(c);tt.wrapS=THREE.RepeatWrapping;return tt;}
 function drawAds(c){const x=c.getContext('2d');
   // auspiciadores inventados, cada uno con su color, como en los carteles LED de un estadio
-  const ads=[['DUELO DE PENALES','#12357f','#ffd23f'],['SUPERGOL','#c62828','#ffffff'],['HELADOS POLAR','#0d7f8f','#eafcff'],['RADIO CANCHA','#f2b705','#1b1f26'],['ATAJA TODO','#14181f','#7ee04a'],['PELOTAS REBOTE','#f6f3e8','#12357f']];
+  const ads=[['EL ARQUERITO','#12357f','#ffd23f'],['SUPERGOL','#c62828','#ffffff'],['HELADOS POLAR','#0d7f8f','#eafcff'],['RADIO CANCHA','#f2b705','#1b1f26'],['ATAJA TODO','#14181f','#7ee04a'],['PELOTAS REBOTE','#f6f3e8','#12357f']];
   const w=2048/ads.length;x.textBaseline='middle';x.textAlign='center';
   ads.forEach(([t,bg,fg],i)=>{const g=x.createLinearGradient(0,0,0,64);g.addColorStop(0,bg);g.addColorStop(1,col(bg,0.62));x.fillStyle=g;x.fillRect(i*w,0,w+1,64);
     x.fillStyle='rgba(255,255,255,.10)';x.fillRect(i*w,0,w,5);x.fillStyle='rgba(0,0,0,.35)';x.fillRect(i*w,0,3,64);
@@ -2433,7 +2433,7 @@ function screenInfo(){
   if(S.msg&&/GO+L|ATAJ|ESTIRADA|ATRAP/.test(S.msg.text))return['big',S.msg.text.replace(/[¡!]/g,'')];
   if(S.mode==='tour'&&S.tour&&S.tour.sh){const r=RIVALS[S.tour.round],sh=S.tour.sh;return['score',`${S.tour.duo?S.tour.code1:'TÚ'}  ${cnt(sh.us)} - ${cnt(sh.them)}  ${r.code}`,r.stage.toUpperCase()];}
   if(S.mode==='endless')return['score',`${S.role==='kicker'?'GOLES':S.role==='both'?'PUNTOS':'ATAJADAS'}  ${S.saves}`,'VIDAS  '+'●'.repeat(Math.max(0,S.lives))+'○'.repeat(Math.max(0,3-S.lives))];
-  return['title','DUELO DE PENALES',(STAGES[CFG.stage]||{p:''}).p.toUpperCase()];
+  return['title','EL ARQUERITO',(STAGES[CFG.stage]||{p:''}).p.toUpperCase()];
 }
 function updateScreens(){
   if(!GL.screens||!GL.screens.length)return;const inf=screenInfo(),key=inf.join('|')+(G.fontsOk||0);if(GL.scrKey===key)return;GL.scrKey=key;
@@ -3832,7 +3832,7 @@ function bannersBuild(grp,spots,night){
 }
 function drawBanners(){
   const B=GL.banner;if(!B)return;const x=B.c.getContext('2d'),r=curRival(),kit=KITS[CFG.kit],nm=(CFG.name||'').trim().toUpperCase();
-  const ours=[nm?`¡VAMOS ${nm}!`:'¡VAMOS CAMPEÓN!','DUELO DE PENALES','¡DALE CAMPEÓN!','LA BARRA','NUNCA DEJES DE ALENTAR','ACÁ ESTÁ TU HINCHADA','¡SÍ SE PUEDE!','CORAZÓN Y GARRA','¡A LA FINAL!','FUERZA EQUIPO'];
+  const ours=[nm?`¡VAMOS ${nm}!`:'¡VAMOS CAMPEÓN!','EL ARQUERITO','¡DALE CAMPEÓN!','LA BARRA','NUNCA DEJES DE ALENTAR','ACÁ ESTÁ TU HINCHADA','¡SÍ SE PUEDE!','CORAZÓN Y GARRA','¡A LA FINAL!','FUERZA EQUIPO'];
   B.spots.forEach((s,i)=>{const y=i*64,away=s.team===1,bg=away?r.color:i%2?kit.c:'#ffffff',fg=away?'#ffffff':i%2?kit.t:'#14181f';
     x.fillStyle=bg;x.fillRect(0,y,1024,64);x.fillStyle=away?r.shorts:i%2?'#ffffff':kit.c;x.fillRect(0,y,1024,7);x.fillRect(0,y+57,1024,7);
     const txt=away?r.team.toUpperCase():ours[(i+3)%ours.length];

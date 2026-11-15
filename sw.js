@@ -1,4 +1,4 @@
-/* Duelo de Penales: guarda los archivos del juego para jugar sin internet.
+/* El Arquerito: guarda los archivos del juego para jugar sin internet.
    La página principal busca primero la versión nueva en internet (sin usar la copia guardada por el navegador); el resto (modelo, sonidos, motor 3D, letras) sale de la memoria. */
 const CACHE='penales-v12';
 const BASE=['./','index.html','jugador.glb?v=7','manifest.webmanifest','icono-192.png','icono-512.png','apple-touch-icon.png',
