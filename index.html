@@ -561,7 +561,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='5.4 · 14 nov 2026';
+const VERSION='5.5 · 14 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -3534,13 +3534,15 @@ const DIAG={a:0,st:0,img:0,lw:0,la:0,fw:0,fn:0,fps:0};
 function diagFrame(now,raw){
   if(!playing()||document.hidden){DIAG.lw=0;DIAG.fw=0;return;}
   if(raw>120)DIAG.img++;
-  if(!DIAG.fw){DIAG.fw=now;DIAG.fn=0;}else if(now-DIAG.fw>=2000){DIAG.fps=Math.round(DIAG.fn*1000/(now-DIAG.fw));DIAG.fw=now;DIAG.fn=0;}
+  if(!DIAG.fw){DIAG.fw=now;DIAG.fn=0;}else if(now-DIAG.fw>=2000){DIAG.fps=Math.round(DIAG.fn*1000/(now-DIAG.fw));DIAG.fw=now;DIAG.fn=0;if(now-(DIAG.sv||0)>8000){DIAG.sv=now;DIAG.sec=(DIAG.sec||0)+8;lsSet('penales-diag',diagNow());}}
   if(AC){if(AC.state!=='running'){DIAG.lw=0;return;}
     if(!DIAG.lw){DIAG.lw=now;DIAG.la=AC.currentTime;}else if(now-DIAG.lw>=1000){const w=now-DIAG.lw,a=(AC.currentTime-DIAG.la)*1000;if(w-a>45)DIAG.a++;if(w-a>140)audioLagged();DIAG.lw=now;DIAG.la=AC.currentTime;}}
 }
-function diagText(){
+/* El diagnóstico se guarda mientras se juega: así sigue disponible aunque la app se cierre y se vuelva a abrir. */
+function diagText(){const cur=diagNow();if(DIAG.fps)return cur;const old=lsGet('penales-diag','');return old?cur+' ‖ SESIÓN ANTERIOR: '+old.replace(/^.*?versión/,'versión'):cur;}
+function diagNow(){
   const ios=(navigator.userAgent.match(/OS (\d+)_(\d+)/)||[]).slice(1).join('.'),q=['alta','media','baja'][GL.tier]||'-';
-  return`Diagnóstico (mándale una captura a Claude): versión ${VERSION} · último partido ${DIAG.dur?Math.round(DIAG.dur)+' s ('+DIAG.shots+' penales)':'-'} · audio atrasado ${DIAG.a} veces · pausas del sistema ${DIAG.st} · tirones de imagen ${DIAG.img} · ${DIAG.fps||'-'} cuadros/s · resolución ×${glPR().toFixed(2)} · calidad ${q}${GL.phoneCap?' (30 cuadros/s)':''} · partió en ${['alta','media','baja'][GL.tier0]||'-'}, bajó ${DIAG.baja||0} · dibujo ${DIAG.ms?DIAG.ms.toFixed(1):'-'} ms (máx ${DIAG.mx?Math.round(DIAG.mx):'-'}) · núcleos ${navigator.hardwareConcurrency||'-'}${ios?' · iOS '+ios:''} · repeticiones ${DIAG.rp||0} · movimiento reducido ${reduce?'sí':'no'} · pantalla ${Math.round(W)}×${Math.round(H)} ×${window.devicePixelRatio||1}`;
+  return`Diagnóstico (mándale una captura a Claude): versión ${VERSION} · último partido ${DIAG.dur?Math.round(DIAG.dur)+' s ('+DIAG.shots+' penales)':'-'} · audio atrasado ${DIAG.a} veces · pausas del sistema ${DIAG.st} · tirones de imagen ${DIAG.img} · ${DIAG.fps||'-'} cuadros/s · resolución ×${glPR().toFixed(2)} · calidad ${q}${GL.phoneCap?' (30 cuadros/s)':''} · partió en ${['alta','media','baja'][GL.tier0]||'-'}, bajó ${DIAG.baja||0} · dibujo ${DIAG.ms?DIAG.ms.toFixed(1):'-'} ms (máx ${DIAG.mx?Math.round(DIAG.mx):'-'}) · núcleos ${navigator.hardwareConcurrency||'-'}${ios?' · iOS '+ios:''} · jugado ${DIAG.sec||0} s · repeticiones ${DIAG.rp||0} · movimiento reducido ${reduce?'sí':'no'} · pantalla ${Math.round(W)}×${Math.round(H)} ×${window.devicePixelRatio||1}`;
 }
 
 /* ---------- Bucle ---------- */
