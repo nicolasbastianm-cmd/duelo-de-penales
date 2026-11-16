@@ -769,7 +769,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo']
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.2 · 15 nov 2026';
+const VERSION='7.3 · 16 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -1723,6 +1723,13 @@ const TVBLUR={uniforms:{tDiffuse:{value:null},dir:{value:null}},
   c+=(texture2D(tDiffuse,vUv+dir*3.2307692)+texture2D(tDiffuse,vUv-dir*3.2307692))*0.0702703;gl_FragColor=c;}`};
 const TVCOPY={uniforms:{tDiffuse:{value:null}},vertexShader:TVBLUR.vertexShader,
   fragmentShader:'uniform sampler2D tDiffuse;varying vec2 vUv;void main(){gl_FragColor=texture2D(tDiffuse,vUv);}'};
+/* Sombras de contacto: cada cuadro se ponen bajo los pies; se achican hasta desaparecer cuando el pie se levanta. */
+function glFeet(){
+  if(!GL.feet||GL.tier>1)return;const T=THREE,a=GL.fva||(GL.fva=new T.Vector3()),b=GL.fvb||(GL.fvb=new T.Vector3());
+  for(const q of GL.feet){const r=q.root;if(!r.parent||!r.visible||!r.parent.visible)continue;
+    for(const[e,fo,to]of q.fb){fo.getWorldPosition(a);to.getWorldPosition(b);const k=clamp(1-(Math.min(a.y-0.07*q.f,b.y)-0.07*q.f)/(0.16*q.f),0,1);
+      a.lerp(b,0.55);a.y=0.021;r.worldToLocal(a);e.position.copy(a);e.scale.set(Math.max(0.001,0.40*q.f*k),Math.max(0.001,0.54*q.f*k),1);}}
+}
 /* Reparte los objetos en capas (una sola vez por objeto): 0 = jugada; 1 = fondo sólido (tribunas, letreros: además tapan lo que
    queda detrás); 2 = fondo sin cuerpo (público, banderas, cielo, vidrios). El suelo va en la jugada y también en el fondo. */
 function glLayers(){
@@ -2276,7 +2283,7 @@ function glSync(dt){
       c.position.set(Math.sin(a)*Rr,17-9*u,46-Math.cos(a)*Rr);c.lookAt(0,5-4*u,52-46*u);}}
   GL.replayOn=!!RP;if(RP)replayCam();
   crowdPhotoApply();celCam();
-  GL.rp.camera=activeCam();GL.rp.split=GL.tier<2&&GL.rp.camera!==GL.camI&&CFG.tv!==false; // en la entrada los jugadores salen del túnel, detrás de la tribuna: ahí se dibuja todo junto
+  glFeet();GL.rp.camera=activeCam();GL.rp.split=GL.tier<2&&GL.rp.camera!==GL.camI&&CFG.tv!==false; // en la entrada los jugadores salen del túnel, detrás de la tribuna: ahí se dibuja todo junto
   if(GL.net){const near=GL.rp.camera===GL.cam;GL.net.material.opacity=near?0.4:0.78;if(GL.net.children[0])GL.net.children[0].visible=!near;} // al atajar se mira a través de la red: se dibuja más fina para que no tape al arquero
   GL.meK.visible=GL.rivS.visible=!GL.kview;GL.meS.visible=GL.rivK.visible=GL.kview;if(GL.wkUs&&!GL.entOn){GL.wkUs.visible=GL.kview;GL.wkThem.visible=!GL.kview;}
   const real=GL.meK.userData.real;
@@ -2682,7 +2689,7 @@ function makeReal(o){
   const longS=o.long!=null?o.long:!!(o.glove||o.style===0),cut=o.cut||0; // cut: 0 normal · 1 rapado · 2 cresta · 3 degradado · 4 moño
   if(cut===1&&!hdK){o=Object.assign({},o,{scalp:0.42});}else if((cut===2||cut===3)&&!hdK){o=Object.assign({},o,{scalp:0.62});}
   m.traverse(n=>{
-    if(n.isBone){for(const k of['Spine1','Spine2','Head','RightHand','LeftHand','Hips','Neck','LeftArm','LeftForeArm','RightArm','RightForeArm','LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot'])if(n.name.endsWith(k)&&!n.name.endsWith('Spine'+k))B[k]=B[k]||n;}
+    if(n.isBone){for(const k of['Spine1','Spine2','Head','RightHand','LeftHand','Hips','Neck','LeftArm','LeftForeArm','RightArm','RightForeArm','LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot','LeftToeBase','RightToeBase'])if(n.name.endsWith(k)&&!n.name.endsWith('Spine'+k))B[k]=B[k]||n;}
     if(!n.isMesh)return;n.castShadow=true;n.receiveShadow=true;n.frustumCulled=false;const part=(n.parent&&n.parent.name)||'';
     if(/Shirt/.test(part))n.material=kitMaterial(n.material,o.shirt,{capt:o.capt,geo:n.geometry,style:o.style==null?1:o.style,c2:o.c2||o.numColor||contrast(o.shirt),sleeve:longS?9:0.236,skinC,tat:o.tat});
     else if(/Socks/.test(part))n.material=kitMaterial(n.material,o.socks,{geo:n.geometry,style:o.style===0?0:5,c2:o.c2||o.numColor||contrast(o.socks)});
@@ -2712,6 +2719,9 @@ function makeReal(o){
     GL.blobMat=new T.MeshBasicMaterial({map:tex(c),transparent:true,depthWrite:false,toneMapped:false,color:0x000000});GL.blobGeo=new T.PlaneGeometry(1,1);}
   {const sh=new T.Mesh(GL.blobGeo,GL.blobMat);sh.rotation.x=-Math.PI/2;sh.scale.set(1.05*f,0.8*f,1);sh.position.y=0.02;sh.renderOrder=2;
     sh.onBeforeRender=function(){this.position.y=0.02-root.position.y;};root.add(sh);root.userData.blob=sh;
+    // sombra de contacto bajo cada pie: es lo que hace que el jugador se vea apoyado en el pasto y no pegado encima
+    if(B.LeftFoot&&B.RightFoot){const fb=[];for(const k of['Left','Right']){const e=new T.Mesh(GL.blobGeo,GL.blobMat);e.rotation.x=-Math.PI/2;e.renderOrder=2;e.scale.setScalar(0.001);root.add(e);fb.push([e,B[k+'Foot'],B[k+'ToeBase']||B[k+'Foot']]);}
+      (GL.feet||(GL.feet=[])).push({root,fb,f});if(GL.feet.length>400)GL.feet=GL.feet.filter(q=>q.root.parent);}
     if(CFG.stage==='noche'){if(!GL.starMat){GL.starMat=GL.blobMat.clone();GL.starMat.opacity=0.42;}
       const st=new T.Group();st.rotation.x=-Math.PI/2;st.position.y=0.022;for(let q=0;q<4;q++){const piv=new T.Group();piv.rotation.z=Math.PI/4+q*Math.PI/2;const e=new T.Mesh(GL.blobGeo,GL.starMat);e.scale.set(0.5*f,1.9*f,1);e.position.y=0.85*f;e.renderOrder=2;piv.add(e);st.add(piv);}
       st.children[0].children[0].onBeforeRender=function(){st.position.y=0.022-root.position.y;};root.add(st);}}
