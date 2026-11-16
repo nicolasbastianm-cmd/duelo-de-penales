@@ -410,7 +410,7 @@ const EN={
 'Cámara lenta':'Slow motion','Tiro de fuego':'Fire shot','¡Cámara lenta!':'Slow motion!','¡Tiro de fuego!':'Fire shot!','¡Activado!':'Activated!','Arcoíris':'Rainbow','Océano':'Ocean','El puño':'Fist pump',
 'Cada medalla nueva te da 3 estrellas para la tienda.':'Each new medal gives you 3 stars for the shop.','en juego':'in play','Ver la vitrina':'See the trophy cabinet','Campeón de temporada':'Season champion',
 'Ataja 100 penales en total':'Save 100 penalties in total','Ataja 3 penales en un partido':'Save 3 penalties in one match','Ataja 3 penales lanzándote':'Save 3 penalties by diving','Gana las 4 copas de una temporada':'Win all 4 cups in a season',
-'Gana un partido con 3 estrellas':'Win a match with 3 stars','Gana un partido de la copa':'Win a cup match','Gana un torneo en fácil, normal y difícil':'Win a tournament on easy, normal and hard','Llega a 10 en el desafío infinito':'Reach 10 in the endless challenge',
+'Gana un partido con 3 estrellas':'Win a match with 3 stars','Gana un partido de la copa':'Win a cup match','Ataja 3 penales':'Save 3 penalties','Mete 5 goles':'Score 5 goals','Haz 3 tiros perfectos (zona verde)':'Make 3 perfect shots (green zone)','Ataja 2 penales seguidos':'Save 2 penalties in a row','Gana un torneo en fácil, normal y difícil':'Win a tournament on easy, normal and hard','Llega a 10 en el desafío infinito':'Reach 10 in the endless challenge',
 'Llega a 25 en el desafío infinito':'Reach 25 in the endless challenge','Mete 2 goles al ángulo':'Score 2 goals in the top corner','Mete 5 goles en un partido sin fallar':'Score 5 goals in a match without missing',
 '¡Nuevo premio!':'New prize!','Póntelo en el vestuario.':'Put it on in the locker room.','¡Desafío de hoy completado!':"Today's challenge complete!",
 // partido
@@ -770,7 +770,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo']
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.5 · 16 nov 2026';
+const VERSION='7.6 · 16 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
