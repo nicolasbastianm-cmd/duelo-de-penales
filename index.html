@@ -770,7 +770,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo']
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.7 · 16 nov 2026';
+const VERSION='7.8 · 16 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -2062,7 +2062,7 @@ function glBuildStage(){
       s.scale.set(700+srand(i)*500,220+srand(i+1)*120,1);s.position.set(Math.cos(a)*R,180+srand(i+2)*260,Math.sin(a)*R);grp.add(s);}
   }
   pm.dispose();
-  const ground=new T.Mesh(new T.PlaneGeometry(4000,4000),M(night?'#2c6233':st==='final'?'#3d8038':'#4a8238',{roughness:1}));ground.rotation.x=-Math.PI/2;ground.position.y=-0.02;grp.add(ground);
+  const ground=new T.Mesh(new T.PlaneGeometry(4000,4000),M(night?'#2c6233':st==='final'?'#3d8038':'#4a8238',{roughness:1,depthWrite:false}));ground.rotation.x=-Math.PI/2;ground.position.y=-0.02;ground.renderOrder=-0.5;grp.add(ground); /* el suelo de afuera queda 2 cm bajo la cancha: si escribe profundidad, con poca precisión se pelean y la cancha parpadea lisa y sin líneas. Se dibuja sin profundidad justo después del cielo (-1) y antes que todo lo demás, que queda encima */
   const pitch=new T.Mesh(new T.PlaneGeometry(90,120),grassMaterial(pitchTexture(st==='estadio'?'final':st)));pitch.rotation.x=-Math.PI/2;pitch.position.set(0,0,45);pitch.receiveShadow=true;grp.add(pitch);
   const gp=night?['#3e8a45','#337a3a']:st==='final'||st==='estadio'?['#4e9c47','#3f873b']:['#5b9a44','#4a8639'];
   // (las briznas 3D se quitaron: el detalle del pasto ahora va en la textura y se ve parejo en toda la cancha)
@@ -2570,12 +2570,12 @@ function kitMaterial(base,color,o={}){
   const sz=bb?bb.max.clone().sub(bb.min):new T.Vector3(1,1,1);
   m.userData.kit={value:new T.Color(color)};m.userData.kit2={value:new T.Color(o.c2||color)};m.userData.kst={value:bb?(o.style||0):0};m.userData.kcap={value:o.capt?1:0};
   m.userData.ksl={value:o.sleeve||9};m.userData.ksk={value:o.skinC||new T.Color(1,1,1)};m.userData.kta={value:new T.Vector2(o.tat?o.tat[0]:0,o.tat?o.tat[1]:0)};
-  m.userData.knT={value:null};m.userData.kfT={value:null};m.userData.knOn={value:0};m.userData.knM={value:1};
+  m.userData.knT={value:null};m.userData.kfT={value:null};m.userData.knOn={value:0};m.userData.knM={value:1};m.userData.knS={value:1};
   for(const k of['knC','knU','knV','knN','kfC','kfU','kfV','kfN'])m.userData[k]={value:new T.Vector3()};
   m.userData.kb0={value:bb?bb.min.clone():new T.Vector3()};m.userData.kb1={value:new T.Vector3(1/(sz.x||1),1/(sz.y||1),1/(sz.z||1))};
-  m.onBeforeCompile=sh=>{for(const k of['kit','kit2','kst','kb0','kb1','kcap','ksl','ksk','kta','knT','kfT','knOn','knM','knC','knU','knV','knN','kfC','kfU','kfV','kfN'])sh.uniforms[k]=m.userData[k];
+  m.onBeforeCompile=sh=>{for(const k of['kit','kit2','kst','kb0','kb1','kcap','ksl','ksk','kta','knT','kfT','knOn','knM','knS','knC','knU','knV','knN','kfC','kfU','kfV','kfN'])sh.uniforms[k]=m.userData[k];
     sh.vertexShader='uniform vec3 kb0,kb1;varying vec3 vBind,vBP,vBN;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vBind=(position-kb0)*kb1;vBP=position;vBN=normal;');
-    sh.fragmentShader='uniform vec3 kit,kit2,ksk,knC,knU,knV,knN,kfC,kfU,kfV,kfN;uniform float kst,kcap,ksl,knOn,knM;uniform vec2 kta;uniform sampler2D knT,kfT;varying vec3 vBind,vBP,vBN;\n'+sh.fragmentShader.replace('#include <map_fragment>',
+    sh.fragmentShader='uniform vec3 kit,kit2,ksk,knC,knU,knV,knN,kfC,kfU,kfV,kfN;uniform float kst,kcap,ksl,knOn,knM,knS;uniform vec2 kta;uniform sampler2D knT,kfT;varying vec3 vBind,vBP,vBN;\n'+sh.fragmentShader.replace('#include <map_fragment>',
     `float km=0.0,kpat=0.0,ktx=abs(vBind.x-0.5),ktor=1.0-smoothstep(0.150,0.160,ktx);
      if(kst>6.5){ // arquero: antebrazos acolchados y paneles laterales en el tono oscuro, trama tono sobre tono en el pecho
        float fore=smoothstep(0.322,0.332,ktx),side=ktor*smoothstep(0.112,0.120,ktx)*(1.0-step(0.84,vBind.y));
@@ -2609,12 +2609,12 @@ function kitMaterial(base,color,o={}){
        diffuseColor.rgb=sk;}
      if(knOn>0.5){ // nombre y número estampados en la tela (se doblan con la camiseta; antes eran una placa rígida que se despegaba de la espalda)
        vec3 bn=normalize(vBN),d=vBP-knC;
-       if(dot(bn,knN)>0.2&&abs(dot(d,knN))<14.0){vec2 uv=vec2(dot(d,knU)*knM,dot(d,knV))*0.5+0.5;
+       if(dot(bn,knN)>0.2&&abs(dot(d,knN))<14.0*knS){vec2 uv=vec2(dot(d,knU)*knM,dot(d,knV))*0.5+0.5;
          if(uv.x>0.0&&uv.x<1.0&&uv.y>0.0&&uv.y<1.0){vec4 t=texture2D(knT,uv);diffuseColor.rgb=mix(diffuseColor.rgb,t.rgb,t.a);}}
        d=vBP-kfC;
-       if(dot(bn,kfN)>0.2&&abs(dot(d,kfN))<9.0){vec2 uv=vec2(dot(d,kfU)*knM,dot(d,kfV))*0.5+0.5;
+       if(dot(bn,kfN)>0.2&&abs(dot(d,kfN))<9.0*knS){vec2 uv=vec2(dot(d,kfU)*knM,dot(d,kfV))*0.5+0.5;
          if(uv.x>0.0&&uv.x<1.0&&uv.y>0.0&&uv.y<1.0){vec4 t=texture2D(kfT,uv);diffuseColor.rgb=mix(diffuseColor.rgb,t.rgb,t.a);}}}`);};
-  m.customProgramCacheKey=()=>'kit7';return m;
+  m.customProgramCacheKey=()=>'kit8';return m;
 }
 
 function numberPlate(name,num,colr,soloTex){
@@ -2718,12 +2718,12 @@ function makeReal(o){
     if(n.material.isMeshStandardMaterial){n.material.envMapIntensity=GL.envI||0.6;addRim(n.material);
       for(const k of['map','normalMap']){const tx=n.material[k];if(tx&&tx.anisotropy<4){tx.anisotropy=Math.min(8,GL.r.capabilities.getMaxAnisotropy());tx.needsUpdate=true;}}}});
   if(o.num!=null&&B.Spine2){const tB=numberPlate(o.name,o.num,o.numColor||contrast(o.shirt),1),tF=numberPlate('',o.num,o.numColor||contrast(o.shirt),1);
-    const sk=shirtN&&shirtN.isSkinnedMesh&&shirtN.skeleton,bi=sk?sk.bones.indexOf(B.Spine2):-1,U=shirtN&&shirtN.material.userData;
+    const sk=shirtN&&shirtN.isSkinnedMesh&&shirtN.skeleton,bi=sk?sk.bones.findIndex(q=>/Spine2(_\d+)?$/.test(q.name)):-1,U=shirtN&&shirtN.material.userData;
     if(bi>=0&&U&&U.knT){ // estampado: se calcula dónde cae la placa en la camiseta en reposo y el sombreador la pinta sobre la tela
       const toGeo=new T.Matrix4().copy(shirtN.bindMatrixInverse).multiply(new T.Matrix4().copy(sk.boneInverses[bi]).invert());
       const put=(pos,ry,half,C,Uu,V,N)=>{const M=new T.Matrix4().compose(new T.Vector3(pos[0],pos[1],pos[2]),new T.Quaternion().setFromEuler(new T.Euler(0,ry,0)),new T.Vector3(1,1,1)).premultiply(toGeo);
         const c=new T.Vector3().applyMatrix4(M),ux=new T.Vector3(half,0,0).applyMatrix4(M).sub(c),uy=new T.Vector3(0,half,0).applyMatrix4(M).sub(c),nz=new T.Vector3(0,0,1).applyMatrix4(M).sub(c);
-        C.value.copy(c);Uu.value.copy(ux).divideScalar(ux.lengthSq());V.value.copy(uy).divideScalar(uy.lengthSq());N.value.copy(nz).normalize();};
+        C.value.copy(c);U.knS.value=ux.length()/half;/* unidades de la malla por cm (la malla viene cuantizada) */Uu.value.copy(ux).divideScalar(ux.lengthSq());V.value.copy(uy).divideScalar(uy.lengthSq());N.value.copy(nz).normalize();};
       put([0,-4,-15.5],Math.PI,15,U.knC,U.knU,U.knV,U.knN);put([6.5,1,o.chest||14.2],0,4.5,U.kfC,U.kfU,U.kfV,U.kfN);
       U.knT.value=tB;U.kfT.value=tF;U.knOn.value=1;root.userData.knM=U.knM;}
     else{const mk=t=>new T.Mesh(new T.PlaneGeometry(30,30),new T.MeshStandardMaterial({map:t,transparent:true,roughness:0.85,polygonOffset:true,polygonOffsetFactor:-4,depthWrite:false}));
