@@ -770,7 +770,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo']
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.6 · 16 nov 2026';
+const VERSION='7.7 · 16 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -2570,10 +2570,12 @@ function kitMaterial(base,color,o={}){
   const sz=bb?bb.max.clone().sub(bb.min):new T.Vector3(1,1,1);
   m.userData.kit={value:new T.Color(color)};m.userData.kit2={value:new T.Color(o.c2||color)};m.userData.kst={value:bb?(o.style||0):0};m.userData.kcap={value:o.capt?1:0};
   m.userData.ksl={value:o.sleeve||9};m.userData.ksk={value:o.skinC||new T.Color(1,1,1)};m.userData.kta={value:new T.Vector2(o.tat?o.tat[0]:0,o.tat?o.tat[1]:0)};
+  m.userData.knT={value:null};m.userData.kfT={value:null};m.userData.knOn={value:0};m.userData.knM={value:1};
+  for(const k of['knC','knU','knV','knN','kfC','kfU','kfV','kfN'])m.userData[k]={value:new T.Vector3()};
   m.userData.kb0={value:bb?bb.min.clone():new T.Vector3()};m.userData.kb1={value:new T.Vector3(1/(sz.x||1),1/(sz.y||1),1/(sz.z||1))};
-  m.onBeforeCompile=sh=>{for(const k of['kit','kit2','kst','kb0','kb1','kcap','ksl','ksk','kta'])sh.uniforms[k]=m.userData[k];
-    sh.vertexShader='uniform vec3 kb0,kb1;varying vec3 vBind;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vBind=(position-kb0)*kb1;');
-    sh.fragmentShader='uniform vec3 kit,kit2,ksk;uniform float kst,kcap,ksl;uniform vec2 kta;varying vec3 vBind;\n'+sh.fragmentShader.replace('#include <map_fragment>',
+  m.onBeforeCompile=sh=>{for(const k of['kit','kit2','kst','kb0','kb1','kcap','ksl','ksk','kta','knT','kfT','knOn','knM','knC','knU','knV','knN','kfC','kfU','kfV','kfN'])sh.uniforms[k]=m.userData[k];
+    sh.vertexShader='uniform vec3 kb0,kb1;varying vec3 vBind,vBP,vBN;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vBind=(position-kb0)*kb1;vBP=position;vBN=normal;');
+    sh.fragmentShader='uniform vec3 kit,kit2,ksk,knC,knU,knV,knN,kfC,kfU,kfV,kfN;uniform float kst,kcap,ksl,knOn,knM;uniform vec2 kta;uniform sampler2D knT,kfT;varying vec3 vBind,vBP,vBN;\n'+sh.fragmentShader.replace('#include <map_fragment>',
     `float km=0.0,kpat=0.0,ktx=abs(vBind.x-0.5),ktor=1.0-smoothstep(0.150,0.160,ktx);
      if(kst>6.5){ // arquero: antebrazos acolchados y paneles laterales en el tono oscuro, trama tono sobre tono en el pecho
        float fore=smoothstep(0.322,0.332,ktx),side=ktor*smoothstep(0.112,0.120,ktx)*(1.0-step(0.84,vBind.y));
@@ -2604,15 +2606,22 @@ function kitMaterial(base,color,o={}){
          float ink=max(max(1.0-smoothstep(0.035,0.10,abs(p)),smoothstep(0.62,0.70,p)),(1.0-smoothstep(0.03,0.09,abs(q)))*step(p,-0.25)*0.85); // trazos curvos y bandas, como un tatuaje de manga
          ink*=smoothstep(ksl+0.012,ksl+0.03,ktx)*(1.0-smoothstep(0.445,0.46,ktx));
          sk=mix(sk,sk*vec3(0.22,0.28,0.36),ink*0.85*tw);}
-       diffuseColor.rgb=sk;}`);};
-  m.customProgramCacheKey=()=>'kit6';return m;
+       diffuseColor.rgb=sk;}
+     if(knOn>0.5){ // nombre y número estampados en la tela (se doblan con la camiseta; antes eran una placa rígida que se despegaba de la espalda)
+       vec3 bn=normalize(vBN),d=vBP-knC;
+       if(dot(bn,knN)>0.2&&abs(dot(d,knN))<14.0){vec2 uv=vec2(dot(d,knU)*knM,dot(d,knV))*0.5+0.5;
+         if(uv.x>0.0&&uv.x<1.0&&uv.y>0.0&&uv.y<1.0){vec4 t=texture2D(knT,uv);diffuseColor.rgb=mix(diffuseColor.rgb,t.rgb,t.a);}}
+       d=vBP-kfC;
+       if(dot(bn,kfN)>0.2&&abs(dot(d,kfN))<9.0){vec2 uv=vec2(dot(d,kfU)*knM,dot(d,kfV))*0.5+0.5;
+         if(uv.x>0.0&&uv.x<1.0&&uv.y>0.0&&uv.y<1.0){vec4 t=texture2D(kfT,uv);diffuseColor.rgb=mix(diffuseColor.rgb,t.rgb,t.a);}}}`);};
+  m.customProgramCacheKey=()=>'kit7';return m;
 }
 
-function numberPlate(name,num,colr){
+function numberPlate(name,num,colr,soloTex){
   const c=cnv(256,256),x=c.getContext('2d');x.textAlign='center';x.textBaseline='middle';x.fillStyle=colr;x.strokeStyle='rgba(0,0,0,.25)';x.lineWidth=4;
   const nm=(name||'').trim().toUpperCase();if(nm){let fs=40;x.font=`${fs}px ${DISPLAY}`;const w=x.measureText(nm).width;if(w>220){fs*=220/w;x.font=`${fs}px ${DISPLAY}`;}x.fillText(nm,128,34);}
   x.font=`${nm?150:170}px ${DISPLAY}`;x.strokeText(String(num),128,nm?156:136);x.fillText(String(num),128,nm?156:136);
-  const t=tex(c);return new THREE.Mesh(new THREE.PlaneGeometry(30,30),new THREE.MeshStandardMaterial({map:t,transparent:true,roughness:0.85,polygonOffset:true,polygonOffsetFactor:-4,depthWrite:false}));
+  const t=tex(c);if(soloTex)return t;return new THREE.Mesh(new THREE.PlaneGeometry(30,30),new THREE.MeshStandardMaterial({map:t,transparent:true,roughness:0.85,polygonOffset:true,polygonOffsetFactor:-4,depthWrite:false}));
 }
 const contrast=hex=>{const n=parseInt(hex.slice(1),16),l=(0.299*((n>>16)&255)+0.587*((n>>8)&255)+0.114*(n&255))/255;return l>0.6?'#1b1f26':'#f6f6f2';};
 /* Luz de contorno: un brillo suave en el borde de los jugadores (como el de los focos del estadio) que los despega del fondo */
@@ -2684,7 +2693,7 @@ const KIT_ST={PUM:2,HAL:3,TIB:4,CON:1,TOR:2,DEL:3,LOB:4};
 function makeReal(o){
   const T=THREE,g=GL.charGLB,m=GL.SU.clone(g.scene),root=new T.Group(),inner=new T.Group();root.add(inner);inner.add(m);
   const f=(o.height||1.9)/1.785,bw=o.build||1;m.scale.set(0.01*f*bw,0.01*f,0.01*f*bw);
-  const B={},hdK=o.head&&GL.heads&&GL.heads[o.head]?HEADS[o.head]:null;
+  let shirtN=null;const B={},hdK=o.head&&GL.heads&&GL.heads[o.head]?HEADS[o.head]:null;
   // tono de piel del brazo (misma piel que la cara y las manos) para la manga corta
   const skinC=(hdK?new T.Color().setRGB(hdK[0],hdK[1],hdK[2]):o.skin?new T.Color(o.skin):new T.Color(1,1,1)).multiply(new T.Color().setRGB(SKIN_BASE[0],SKIN_BASE[1],SKIN_BASE[2]));
   const longS=o.long!=null?o.long:!!(o.glove||o.style===0),cut=o.cut||0; // cut: 0 normal · 1 rapado · 2 cresta · 3 degradado · 4 moño
@@ -2692,7 +2701,7 @@ function makeReal(o){
   m.traverse(n=>{
     if(n.isBone){for(const k of['Spine1','Spine2','Head','RightHand','LeftHand','Hips','Neck','LeftArm','LeftForeArm','RightArm','RightForeArm','LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot','LeftToeBase','RightToeBase'])if(n.name.endsWith(k)&&!n.name.endsWith('Spine'+k))B[k]=B[k]||n;}
     if(!n.isMesh)return;n.castShadow=true;n.receiveShadow=true;n.frustumCulled=false;const part=(n.parent&&n.parent.name)||'';
-    if(/Shirt/.test(part))n.material=kitMaterial(n.material,o.shirt,{capt:o.capt,geo:n.geometry,style:o.style==null?1:o.style,c2:o.c2||o.numColor||contrast(o.shirt),sleeve:longS?9:0.236,skinC,tat:o.tat});
+    if(/Shirt/.test(part))shirtN=n,n.material=kitMaterial(n.material,o.shirt,{capt:o.capt,geo:n.geometry,style:o.style==null?1:o.style,c2:o.c2||o.numColor||contrast(o.shirt),sleeve:longS?9:0.236,skinC,tat:o.tat});
     else if(/Socks/.test(part))n.material=kitMaterial(n.material,o.socks,{geo:n.geometry,style:o.style===0?0:5,c2:o.c2||o.numColor||contrast(o.socks)});
     else if(/Shoes/.test(part)&&o.boots)n.material=kitMaterial(n.material,o.boots);
     else if(/Shorts/.test(part))n.material=kitMaterial(n.material,o.shorts,o.style===0?{}:{geo:n.geometry,style:6,c2:o.shirt});
@@ -2708,8 +2717,17 @@ function makeReal(o){
     else if(/Body/.test(part)){n.material=skinMaterial(n.material,n.geometry,o);}
     if(n.material.isMeshStandardMaterial){n.material.envMapIntensity=GL.envI||0.6;addRim(n.material);
       for(const k of['map','normalMap']){const tx=n.material[k];if(tx&&tx.anisotropy<4){tx.anisotropy=Math.min(8,GL.r.capabilities.getMaxAnisotropy());tx.needsUpdate=true;}}}});
-  if(o.num!=null&&B.Spine2){const p=numberPlate(o.name,o.num,o.numColor||contrast(o.shirt));p.position.set(0,-4,-15.5);p.rotation.y=Math.PI;B.Spine2.add(p);root.userData.plate=p;
-    const fp=numberPlate('',o.num,o.numColor||contrast(o.shirt));fp.scale.setScalar(0.3);fp.position.set(6.5,1,o.chest||14.2);B.Spine2.add(fp);}
+  if(o.num!=null&&B.Spine2){const tB=numberPlate(o.name,o.num,o.numColor||contrast(o.shirt),1),tF=numberPlate('',o.num,o.numColor||contrast(o.shirt),1);
+    const sk=shirtN&&shirtN.isSkinnedMesh&&shirtN.skeleton,bi=sk?sk.bones.indexOf(B.Spine2):-1,U=shirtN&&shirtN.material.userData;
+    if(bi>=0&&U&&U.knT){ // estampado: se calcula dónde cae la placa en la camiseta en reposo y el sombreador la pinta sobre la tela
+      const toGeo=new T.Matrix4().copy(shirtN.bindMatrixInverse).multiply(new T.Matrix4().copy(sk.boneInverses[bi]).invert());
+      const put=(pos,ry,half,C,Uu,V,N)=>{const M=new T.Matrix4().compose(new T.Vector3(pos[0],pos[1],pos[2]),new T.Quaternion().setFromEuler(new T.Euler(0,ry,0)),new T.Vector3(1,1,1)).premultiply(toGeo);
+        const c=new T.Vector3().applyMatrix4(M),ux=new T.Vector3(half,0,0).applyMatrix4(M).sub(c),uy=new T.Vector3(0,half,0).applyMatrix4(M).sub(c),nz=new T.Vector3(0,0,1).applyMatrix4(M).sub(c);
+        C.value.copy(c);Uu.value.copy(ux).divideScalar(ux.lengthSq());V.value.copy(uy).divideScalar(uy.lengthSq());N.value.copy(nz).normalize();};
+      put([0,-4,-15.5],Math.PI,15,U.knC,U.knU,U.knV,U.knN);put([6.5,1,o.chest||14.2],0,4.5,U.kfC,U.kfU,U.kfV,U.kfN);
+      U.knT.value=tB;U.kfT.value=tF;U.knOn.value=1;root.userData.knM=U.knM;}
+    else{const mk=t=>new T.Mesh(new T.PlaneGeometry(30,30),new T.MeshStandardMaterial({map:t,transparent:true,roughness:0.85,polygonOffset:true,polygonOffsetFactor:-4,depthWrite:false}));
+      const p=mk(tB);p.position.set(0,-4,-15.5);p.rotation.y=Math.PI;B.Spine2.add(p);root.userData.plate=p;const fp=mk(tF);fp.scale.setScalar(0.3);fp.position.set(6.5,1,o.chest||14.2);B.Spine2.add(fp);}}
   if(o.head&&GL.heads&&GL.heads[o.head]&&B.Head){const hg=GL.heads[o.head].clone(true);hg.position.set(0,0,0);hg.rotation.set(0,0,0);hg.scale.setScalar(1);if(o.cap)hg.traverse(q=>{if(q.userData.hair)q.visible=false;});
     if(o.beard>0||o.mus>0)hg.traverse(q=>{if(q.isMesh&&!q.userData.hair)q.material=headBeard(q.material,q.geometry,o.beard||0,o.mus||0);});B.Head.add(hg);}
   if(cut===4&&B.Head&&!o.cap){const bun=mesh(new T.SphereGeometry(3.9,14,10),M(o.hair||'#1b130d',{roughness:0.95}));bun.position.set(0,17.5,-7.5);bun.scale.set(1,0.9,1);B.Head.add(bun);} // moño
@@ -2741,7 +2759,7 @@ function drive(model,name,time,dt,mirror){
   for(const k in u.acts){const x=u.acts[k];x.setEffectiveWeight(x===a?(u.prev?u.fade:1):(x===u.prev?1-u.fade:0));}
   if(u.prev&&u.fade>=1)u.prev=null;
   u.mixer.update(0);
-  u.inner.scale.x=mirror?-1:1;if(u.plate)u.plate.scale.x=mirror?-1:1;
+  u.inner.scale.x=mirror?-1:1;if(u.plate)u.plate.scale.x=mirror?-1:1;if(u.knM)u.knM.value=mirror?-1:1;
 }
 /* El arquero "se hace grande" mientras el pateador toma carrera: abre los brazos, los mueve y rebota sobre la punta de los pies */
 function keeperReady(m,w,ph){
@@ -2825,7 +2843,9 @@ function poseRivalReal(dt){
   else if(st&&st.k!=null&&KICK_T+st.k>1.45){const res=S.phase==='after',gol=S.celeb&&S.celeb.who==='rivS';afterKick(m,R,f,KICK_T+st.k-1.45,dt,res,gol,RIV_CEL[(S.shotN||0)%RIV_CEL.length],false);}
   else if(t<=0&&m.userData.acts.oi&&playing()&&S.turn==='save'&&S.phase==='runup'){const d=m.userData.acts.oi.getClip().duration-0.3,x=(S.time*0.8)%(2*d);drive(m,'oi',0.15+(x<d?x:2*d-x),dt,false);m.position.set(R.x+0.13*f,0,R.z-0.29*f);m.rotation.set(0,Math.PI,0);}
   else{drive(m,'kick',Math.min(t,1.45),dt,false);const w=1-fadeW(m);m.position.set(R.x+0.13*f*w,hop,R.z-0.29*f*w);m.rotation.set(0,Math.PI,0);}
-  const B=m.userData.B;if(B.Spine1&&lean){B.Spine1.rotation.z+=-lean*0.28;B.Head.rotation.y+=lean*0.6;}
+  // la inclinación que delata el tiro entra y sale de a poco: antes saltaba de un cuadro a otro (al amagar y al terminar el tiro) y en la repetición lenta la cabeza se veía dar un tirón
+  const B=m.userData.B,ud=m.userData;ud.leanS=(ud.leanS||0)+(lean-(ud.leanS||0))*Math.min(1,(dt||0.016)*7);if(Math.abs(ud.leanS)<0.002)ud.leanS=0;lean=ud.leanS;
+  if(B.Spine1&&lean){B.Spine1.rotation.z+=-lean*0.28;B.Head.rotation.y+=lean*0.5;}
   const hp=new THREE.Vector3();B.Head.getWorldPosition(hp);const fp=glProject(new THREE.Vector3(hp.x,0,hp.z)),hq=glProject(hp);S.strPos={x:fp.x,y:fp.y,h:Math.max(10,(fp.y-hq.y)*1.1)};
 }
 function poseKickReal(dt){
@@ -3000,6 +3020,7 @@ function startReplay(then){
   RP={cam:S.rpN%3,frames,t:0,el:0,tRes:tRes-frames[0].time,then,tw,side:tw.x>=0?1:-1,turn:last.turn,
     live:{keeper:S.keeper,striker:S.striker,ball:S.ball,kick:S.kick,ripple:S.ripple,phase:S.phase,turn:S.turn,time:S.time,plan:S.plan,celeb:S.celeb}};
   DIAG.rp=(DIAG.rp||0)+1;S.lastReplay=S.shotN;S.msg=null;S.banner=null;GL.trail.length=0;
+  for(const m of[GL.rivS,GL.rivK,GL.meS,GL.meK])if(m&&m.userData){m.userData.cur=null;m.userData.prev=null;m.userData.leanS=0;} // la repetición parte con la pose limpia, sin mezclarla con el festejo o el lamento que venía después
 }
 function replayStep(dt){
   const dur=RP.frames[RP.frames.length-1].time-RP.frames[0].time,near=Math.abs(RP.t-RP.tRes)<0.3,v=Math.max(0.75,(dur-0.6)/3.1);
