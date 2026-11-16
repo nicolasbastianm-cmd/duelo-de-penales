@@ -769,7 +769,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo']
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.3 · 16 nov 2026';
+const VERSION='7.4 · 16 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -913,7 +913,7 @@ function newRound(){
   S.plan=plan;rivPick(S.mode==='tut'?0:S.mode==='tour'&&S.tour&&S.tour.sh?S.tour.sh.them.length:(S.shotN||0));
   S.striker={tv:S.mode==='tour'&&GL.ok&&!reduce&&S.tour&&S.tour.sh&&S.tour.sh.them.length<5&&GL.rivS&&GL.rivS.userData.real?TV_T:0,pre:S.mode==='tour'&&GL.ok?PRE_T+JOG_T:0,t:0,k:null,run:plan.run,stutter:plan.stutter,feint:plan.feint,honesty:plan.honesty,tell:plan.tell};
   S.ball={state:'spot',u:0,trail:[]};S.phase='runup';sfx.whistle();if(S.mode!=='tut'){ambWhistles();S.shotN=(S.shotN||0)+1;recStart();}
-  if(S.mode==='tour'&&S.tour&&!S.tour.toldS){S.tour.toldS=true;const r=RIVALS[S.tour.round];S.banner={title:'¿Dónde patean '+r.team+'?',viz:{p:r.pref,high:r.high>=0.3},t:0,dur:3.2};}
+  // (el cartel «¿Dónde patean…?» se quitó: tapaba la jugada y a los niños les estorbaba)
   pressureStart();
 }
 function launch(){
@@ -2869,7 +2869,7 @@ function newKickRound(){
   S.turn='kick';S.phase='aim';S.ripple=null;S.msg=null;S.celeb=null;
   S.kick={t:0,step:'aim',pw:0,drag:null,lvl:kickLevel(),aim:{x:0,y:1.2},ai:{x:0,dir:null,diveAt:99,stay:false},b:{x:0,y:0.11,z:11,vx:0,vy:0,vz:0,spin:0},res:null,shot:null};
   S.banner=(CFG.kickCount||0)<2||S.input==='key'?{title:'Tu turno de patear',sub:kickHow,t:0,dur:Infinity}:(S.role==='both'?{title:'¡Te toca patear!',sub:'',t:0,dur:1.4}:null);
-  if(S.mode==='tour'&&S.tour&&!S.tour.toldK){S.tour.toldK=true;const r=RIVALS[S.tour.round];S.banner={title:'¿Dónde se tira '+r.gkName+'?',viz:{p:r.gkPref},t:0,dur:3.2};}
+  // (el cartel «¿Dónde se tira…?» se quitó: tapaba la jugada y a los niños les estorbaba)
   if((CFG.kickCount||0)<2&&S.input!=='key')guia(kickCtrl()==='apuntar'?'ap1':'des',0.9);
   pressureStart();sfx.whistle();hud();
 }
