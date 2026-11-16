@@ -769,7 +769,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo']
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.1 · 15 nov 2026';
+const VERSION='7.2 · 15 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -1712,11 +1712,56 @@ const GRADE={uniforms:{tDiffuse:{value:null},time:{value:0},vig:{value:0.3},grai
   void main(){vec4 c=texture2D(tDiffuse,vUv);vec3 col=c.rgb;float l=dot(col,vec3(0.2126,0.7152,0.0722));col=mix(vec3(l),col,sat);
   col=(col-0.5)*con+0.5;vec2 d=vUv-0.5;col*=1.0-vig*dot(d,d)*2.2;
   float n=fract(sin(dot(vUv*vec2(1234.5,4321.7)+time,vec2(12.9898,78.233)))*43758.5453);col+=(n-0.5)*grain;gl_FragColor=vec4(clamp(col,0.0,1.0),c.a);}`};
+/* ---------- Tratamiento de transmisión de TV: el fondo fuera de foco ----------
+   La escena se dibuja en dos capas. Primero el fondo (tribunas, público, banderas, letreros, cielo) a media resolución y
+   desenfocado; encima, nítido, lo que importa: cancha, arcos, jugadores y pelota. Así la vista se va a la jugada, como con
+   el teleobjetivo de una transmisión, y el teléfono dibuja el estadio con la cuarta parte de los píxeles. */
+const TVBLUR={uniforms:{tDiffuse:{value:null},dir:{value:null}},
+  vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+  fragmentShader:`uniform sampler2D tDiffuse;uniform vec2 dir;varying vec2 vUv;
+  void main(){vec4 c=texture2D(tDiffuse,vUv)*0.2270270;c+=(texture2D(tDiffuse,vUv+dir*1.3846154)+texture2D(tDiffuse,vUv-dir*1.3846154))*0.3162162;
+  c+=(texture2D(tDiffuse,vUv+dir*3.2307692)+texture2D(tDiffuse,vUv-dir*3.2307692))*0.0702703;gl_FragColor=c;}`};
+const TVCOPY={uniforms:{tDiffuse:{value:null}},vertexShader:TVBLUR.vertexShader,
+  fragmentShader:'uniform sampler2D tDiffuse;varying vec2 vUv;void main(){gl_FragColor=texture2D(tDiffuse,vUv);}'};
+/* Reparte los objetos en capas (una sola vez por objeto): 0 = jugada; 1 = fondo sólido (tribunas, letreros: además tapan lo que
+   queda detrás); 2 = fondo sin cuerpo (público, banderas, cielo, vidrios). El suelo va en la jugada y también en el fondo. */
+function glLayers(){
+  const T=THREE,box=GL.lyBox||(GL.lyBox=new T.Box3()),anc=(o,f)=>{for(let p=o;p;p=p.parent)if(f(p))return true;return false;};
+  GL.scene.traverse(o=>{
+    if(o.isLight){if(!o.userData.lyA){o.userData.lyA=1;o.layers.enableAll();}return;}
+    if(!(o.isMesh||o.isLine||o.isSprite||o.isPoints)||o.userData.ly!==undefined)return;let bg;
+    if(o.isSkinnedMesh||anc(o,p=>p.isBone||p.isSkinnedMesh||p===GL.ball)||o.material===GL.blobMat||(GL.conf&&o===GL.conf.im))bg=0;
+    else if(o.isSprite||o===GL.crowdMesh||o===GL.flagMesh||(o.geometry&&o.geometry.isInstancedBufferGeometry)||(o.material&&o.material.isShaderMaterial))bg=2;
+    else{box.setFromObject(o);const a=box.min,b=box.max;
+      if(box.isEmpty())bg=0;else if(b.y<0.3)bg=3;else if(a.x>-36&&b.x<36&&a.z>-4.6&&b.z<109.6&&b.y<4.5)bg=0;else bg=o.isMesh&&o.material&&!o.material.transparent&&!o.material.alphaTest?1:2;}
+    o.userData.ly=bg;o.layers.set(bg===3?0:bg);if(bg===3)o.layers.enable(2);}); // el suelo se dibuja en la jugada y en el fondo, pero no en la pasada de profundidad (pelearía consigo mismo)
+}
+function glSplitPass(){
+  const T=THREE,m=GL.mods;
+  class SplitPass extends m.RenderPass{
+    constructor(sc,cam){super(sc,cam);const o={type:T.HalfFloatType};this.a=new T.WebGLRenderTarget(2,2,o);this.b=new T.WebGLRenderTarget(2,2,o);this.pr=1;
+      this.bh=new m.ShaderPass(TVBLUR);this.bv=new m.ShaderPass(TVBLUR);this.bh.uniforms.dir.value=new T.Vector2();this.bv.uniforms.dir.value=new T.Vector2();
+      this.om=new T.MeshBasicMaterial({colorWrite:false,side:T.DoubleSide});this.cp=new m.ShaderPass(TVCOPY);this.cp.clear=true;this.cp.material.depthTest=false;this.cp.material.depthWrite=false;}
+    setSize(w,h){const hw=Math.max(2,Math.round(w/2)),hh=Math.max(2,Math.round(h/2));this.a.setSize(hw,hh);this.b.setSize(hw,hh);
+      const k=0.68*(this.pr||1)*clamp(W/560,0.6,1); /* en pantallas angostas, menos desenfoque: que el marcador del estadio se siga leyendo */this.bh.uniforms.dir.value.set(k/hw,0);this.bv.uniforms.dir.value.set(0,k/hh);}
+    dispose(){this.a.dispose();this.b.dispose();this.om.dispose();this.bh.dispose();this.bv.dispose();this.cp.dispose();}
+    render(r,wb,rb,dt,mask){const cam=this.camera;
+      if(!this.split){cam.layers.enableAll();return super.render(r,wb,rb,dt,mask);}
+      glLayers();const ac=r.autoClear,su=r.shadowMap.autoUpdate;r.autoClear=false;
+      r.shadowMap.autoUpdate=false;cam.layers.set(1);cam.layers.enable(2);r.setRenderTarget(this.a);r.clear();r.render(this.scene,cam);   // fondo, a media resolución
+      this.bh.render(r,this.b,this.a);this.bv.render(r,this.a,this.b);                                           // desenfoque
+      this.cp.render(r,rb,this.a);                                                                               // el fondo al cuadro final (limpia también la profundidad)
+      cam.layers.set(1);r.setRenderTarget(rb);this.scene.overrideMaterial=this.om;r.render(this.scene,cam);this.scene.overrideMaterial=null; // solo la profundidad del fondo sólido: tapa lo que queda detrás
+      r.shadowMap.autoUpdate=su;cam.layers.set(0);r.render(this.scene,cam);                                      // la jugada, nítida, encima
+      cam.layers.enableAll();r.autoClear=ac;}
+  }
+  return SplitPass;
+}
 function glComposer(){
   const T=THREE,m=GL.mods,pr=glPR();
   if(GL.composer)GL.composer.dispose();
   const rt=new T.WebGLRenderTarget(Math.max(1,W*pr),Math.max(1,H*pr),{type:T.HalfFloatType,samples:GL.tier===2?2:4});
-  const c=new m.EffectComposer(GL.r,rt);GL.rp=new m.RenderPass(GL.scene,GL.cam);c.addPass(GL.rp);
+  const c=new m.EffectComposer(GL.r,rt);if(GL.rp&&GL.rp.dispose)GL.rp.dispose();GL.rp=new(glSplitPass())(GL.scene,GL.cam);GL.rp.pr=pr;c.addPass(GL.rp);
   GL.bloom=new m.UnrealBloomPass(new T.Vector2(W||1,H||1),0.2,0.45,0.88);GL.bloom.enabled=GL.tier===0;if(GL.tier===0)c.addPass(GL.bloom);
   c.addPass(new m.OutputPass());GL.grade=new m.ShaderPass(GRADE);c.addPass(GL.grade);GL.composer=c;
 }
@@ -1749,7 +1794,7 @@ function glResize(){
      ancho de la ventana. La jugada sigue ocupando la columna central, igual que siempre: solo se agrega estadio a los lados. */
   const Wf=Math.max(W,Math.round(window.innerWidth||W)),ox=Wf>W+2?(Wf-W)/2:0,gc=$('gl');GL.wf=ox?Wf:W;GL.ox=ox;
   gc.style.width=GL.wf+'px';gc.style.left=(-ox)+'px';
-  GL.r.setPixelRatio(pr);GL.r.setSize(GL.wf,H,false);GL.composer.setPixelRatio(pr);GL.composer.setSize(GL.wf,H);
+  GL.r.setPixelRatio(pr);GL.r.setSize(GL.wf,H,false);if(GL.rp)GL.rp.pr=pr;GL.composer.setPixelRatio(pr);GL.composer.setSize(GL.wf,H);
   const pxm=0.55*W*G.mx,Z0=1/(2.2*G.m),f=Z0*pxm,hc=(G.lineY-G.hz)*Z0/f,Hf=2*Math.max(G.hz,H-G.hz);
   Object.assign(GL,{pxm,Z0,f,hc,Hf,voy:Hf/2-G.hz});
   const c=GL.cam;c.fov=2*Math.atan((Hf/2)/f)*180/Math.PI;c.aspect=W/Hf;
@@ -2231,7 +2276,7 @@ function glSync(dt){
       c.position.set(Math.sin(a)*Rr,17-9*u,46-Math.cos(a)*Rr);c.lookAt(0,5-4*u,52-46*u);}}
   GL.replayOn=!!RP;if(RP)replayCam();
   crowdPhotoApply();celCam();
-  GL.rp.camera=activeCam();
+  GL.rp.camera=activeCam();GL.rp.split=GL.tier<2&&GL.rp.camera!==GL.camI&&CFG.tv!==false; // en la entrada los jugadores salen del túnel, detrás de la tribuna: ahí se dibuja todo junto
   if(GL.net){const near=GL.rp.camera===GL.cam;GL.net.material.opacity=near?0.4:0.78;if(GL.net.children[0])GL.net.children[0].visible=!near;} // al atajar se mira a través de la red: se dibuja más fina para que no tape al arquero
   GL.meK.visible=GL.rivS.visible=!GL.kview;GL.meS.visible=GL.rivK.visible=GL.kview;if(GL.wkUs&&!GL.entOn){GL.wkUs.visible=GL.kview;GL.wkThem.visible=!GL.kview;}
   const real=GL.meK.userData.real;
