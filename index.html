@@ -770,7 +770,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo']
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.8 · 16 nov 2026';
+const VERSION='7.9 · 16 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -2536,11 +2536,21 @@ const KS=0.33,KT=()=>GL.charGLB?KICK_T-KS:0.45;
 /* Caras distintas: cabezas (cara y pelo) de otros personajes, que se montan sobre el cuello del jugador.
    color = cuánto hay que teñir la piel del cuerpo para que cuello y manos igualen el tono de esa cara. */
 const HEADS={leo:[0.991,1.002,0.985],josh:[1.303,1.174,1.239],c28:[0.372,0.204,0.096],c42:[1.139,1.083,1.027],c01:[1.292,1.321,1.504]},HEAD_IDS=Object.keys(HEADS);
-/* Los modelos van como archivos binarios (.glb) en el sitio publicado, un 25% más livianos que en texto. Si el .glb no
-   está (como en la copia de Claude), se usa la versión en texto (.js). El número de versión evita usar una copia vieja guardada. */
-const MODEL_V={jugador:7,cabezas:1};
+/* Los modelos de Mixamo (jugador y cabezas) y las fotos del público van en un solo paquete revuelto, recursos.dat, que solo
+   el juego sabe abrir: así no quedan como archivos sueltos que se puedan bajar aparte (términos de Adobe, sección 3.6).
+   Lo arma build.py desde modelos/. RES_V es una huella del contenido (evita usar una copia vieja guardada). Si el paquete
+   no está (como en la copia de Claude), los modelos salen de la versión en texto (.js). */
+const RES_V='899e8c24';let PACK=null;
+function packGet(){
+  if(!PACK)PACK=(async()=>{const r=await fetch('recursos.dat?v='+RES_V);if(!r.ok)throw new Error('sin paquete');
+    const u=new Uint8Array(await r.arrayBuffer()),dv=new DataView(u.buffer);if(dv.getUint32(0,true)!==0x31504b4c)throw new Error('paquete raro');
+    let x=dv.getUint32(4,true)>>>0;for(let i=8;i<u.length;i++){x^=x<<13;x>>>=0;x^=x>>>17;x^=x<<5;x>>>=0;u[i]^=x&255;}
+    const n=dv.getUint32(8,true),m={},td=new TextDecoder();let p=12;
+    for(let k=0;k<n;k++){const L=u[p++],nm=td.decode(u.subarray(p,p+L));p+=L;const o=dv.getUint32(p,true),l=dv.getUint32(p+4,true);p+=8;m[nm]=u.subarray(o,o+l);}
+    return m;})();
+  return PACK;}
 async function loadBin(name,glob){
-  try{const r=await fetch(name+'.glb?v='+MODEL_V[name]);if(r.ok){const b=await r.arrayBuffer();if(b.byteLength>100000)return b;}}catch(e){}
+  try{const m=await packGet(),b=m[name+'.glb'];if(b&&b.byteLength>100000)return b.slice().buffer;}catch(e){}
   if(!window[glob])await new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=name+'.js';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});
   const s64=window[glob],bin=new Uint8Array(s64.length*3/4|0);let raw=atob(s64);for(let i=0;i<raw.length;i++)bin[i]=raw.charCodeAt(i);raw=null;window[glob]=null;
   return bin.buffer.slice(0,bin.length);
@@ -3808,8 +3818,8 @@ function crowdPhoto(){
    Llevan la polera del color de su barra igual que el resto; cambian caras, peinados, cuerpos y pantalones. */
 function genteLoad(){
   if(GL.genteReq||!THREE)return;GL.genteReq=1;
-  try{const L=new THREE.TextureLoader();let n=0;const ok=()=>{if(++n===2)GL.gente=[a,b];};
-    const a=L.load('gente.webp',ok,undefined,()=>{}),b=L.load('gente_m.webp',ok,undefined,()=>{});a.colorSpace=THREE.SRGBColorSpace;a.generateMipmaps=b.generateMipmaps=false;a.minFilter=b.minFilter=THREE.LinearFilter;}catch(e){}
+  packGet().then(m=>{const L=new THREE.TextureLoader();let n=0;const ok=()=>{if(++n===2)GL.gente=[a,b];};const url=k=>URL.createObjectURL(new Blob([m[k]],{type:'image/webp'})); /* fotos del público: salen del paquete */
+    const a=L.load(url('gente.webp'),ok,undefined,()=>{}),b=L.load(url('gente_m.webp'),ok,undefined,()=>{});a.colorSpace=THREE.SRGBColorSpace;a.generateMipmaps=b.generateMipmaps=false;a.minFilter=b.minFilter=THREE.LinearFilter;}).catch(()=>{});
 }
 function genteBlit(){
   if(GL.genteDone||!GL.gente||!GL.crowdRTs||!GL.r)return;GL.genteDone=true;
