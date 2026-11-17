@@ -770,7 +770,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo']
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.9 · 16 nov 2026';
+const VERSION='7.10 · 17 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -2540,15 +2540,16 @@ const HEADS={leo:[0.991,1.002,0.985],josh:[1.303,1.174,1.239],c28:[0.372,0.204,0
    el juego sabe abrir: así no quedan como archivos sueltos que se puedan bajar aparte (términos de Adobe, sección 3.6).
    Lo arma build.py desde modelos/. RES_V es una huella del contenido (evita usar una copia vieja guardada). Si el paquete
    no está (como en la copia de Claude), los modelos salen de la versión en texto (.js). */
-const RES_V='899e8c24';let PACK=null;
-function packGet(){
-  if(!PACK)PACK=(async()=>{const r=await fetch('recursos.dat?v='+RES_V);if(!r.ok)throw new Error('sin paquete');
+const RES_V='899e8c24',VOZ_V={voz:'447d8333',voz_en:'37f4b007'};let PACK=null;
+function packGet(){if(!PACK)PACK=datGet('recursos.dat',RES_V);return PACK;}
+/* Lee un paquete .dat (mismo formato para recursos y voces; las voces van sin revolver: semilla 0) */
+function datGet(file,v){
+  return (async()=>{const r=await fetch(file+'?v='+v);if(!r.ok)throw new Error('sin paquete');
     const u=new Uint8Array(await r.arrayBuffer()),dv=new DataView(u.buffer);if(dv.getUint32(0,true)!==0x31504b4c)throw new Error('paquete raro');
     let x=dv.getUint32(4,true)>>>0;for(let i=8;i<u.length;i++){x^=x<<13;x>>>=0;x^=x>>>17;x^=x<<5;x>>>=0;u[i]^=x&255;}
     const n=dv.getUint32(8,true),m={},td=new TextDecoder();let p=12;
     for(let k=0;k<n;k++){const L=u[p++],nm=td.decode(u.subarray(p,p+L));p+=L;const o=dv.getUint32(p,true),l=dv.getUint32(p+4,true);p+=8;m[nm]=u.subarray(o,o+l);}
-    return m;})();
-  return PACK;}
+    return m;})();}
 async function loadBin(name,glob){
   try{const m=await packGet(),b=m[name+'.glb'];if(b&&b.byteLength>100000)return b.slice().buffer;}catch(e){}
   if(!window[glob])await new Promise((res,rej)=>{const sc=document.createElement('script');sc.src=name+'.js';sc.onload=res;sc.onerror=rej;document.head.appendChild(sc);});
@@ -3558,7 +3559,8 @@ function sonVoz(url,onend){
     SON.vsrc={s,g};SON.vEnd=AC.currentTime+buf.duration;s.onended=()=>{if(SON.vsrc&&SON.vsrc.s===s){SON.vsrc=null;if(onend)onend();}};};
   if(get){go(get);return;}
   const ab=VOZ.ab&&VOZ.ab[url];
-  (ab?Promise.resolve(ab.slice(0)):fetch(url).then(r=>r.arrayBuffer())).then(decodeAB).then(go).catch(()=>{});
+  if(!VOZ.warm)vozWarm();
+  (ab?Promise.resolve(ab.slice(0)):(VOZ.pk||Promise.resolve(false)).then(ok=>{const b=VOZ.ab&&VOZ.ab[url];return b?b.slice(0):fetch(url).then(r=>r.arrayBuffer());})).then(decodeAB).then(go).catch(()=>{});
 }
 function sonVozStop(tc=0.06){SON.vtok++;const v=SON.vsrc;SON.vsrc=null;SON.vEnd=0;if(!v)return;const t=AC.currentTime;try{v.g.gain.setTargetAtTime(0.0001,t,tc);v.s.stop(t+tc*6);}catch(e){}}
 const sonVozBusy=()=>!!(SON.vsrc&&AC&&AC.currentTime<SON.vEnd);
@@ -3605,6 +3607,11 @@ function vozUnlock(){
 }
 function vozWarm(){
   if(VOZ.warm||typeof fetch!=='function')return;VOZ.warm=true;
+  /* las 266 frases de cada idioma vienen en un solo paquete (voz.dat / voz_en.dat); si no está (copia de Claude), una por una */
+  VOZ.pk=datGet(VOZ_DIR+'.dat',VOZ_V[VOZ_DIR]).then(m=>{for(const k in m)VOZ.ab[VOZ_DIR+'/'+k]=m[k].slice().buffer;return true;},()=>false);
+  VOZ.pk.then(ok=>{if(!ok)vozWarm1();});
+}
+function vozWarm1(){
   const list=[];for(const[k,n]of Object.entries(VOZ_N))for(let i=0;i<n;i++)list.push(`${VOZ_DIR}/${k}_${i}.mp3`);
   let i=0;const next=()=>{const s=list[i++];if(!s)return;
     fetch(s).then(r=>r.ok?r.arrayBuffer():null).then(ab=>{if(ab&&ab.byteLength){VOZ.ab[s]=ab;}}).catch(()=>{}).then(next);};
