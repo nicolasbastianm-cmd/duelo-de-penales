@@ -770,7 +770,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo']
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.10 · 17 nov 2026';
+const VERSION='7.11 · 17 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -2769,13 +2769,18 @@ function drive(model,name,time,dt,mirror){
   if(u.prev){u.fade=Math.min(1,u.fade+dt/(u.fl||0.14));u.prev.time=Math.min(u.prevT,u.prev.getClip().duration-0.01);}
   for(const k in u.acts){const x=u.acts[k];x.setEffectiveWeight(x===a?(u.prev?u.fade:1):(x===u.prev?1-u.fade:0));}
   if(u.prev&&u.fade>=1)u.prev=null;
+  if(u.add){for(const a of u.add)a[0].rotation[a[1]]-=a[2];u.add=null;} /* se quitan los giros extra del cuadro anterior (ver addRot) */
   u.mixer.update(0);
   u.inner.scale.x=mirror?-1:1;if(u.plate)u.plate.scale.x=mirror?-1:1;if(u.knM)u.knM.value=mirror?-1:1;
 }
+/* Giro extra encima de la animación (la pista del pateador, los brazos abiertos del arquero). Se anota para quitarlo antes del
+   cuadro siguiente: si la animación no cambia (repetición en cámara lenta), el motor no reescribe el hueso y el giro se
+   acumulaba; al cambiar de cuadro volvía de golpe y la cabeza del pateador se movía de izquierda a derecha. */
+function addRot(m,b,ax,v){if(!b||!v)return;b.rotation[ax]+=v;(m.userData.add||(m.userData.add=[])).push([b,ax,v]);}
 /* El arquero "se hace grande" mientras el pateador toma carrera: abre los brazos, los mueve y rebota sobre la punta de los pies */
 function keeperReady(m,w,ph){
   if(!(w>0.01))return 0;const B=m.userData.B,s=Math.sin(S.time*5.2+ph)*0.08;
-  if(B.LeftArm)B.LeftArm.rotation.z+=(0.40+s)*w;if(B.RightArm)B.RightArm.rotation.z-=(0.40-s)*w;
+  addRot(m,B.LeftArm,'z',(0.40+s)*w);addRot(m,B.RightArm,'z',-(0.40-s)*w);
   return Math.abs(Math.sin(S.time*6.5+ph))*0.035*w;
 }
 function handsMid(model){const B=model.userData.B,a=new THREE.Vector3(),b=new THREE.Vector3();B.RightHand.getWorldPosition(a);B.LeftHand.getWorldPosition(b);return a.add(b).multiplyScalar(0.5);}
@@ -2856,7 +2861,7 @@ function poseRivalReal(dt){
   else{drive(m,'kick',Math.min(t,1.45),dt,false);const w=1-fadeW(m);m.position.set(R.x+0.13*f*w,hop,R.z-0.29*f*w);m.rotation.set(0,Math.PI,0);}
   // la inclinación que delata el tiro entra y sale de a poco: antes saltaba de un cuadro a otro (al amagar y al terminar el tiro) y en la repetición lenta la cabeza se veía dar un tirón
   const B=m.userData.B,ud=m.userData;ud.leanS=(ud.leanS||0)+(lean-(ud.leanS||0))*Math.min(1,(dt||0.016)*7);if(Math.abs(ud.leanS)<0.002)ud.leanS=0;lean=ud.leanS;
-  if(B.Spine1&&lean){B.Spine1.rotation.z+=-lean*0.28;B.Head.rotation.y+=lean*0.5;}
+  if(B.Spine1&&lean){addRot(m,B.Spine1,'z',-lean*0.28);addRot(m,B.Head,'y',lean*0.5);}
   const hp=new THREE.Vector3();B.Head.getWorldPosition(hp);const fp=glProject(new THREE.Vector3(hp.x,0,hp.z)),hq=glProject(hp);S.strPos={x:fp.x,y:fp.y,h:Math.max(10,(fp.y-hq.y)*1.1)};
 }
 function poseKickReal(dt){
