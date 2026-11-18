@@ -140,6 +140,15 @@ input[type=text]:focus-visible,input[type=number]:focus-visible{outline:3px soli
 .mtile .bdg.st{background:var(--sun);color:var(--ink)}
 .minor{display:flex;gap:10px}
 .card.alb{max-width:420px}
+#carga{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 40%,#2f7d37,#0f2a17 70%);transition:opacity .4s}
+#carga.fuera{opacity:0;pointer-events:none}
+#carga .cg-in{width:min(320px,80vw);text-align:center}
+#carga h1{font-family:var(--display);font-weight:400;color:var(--sun);font-size:44px;margin:0 0 18px;text-shadow:0 4px 0 rgba(0,0,0,.35)}
+#carga .cg-bar{height:16px;border-radius:10px;background:rgba(246,243,232,.18);overflow:hidden;border:2px solid var(--chalk)}
+#carga .cg-bar i{display:block;height:100%;width:5%;background:var(--sun);transition:width .3s}
+#carga p{margin:10px 0 0;font-size:14px;opacity:.85}
+.ghost:active,.link-btn:active{transform:scale(.96)}
+.go,.ghost,.mtile,.link-btn{transition:transform .08s}
 .paises{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .pais{position:relative;cursor:pointer}
 .pais input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
@@ -264,6 +273,7 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
     <button id="power" type="button" hidden><b>⚡</b><span id="powerTxt">Poder</span></button>
     <canvas id="pitch" tabindex="0" aria-label="Cancha: mueve al arquero para atajar los penales"></canvas>
 
+    <div id="carga" role="status" aria-live="polite"><div class="cg-in"><h1>El Arquerito</h1><div class="cg-bar"><i id="cgBar"></i></div><p id="cgTxt">Preparando el estadio…</p></div></div>
     <div class="overlay" id="home">
       <div class="card">
         <h1>El Arquerito</h1>
@@ -521,6 +531,8 @@ const EN={
 'Uy… gol de ellos.':'Oh… goal for them.','¡Lo atajó el arquero!':'The keeper saved it!','Palo o afuera':'Post or wide','¡Uyyy, por poquito!':'Ohhh, so close!','Penal decisivo':'Deciding penalty',
 '¡Ganamos! ¡A la siguiente ronda!':'We won! On to the next round!','Campeones':'Champions','¡Campeones! ¡La copa es nuestra!':'Champions! The cup is ours!','¡Otra vez será! ¡Vamos de nuevo!':'Next time! Let us go again!',
 'Camisetas':'Shirts','Amarilla':'Yellow','Balones':'Balls','Fuego':'Fire','De oro':'Golden','Festejos':'Celebrations','La voltereta':'Backflip','El baile':'The dance',
+// pulido (7.19)
+'Preparando el estadio…':'Getting the stadium ready…',
 // países (7.17)
 'Tu país':'Your country','Ninguno':'None','Selección':'National team','Camiseta de la selección':'National team shirt',
 'Brasil':'Brazil','Perú':'Peru','México':'Mexico','España':'Spain','Francia':'France','Italia':'Italy','Alemania':'Germany','Inglaterra':'England','Países Bajos':'Netherlands','Estados Unidos':'United States','Japón':'Japan',
@@ -564,6 +576,7 @@ const EN_RX1=[
 [/^(Medalla nueva|Medallas nuevas): (.+) \(\+(\d+) ★\)\.?$/,k=>(k[1]==='Medalla nueva'?'New medal: ':'New medals: ')+k[2].split(', ').map(tr).join(', ')+' (+'+k[3]+' ★).'],
 ];
 const EN_RX=[
+[/^(Siguiente partido|¡A la cancha!) \((\d)\)$/,'$1 ($2)'],[/^Racha de (\d+) días?: \+(\d+) ★$/,'$1-day streak: +$2 ★'],
 [/^copa (\d+) de 4$/,'cup $1 of 4'],
 [/^Álbum \((\d+)\)$/,'Album ($1)'],[/^Abrir sobre \((\d+)\)$/,'Open pack ($1)'],[/^(\d+) de (\d+) láminas$/,'$1 of $2 stickers'],[/^(Los rivales|Las copas|Los estadios|Los tiros) (\d+)\/(\d+)$/,'$1 $2/$3'],
 [/^Versión (.+)$/,'Version $1'],[/^Nivel (\d+)$/,'Level $1'],[/^Tienda ★ (\d+)$/,'Shop ★ $1'],[/^(\d+)\/(\d+) para el nivel (\d+)$/,'$1/$2 to level $3'],
@@ -783,6 +796,7 @@ function whistle(dur,at=0,vol=0.17){
   o.frequency.value=2850;lfo.frequency.value=32;lg.gain.value=140;lfo.connect(lg);lg.connect(o.frequency);
   env(g,t0,0.02,dur,vol);o.connect(g);g.connect(master);o.start(t0);lfo.start(t0);o.stop(t0+dur+0.05);lfo.stop(t0+dur+0.05);}
 const sfx={
+  tap:()=>{tone(620,0.05,{vol:0.1,to:820});},
   whistle:()=>whistle(0.22),
   final:()=>{whistle(0.25,0);whistle(0.25,0.35);whistle(0.7,0.7);},
   kick:(p=1)=>{tone(150,0.13,{vol:0.6+0.25*p,to:45});noise(0.05,{vol:0.3,type:'lowpass',f:1400});noise(0.025,{vol:0.28+0.12*p,type:'highpass',f:2600,a:0.002});},
@@ -860,7 +874,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.18 · 18 nov 2026';
+const VERSION='7.19 · 18 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -997,7 +1011,9 @@ function rachaHit(ok){
   if(S.racha===3&&!(S.pow>0)&&!S.powOn){S.pow=1;S.rachaPow=2.2;}
   albSave();
 }
-function sobreDelDia(){const d=new Date().toISOString().slice(0,10);if(ALB.day===d)return false;ALB.day=d;ALB.packs++;albSave();return true;}
+function sobreDelDia(){const d=new Date().toISOString().slice(0,10);if(ALB.day===d)return false;
+  const ay=new Date(Date.now()-864e5).toISOString().slice(0,10),r=CFG.dias&&CFG.dias.last===ay?CFG.dias.n+1:1;CFG.dias={last:d,n:r};saveCfg();
+  const st=Math.min(r,7)*2;addStars(st);ALB.day=d;ALB.packs++;albSave();return{n:r,st};}
 function rachaTick(dt){for(const k of['sobreFx','sobreNew','rachaPow'])if(S[k]>0)S[k]=Math.max(0,S[k]-dt);}
 /* Sobre y racha en la cancha: arriba a la izquierda, fuera de la jugada */
 function drawRacha(){
@@ -1160,8 +1176,12 @@ function showPrizes(list){
 }
 function addSave(){S.total++;lsSet('arquerito-total',String(S.total));addXP(10);}
 /* Al final de un partido o desafío: el primer partido del día regala un sobre, y si hay sobres aparece «Abrir sobre» */
-function sobreBtns(list){const dia=sobreDelDia();if(dia)$('rNote').textContent+=' '+'¡Sobre del día de regalo!';
+function sobreBtns(list){const dia=sobreDelDia();if(dia)$('rNote').textContent+=' '+'¡Sobre del día de regalo!'+' '+`Racha de ${dia.n} ${dia.n===1?'día':'días'}: +${dia.st} ★`;homeBadges();
   if(ALB.packs>0)list.splice(1,0,{t:`Abrir sobre (${ALB.packs})`,f:()=>{goHome();openAlbum();},cls:'go alt'});setButtons(list);}
+/* Cuenta regresiva en un botón: si nadie toca otra cosa, se aprieta solo (menos clics entre partidos) */
+function autoGo(btn,n){if(!btn)return;const base=btn.textContent,ov=btn.closest('.overlay');let k=n;const stop=()=>{clearInterval(id);btn.textContent=base;};
+  const id=setInterval(()=>{if(!ov||ov.hidden||!btn.isConnected){stop();return;}k--;if(k<=0){stop();btn.click();return;}btn.textContent=`${base} (${k})`;},1000);
+  btn.textContent=`${base} (${k})`;ov&&ov.addEventListener('pointerdown',e=>{if(e.target!==btn)stop();},{once:true});}
 function setButtons(list){
   const box=$('rBtns');box.innerHTML='';
   list.forEach((b,i)=>{const el=document.createElement('button');el.type='button';el.className=b.cls||(i===0?'go':'link-btn');el.textContent=b.t;el.addEventListener('click',b.f);box.appendChild(el);});
@@ -1246,7 +1266,7 @@ function ballPos(b,u){
 const diveT=()=>S.mode==='tut'?0.6:D().diveT,REC_T=0.45;
 /* Zona de atajada según la postura: parado, en el aire (lanzado o saltando) o en el suelo después de lanzarse */
 function catchZone(){
-  const k=S.keeper,R=G.reach*(S.mode==='tut'?1.12:D().reach*perkReach()),kH=G.kH;
+  const k=S.keeper,R=G.reach*(S.mode==='tut'?1.12:D().reach*perkReach()*(boost()?1.15:1)),kH=G.kH;
   if(k.dive)return k.dive.dir?{c:k.x+k.dive.dir*R*0.3,hw:R*0.62,hmax:G.frameH*0.98}:{c:k.x,hw:R*0.5,hmax:G.frameH};
   if(k.rec>0)return{c:k.x+k.lastDir*R*0.35,hw:R*0.7,hmax:0.45*kH};
   return{c:k.x,hw:R*0.5,hmax:0.85*kH};
@@ -1270,7 +1290,7 @@ function resolve(){
   if(out==='save'){
     if(GL.ok&&!k.dive&&S.mode!=='tut'){b.state='held';b.holdT=0.95;Object.assign(b,{x:p.x,y:p.y,r:p.r,vx:0,vy:0,life:1});} // atajada de pie: la embolsa
     else{const dv=k.dive&&k.dive.dir?k.dive.dir:(Math.sign(p.x-k.x)||1);b.state='free';Object.assign(b,{x:p.x,y:p.y,r:p.r,vx:k.dive?dv*rand(150,300)*u:(p.x-k.x)*5+rand(-60,60),vy:-rand(k.dive?120:260,k.dive?260:420)*u,life:1,dz:0});}
-    k.saveT=0.6;S.freeze=reduce?0:0.09;S.cheer=1.2;{const fp=fxPoint(p);burst(fp.x,fp.y,16,[C.sun,C.chalk],230*u);}
+    k.saveT=0.6;S.freeze=reduce?0:(k.dive?0.2:0.12);S.shake=reduce?0:(k.dive?0.3:0.18);S.cheer=1.2;{const fp=fxPoint(p);burst(fp.x,fp.y,30,[C.sun,C.chalk,'#7ee04a'],300*u);}if(k.dive)try{sfx.land();}catch(e){}
     say(k.dive?'¡QUÉ ESTIRADA!':'¡ATAJADA!',C.sun);sfx.save();ambReact('cheer');buzz(30);
   }else if(out==='post'||out==='bar'){
     const s=b.txf*W<W/2?-1:1;
@@ -1374,7 +1394,7 @@ function afterTour(out){
   hud();S.wait=1.1;S.then=()=>{const w=decided(sh);if(w)endMatch(w);else usTurn();};
 }
 function ourKick(){
-  S.phase='ourKick';S.ok={t:0,done:false,goal:Math.random()<D().team};
+  S.phase='ourKick';S.ok={t:0,done:false,goal:Math.random()<(boost()?0.95:D().team)};
   S.banner={title:'Patea tu equipo…',sub:'',t:0,dur:1.0};
 }
 function updOurKick(g){
@@ -1424,12 +1444,24 @@ function showIntro(){
   $('iStage').textContent=r.stage;$('iTeam').textContent=r.team;$('iBadge').style.background=r.pais&&PAISES[r.pais]?`center/cover url(${bandera(r.pais)})`:r.color;
   $('iDesc').textContent=S.role==='keeper'?strikerFact(r):S.role==='kicker'?keeperFact(r):strikerFact(r)+' '+keeperFact(r);
   $('iRole').textContent=`${copaNow().n} · temporada ${TEMP.n} · ${S.role==='keeper'?'tú atajas':S.role==='kicker'?'tú pateas':'tú pateas y atajas'} · 5 penales por lado`;
-  show('intro');hud();setTimeout(()=>$('iGo').focus({preventScroll:true}),50);
+  show('intro');hud();setTimeout(()=>$('iGo').focus({preventScroll:true}),50);if(i>0&&!(S.tour&&S.tour.duo))autoGo($('iGo'),4);
 }
 /* Copa en un clic: arma la copa y parte el primer partido sin pasar por la tarjeta del rival */
 function cupGo(){S.prizeBase=S.prizeBase||unlockedIds();S.tour={round:0,sh:{us:[],them:[]}};newCup();S.role=roleNow();ROLE=S.role;S.turn=S.role==='kicker'?'kick':'save';startMatch();}
 /* Primera visita: sin menú, directo a atajar (el tutorial es la primera jugada) y al terminar, el primer partido de la copa.
    Se espera a que esté el 3D y el jugador (o 12 s, por si el equipo no tiene 3D). El sonido parte con el primer toque. */
+/* Pantalla de carga: la barra avanza con lo que ya está listo (3D, paquete de recursos, jugador, caras) y se va sola */
+function cargaTick(){
+  const el=$('carga');if(!el||el.classList.contains('fuera'))return;const t=(performance.now()-(window.__t0c||(window.__t0c=performance.now())))/1000;
+  const listo=(GL.charGLB&&GL.heads)||GL.failed||t>25;
+  const p=listo?1:Math.min(0.97,0.08+(GL.ok?0.22:0)+0.4*(GL.packP||0)+(GL.charGLB?0.18:0)+Math.min(0.08,t*0.01));
+  $('cgBar').style.width=Math.round(p*100)+'%';
+  if(listo){el.classList.add('fuera');setTimeout(()=>el.remove(),500);return;}
+  setTimeout(cargaTick,150);
+}
+/* Hasta que gane su primer partido, la copa le da una mano: arquero con más alcance, el arquero rival lee menos y su equipo falla menos */
+const boost=()=>S.mode==='tour'&&S.tour&&!S.tour.duo&&!CFG.ganoUno;
+document.addEventListener('pointerdown',e=>{const b=e.target.closest&&e.target.closest('button');if(b&&!b.disabled&&AC&&!CFG.muted)try{sfx.tap();}catch(err){}},true);
 function firstVisit(){
   if(CFG.tutDone||Object.keys(STAT.m).length)return;const t0=Date.now();
   const tick=()=>{if(S.mode!=='home'||CFG.tutDone)return;if((GL.ok&&GL.charGLB&&GL.meK&&GL.meK.userData.real)||Date.now()-t0>12000){startTutorial(cupGo);return;}setTimeout(tick,300);};
@@ -1443,7 +1475,7 @@ function startMatch(){
   if(GL.ok&&!reduce){const r=RIVALS[S.tour.round];S.phase='intro';S.introT=0;S.banner={title:r.stage,sub:'Tu equipo vs '+r.team,t:0,dur:introLen()-0.3};ambReact('entrance');}else themTurn();vozIntro();cv.focus({preventScroll:true});
 }
 function endMatch(w){
-  statAdd(w==='us'?'gan':'per');statSave();
+  statAdd(w==='us'?'gan':'per');statSave();if(w==='us'&&!(S.tour&&S.tour.duo)&&!CFG.ganoUno){CFG.ganoUno=true;saveCfg();}
   if(S.tour&&S.tour.duo)return duoEnd(w);
   if(DIAG.t0){DIAG.dur=(performance.now()-DIAG.t0)/1000;DIAG.shots=S.tour.sh.us.length+S.tour.sh.them.length;DIAG.t0=0;}
   const r=RIVALS[S.tour.round],sh=S.tour.sh,score=`${cnt(sh.us)}–${cnt(sh.them)}`;
@@ -1460,7 +1492,7 @@ function endMatch(w){
     if(S.tour.round<RIVALS.length-1){
       $('rTitle').textContent='¡Ganaste!';$('rSub').textContent=`Le ganaste a ${r.team}.`;
       $('rNote').textContent=`Pasas a la ${RIVALS[S.tour.round+1].lower}.`+extra;showPrizes(newPrizes());
-      sobreBtns([{t:'Siguiente partido',f:()=>{S.tour.round++;showIntro();}},{t:'Volver al menú',f:goHome}]);
+      sobreBtns([{t:'Siguiente partido',f:()=>{S.tour.round++;showIntro();}},{t:'Volver al menú',f:goHome}]);autoGo([...$('rBtns').querySelectorAll('button')].find(b=>b.textContent==='Siguiente partido'),6);
     }else{
       TROPHIES[CFG.diff]=true;lsSet('arquerito-trofeos',JSON.stringify(TROPHIES));
       const cp=copaNow();let nt;TEMP.won[TEMP.copa]++;
@@ -2873,7 +2905,11 @@ function packGet(){if(!PACK)PACK=datGet('recursos.dat',RES_V);return PACK;}
 /* Lee un paquete .dat (mismo formato para recursos y voces; las voces van sin revolver: semilla 0) */
 function datGet(file,v){
   return (async()=>{const r=await fetch(file+'?v='+v);if(!r.ok)throw new Error('sin paquete');
-    const u=new Uint8Array(await r.arrayBuffer()),dv=new DataView(u.buffer);if(dv.getUint32(0,true)!==0x31504b4c)throw new Error('paquete raro');
+    let u;const len=+(r.headers.get('content-length')||0),prog=file==='recursos.dat';
+    if(prog&&r.body&&len){const rd=r.body.getReader(),ch=[];let o=0;for(;;){const{done,value}=await rd.read();if(done)break;ch.push(value);o+=value.length;GL.packP=Math.min(1,o/len);}
+      u=new Uint8Array(o);let q=0;for(const c of ch){u.set(c,q);q+=c.length;}}else u=new Uint8Array(await r.arrayBuffer());
+    if(prog)GL.packP=1;
+    const dv=new DataView(u.buffer);if(dv.getUint32(0,true)!==0x31504b4c)throw new Error('paquete raro');
     let x=dv.getUint32(4,true)>>>0;for(let i=8;i<u.length;i++){x^=x<<13;x>>>=0;x^=x>>>17;x^=x<<5;x>>>=0;u[i]^=x&255;}
     const n=dv.getUint32(8,true),m={},td=new TextDecoder();let p=12;
     for(let k=0;k<n;k++){const L=u[p++],nm=td.decode(u.subarray(p,p+L));p+=L;const o=dv.getUint32(p,true),l=dv.getUint32(p+4,true);p+=8;m[nm]=u.subarray(o,o+l);}
@@ -3252,7 +3288,7 @@ function shoot(p,tx,ty,curve){
   k.shot={p,tx,ty,curve,T};k.fire=fire;S.phase='krun';k.t=0;S.shotN=(S.shotN||0)+1;recStart();
   const ai=k.ai,L=k.lvl;
   if(S.tour&&S.tour.duo){const dd=S.tour.pick||0;ai.read=false;if(dd===0){if(ty>1.7){ai.dir=0;ai.diveAt=KT()+T*0.35;}else{ai.dir=null;ai.stay=true;}}else{ai.dir=dd*DUO_SIGN;ai.diveAt=KT()+rand(0.0,0.06);}return;}
-  let pRead=clamp(0.28+L*0.035+GK_READ[CFG.diff],0.15,0.72)*(1-0.35*Math.abs(curve));
+  let pRead=clamp(0.28+L*0.035+GK_READ[CFG.diff],0.15,0.72)*(1-0.35*Math.abs(curve))*(boost()?0.5:1);
   if(p<0.35)pRead=0.9;else if(p<0.6)pRead=Math.max(pRead,0.55+(0.6-p));
   const realDir=Math.abs(tx)<0.9?0:Math.sign(tx);ai.read=Math.random()<pRead;
   if(ai.read){if(realDir===0){if(ty>1.7){ai.dir=0;ai.diveAt=KT()+T*0.35;}else{ai.dir=null;ai.stay=true;}}
@@ -4505,7 +4541,7 @@ $('duPick').addEventListener('click',e=>{const b=e.target.closest('button');if(b
 
 glLoad();
 new ResizeObserver(resize).observe(stage);
-resize();paintMute();renderHome();hud();firstVisit();
+resize();paintMute();renderHome();hud();firstVisit();cargaTick();
 if(document.fonts&&document.fonts.ready)document.fonts.ready.then(()=>{G.fontsOk=1;});
 requestAnimationFrame(frame);
 })();
