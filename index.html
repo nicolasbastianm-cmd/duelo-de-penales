@@ -140,6 +140,16 @@ input[type=text]:focus-visible,input[type=number]:focus-visible{outline:3px soli
 .mtile .bdg.st{background:var(--sun);color:var(--ink)}
 .minor{display:flex;gap:10px}
 .card.alb{max-width:420px}
+.paises{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.pais{position:relative;cursor:pointer}
+.pais input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
+.pais span{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:700;line-height:1.1;text-align:center;padding:5px 2px;border:2px solid transparent;border-radius:10px}
+.pais img,.pais .nof{width:42px;height:28px;border-radius:4px;display:block}
+.pais .nof{display:grid;place-items:center;border:2px dashed rgba(246,243,232,.5);box-sizing:border-box;font-style:normal}
+.pais input:checked+span{border-color:var(--sun);background:rgba(255,210,63,.12)}
+.pais input:focus-visible+span{outline:3px solid var(--sun)}
+.tag img.flg{width:15px;height:10px;border-radius:2px;margin-right:3px;vertical-align:-1px}
+.tag{width:auto!important;min-width:28px}
 .card.how canvas{position:static;inset:auto;width:100%;height:auto;aspect-ratio:300/170;border-radius:12px;display:block;touch-action:auto}
 .hwsteps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;text-align:left}
 .hwsteps li{display:flex;align-items:center;gap:10px;font-family:var(--display);font-size:20px}
@@ -300,6 +310,7 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
             <div class="field"><label class="lbl" for="name">Nombre</label><input id="name" type="text" maxlength="10" autocomplete="off" placeholder="Arquero"></div>
             <div class="field"><label class="lbl" for="num">Número</label><input id="num" type="number" min="1" max="99" inputmode="numeric" value="1"></div>
           </div>
+          <fieldset><legend>Tu país</legend><div class="paises" id="paisSw"></div></fieldset>
           <fieldset><legend>Camiseta</legend><div class="swatches" id="kitSw"></div></fieldset>
           <fieldset><legend>Diseño de la camiseta</legend><div class="seg" id="disSeg"></div></fieldset>
           <fieldset><legend>Guantes</legend><div class="swatches" id="gloveSw"></div></fieldset>
@@ -510,6 +521,9 @@ const EN={
 'Uy… gol de ellos.':'Oh… goal for them.','¡Lo atajó el arquero!':'The keeper saved it!','Palo o afuera':'Post or wide','¡Uyyy, por poquito!':'Ohhh, so close!','Penal decisivo':'Deciding penalty',
 '¡Ganamos! ¡A la siguiente ronda!':'We won! On to the next round!','Campeones':'Champions','¡Campeones! ¡La copa es nuestra!':'Champions! The cup is ours!','¡Otra vez será! ¡Vamos de nuevo!':'Next time! Let us go again!',
 'Camisetas':'Shirts','Amarilla':'Yellow','Balones':'Balls','Fuego':'Fire','De oro':'Golden','Festejos':'Celebrations','La voltereta':'Backflip','El baile':'The dance',
+// países (7.17)
+'Tu país':'Your country','Ninguno':'None','Selección':'National team','Camiseta de la selección':'National team shirt',
+'Brasil':'Brazil','Perú':'Peru','México':'Mexico','España':'Spain','Francia':'France','Italia':'Italy','Alemania':'Germany','Inglaterra':'England','Países Bajos':'Netherlands','Estados Unidos':'United States','Japón':'Japan',
 // tarjetas de cómo se juega (7.15)
 '¡Eres el arquero!':"You're the keeper!",'¡Gol!':'Goal!','¡Te toca patear!':'Your turn to shoot!','¡Vamos!':"Let's go!",'Muévete':'Move','Lánzate':'Dive','¡Atájala!':'Save it!',
 'Con las flechas':'With the arrow keys','Mueve el mouse':'Move the mouse','Arrastra el dedo':'Drag your finger','Barra espaciadora':'Space bar','Haz clic':'Click','Desliza hacia el balón':'Swipe towards the ball',
@@ -835,7 +849,7 @@ function hud(){
   $('hudR').hidden=!(m==='endless'||m==='home');$('quit').hidden=!playing();
   if(m==='tour'){const sh=S.tour.sh,r=RIVALS[S.tour.round];
     $('hudLl').textContent=sh.them.length>5?'Muerte súbita':r.short;$('hudLv').textContent=`${cnt(sh.us)}–${cnt(sh.them)}`;
-    $('rivTag').textContent=r.code;$('usTag').textContent=S.tour.duo?S.tour.code1:'TÚ';dots('dUs',sh.us);dots('dThem',sh.them);}
+    $('rivTag').textContent=r.code;if(S.tour.duo)$('usTag').textContent=S.tour.code1;else $('usTag').innerHTML=usTagHTML();dots('dUs',sh.us);dots('dThem',sh.them);}
   else if(m==='tut'){$('hudLl').textContent='Tutorial';$('hudLv').textContent=`${Math.min(3,S.tut.step+1)}/3`;}
   else if(m==='endless'){$('hudLl').textContent=S.role==='kicker'?'Goles':S.role==='both'?'Puntos':'Atajadas';$('hudLv').textContent=S.saves;}
   else{$('hudLl').textContent='Total';$('hudLv').textContent=S.total;}
@@ -846,7 +860,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.16 · 18 nov 2026';
+const VERSION='7.17 · 18 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -1061,6 +1075,54 @@ function openPack(){
   setTimeout(renderAlbum,1500);renderAlbum();
 }
 
+/* ---------- Tu país ----------
+   Banderas dibujadas aquí mismo (sin imágenes de afuera), con los colores de cada selección para la camiseta y la hinchada.
+   Elegir un país crea la camiseta «Selección» (KITS.pais) y la deja puesta; se puede cambiar de camiseta igual. */
+const PAISES={
+  chile:{n:'Chile',c:'#d52b1e',t:'#ffffff',f:['chile']},
+  argentina:{n:'Argentina',c:'#75aadb',t:'#ffffff',f:['h',['#74acdf','#ffffff','#74acdf']],sol:'#f6b40e'},
+  brasil:{n:'Brasil',c:'#ffdf00',t:'#009b3a',f:['brasil']},
+  uruguay:{n:'Uruguay',c:'#5cbfeb',t:'#0f2a17',f:['uruguay']},
+  peru:{n:'Perú',c:'#ffffff',t:'#d91023',f:['v',['#d91023','#ffffff','#d91023']]},
+  colombia:{n:'Colombia',c:'#fcd116',t:'#003893',f:['h',['#fcd116','#fcd116','#003893','#ce1126']]},
+  mexico:{n:'México',c:'#006847',t:'#ffffff',f:['v',['#006847','#ffffff','#ce1126']],escudo:'#8a5a2b'},
+  espana:{n:'España',c:'#c60b1e',t:'#ffc400',f:['h',['#aa151b','#f1bf00','#f1bf00','#aa151b']]},
+  francia:{n:'Francia',c:'#1f3a93',t:'#ffffff',f:['v',['#002395','#ffffff','#ed2939']]},
+  italia:{n:'Italia',c:'#1e6fd1',t:'#ffffff',f:['v',['#009246','#ffffff','#ce2b37']]},
+  alemania:{n:'Alemania',c:'#f6f3e8',t:'#111111',f:['h',['#000000','#dd0000','#ffce00']]},
+  portugal:{n:'Portugal',c:'#c8102e',t:'#046a38',f:['portugal']},
+  inglaterra:{n:'Inglaterra',c:'#f6f3e8',t:'#1a2a6c',f:['cruz']},
+  paisesbajos:{n:'Países Bajos',c:'#ff7a00',t:'#1b1f26',f:['h',['#ae1c28','#ffffff','#21468b']]},
+  eeuu:{n:'Estados Unidos',c:'#f6f3e8',t:'#1f3a93',f:['eeuu']},
+  japon:{n:'Japón',c:'#123b8f',t:'#ffffff',f:['disco']}};
+const FLAGC={};
+function bandera(id,w=60,h=40){
+  const k=id+'|'+w;if(FLAGC[k])return FLAGC[k];const P=PAISES[id],cv2=document.createElement('canvas');cv2.width=w;cv2.height=h;const x=cv2.getContext('2d'),f=P.f;
+  const star=(cx,cy,r,col)=>{x.fillStyle=col;x.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*0.4:r;x.lineTo(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr);}x.fill();};
+  if(f[0]==='h'){f[1].forEach((c,i)=>{x.fillStyle=c;x.fillRect(0,h*i/f[1].length,w,h/f[1].length+1);});}
+  else if(f[0]==='v'){f[1].forEach((c,i)=>{x.fillStyle=c;x.fillRect(w*i/f[1].length,0,w/f[1].length+1,h);});}
+  else if(f[0]==='chile'){x.fillStyle='#fff';x.fillRect(0,0,w,h/2);x.fillStyle='#d52b1e';x.fillRect(0,h/2,w,h/2);x.fillStyle='#0039a6';x.fillRect(0,0,h/2,h/2);star(h/4,h/4,h*0.15,'#fff');}
+  else if(f[0]==='brasil'){x.fillStyle='#009b3a';x.fillRect(0,0,w,h);x.fillStyle='#fedf00';x.beginPath();x.moveTo(w*0.08,h/2);x.lineTo(w/2,h*0.1);x.lineTo(w*0.92,h/2);x.lineTo(w/2,h*0.9);x.fill();x.fillStyle='#002776';x.beginPath();x.arc(w/2,h/2,h*0.22,0,7);x.fill();}
+  else if(f[0]==='uruguay'){for(let i=0;i<9;i++){x.fillStyle=i%2?'#0038a8':'#ffffff';x.fillRect(0,h*i/9,w,h/9+1);}x.fillStyle='#fff';x.fillRect(0,0,w*0.4,h*5/9);x.fillStyle='#fcd116';x.beginPath();x.arc(w*0.2,h*5/18,h*0.13,0,7);x.fill();}
+  else if(f[0]==='portugal'){x.fillStyle='#046a38';x.fillRect(0,0,w*0.4,h);x.fillStyle='#da291c';x.fillRect(w*0.4,0,w*0.6,h);x.fillStyle='#ffe900';x.beginPath();x.arc(w*0.4,h/2,h*0.2,0,7);x.fill();}
+  else if(f[0]==='cruz'){x.fillStyle='#fff';x.fillRect(0,0,w,h);x.fillStyle='#ce1124';x.fillRect(w/2-h*0.1,0,h*0.2,h);x.fillRect(0,h*0.4,w,h*0.2);}
+  else if(f[0]==='eeuu'){for(let i=0;i<13;i++){x.fillStyle=i%2?'#ffffff':'#b22234';x.fillRect(0,h*i/13,w,h/13+1);}x.fillStyle='#3c3b6e';x.fillRect(0,0,w*0.4,h*7/13);x.fillStyle='#fff';for(let r=0;r<4;r++)for(let c=0;c<5;c++){x.beginPath();x.arc(w*0.04+c*w*0.08,h*0.06+r*h*0.12,Math.max(0.8,h*0.02),0,7);x.fill();}}
+  else if(f[0]==='disco'){x.fillStyle='#fff';x.fillRect(0,0,w,h);x.fillStyle='#bc002d';x.beginPath();x.arc(w/2,h/2,h*0.3,0,7);x.fill();}
+  if(P.sol){x.fillStyle=P.sol;x.beginPath();x.arc(w/2,h/2,h*0.1,0,7);x.fill();}
+  if(P.escudo){x.fillStyle=P.escudo;x.beginPath();x.arc(w/2,h/2,h*0.12,0,7);x.fill();}
+  x.strokeStyle='rgba(0,0,0,.25)';x.lineWidth=1;x.strokeRect(0.5,0.5,w-1,h-1);
+  return FLAGC[k]=cv2.toDataURL('image/png');
+}
+function setPaisKit(){if(CFG.pais&&PAISES[CFG.pais]){const P=PAISES[CFG.pais];KITS.pais={c:P.c,t:P.t,n:'Selección',p:'Camiseta de la selección'};}else{delete KITS.pais;if(CFG.kit==='pais')CFG.kit='naranjo';}}
+/* dos colores para las banderas de la hinchada: los dos primeros de la bandera del país */
+function paisColores(){const P=PAISES[CFG.pais];if(!P)return null;const f=P.f;return f[0]==='h'||f[0]==='v'?[f[1][0],f[1][1]===f[1][0]?f[1][2]:f[1][1]]:{chile:['#d52b1e','#ffffff'],brasil:['#009b3a','#fedf00'],uruguay:['#0038a8','#ffffff'],portugal:['#046a38','#da291c'],cruz:['#ffffff','#ce1124'],eeuu:['#b22234','#ffffff'],disco:['#ffffff','#bc002d']}[f[0]];}
+function renderPais(){
+  $('paisSw').innerHTML=`<label class="pais"><input type="radio" name="pais" value=""${CFG.pais?'':' checked'}><span><i class="nof">—</i>Ninguno</span></label>`+
+    Object.entries(PAISES).map(([k,P])=>`<label class="pais"><input type="radio" name="pais" value="${k}"${k===CFG.pais?' checked':''}><span><img src="${bandera(k)}" alt="">${P.n}</span></label>`).join('');
+}
+setPaisKit(); /* al cargar: si ya eligió país, la camiseta «Selección» existe antes de dibujar nada */
+function usTagHTML(){return (CFG.pais&&PAISES[CFG.pais]?`<img class="flg" src="${bandera(CFG.pais,30,20)}" alt="">`:'')+'TÚ';}
+
 /* ---------- Vestuario y premios ---------- */
 function swatches(elId,set,name,cur){
   $(elId).innerHTML=Object.entries(set).map(([k,v])=>{const lk=!isUnlocked(v);
@@ -1071,7 +1133,7 @@ function renderLocker(){
   if(!isUnlocked(KITS[CFG.kit]))CFG.kit='naranjo';if(!isUnlocked(GLOVES[CFG.glove]))CFG.glove='amarillo';if(!isUnlocked(STAGES[CFG.stage]))CFG.stage='estadio';
   {const lg=$('lg-'+LANG);if(lg)lg.checked=true;}
   $('name').value=CFG.name;$('num').value=CFG.num;{const q=$('q-'+CFG.quality);if(q)q.checked=true;const kc=$('kc-'+kickCtrl());if(kc)kc.checked=true;renderVozCfg();}
-  swatches('kitSw',KITS,'kit',CFG.kit);swatches('gloveSw',GLOVES,'glove',CFG.glove);
+  setPaisKit();renderPais();swatches('kitSw',KITS,'kit',CFG.kit);swatches('gloveSw',GLOVES,'glove',CFG.glove);
   if(!DESIGNS[CFG.design])CFG.design='rayas';$('disSeg').innerHTML=Object.entries(DESIGNS).map(([k,v])=>`<label><input type="radio" name="design" value="${k}"${k===CFG.design?' checked':''}><span>${v.n}</span></label>`).join('');
   for(const[id,name,tab]of[['cutSeg','cut',PEINADOS],['beardSeg','beard',BARBAS],['tatSeg','tat',TATS]]){if(!tab[CFG[name]])CFG[name]=Object.keys(tab)[0];
     $(id).innerHTML=Object.entries(tab).map(([k,v])=>`<label><input type="radio" name="${name}" value="${k}"${k===CFG[name]?' checked':''}><span>${v.n}</span></label>`).join('');}
@@ -1088,7 +1150,7 @@ function renderLocker(){
 $('name').addEventListener('input',e=>{CFG.name=e.target.value.slice(0,10);saveCfg();});
 $('num').addEventListener('input',e=>{const n=parseInt(e.target.value,10);if(n>=1&&n<=99){CFG.num=n;saveCfg();}});
 $('num').addEventListener('blur',e=>{e.target.value=CFG.num;});
-$('locker').addEventListener('change',e=>{const t=e.target;if(t.name==='kit')CFG.kit=t.value;else if(t.name==='glove')CFG.glove=t.value;else if(t.name==='design')CFG.design=t.value;else if(t.name==='cut'||t.name==='beard'||t.name==='tat')CFG[t.name]=t.value;else if(t.name==='lang'){CFG.lang=t.value;saveCfg();location.reload();return;}else if(t.name==='stage')CFG.stage=t.value;else if(t.name==='kickctrl'){CFG.kickCtrl=t.value;}else if(t.name==='quality'){CFG.quality=t.value;if(GL.ok){const nt=initialTier();if(nt!==GL.tier){GL.tier=nt;glApplyTier();}}}saveCfg();});
+$('locker').addEventListener('change',e=>{const t=e.target;if(t.name==='pais'){CFG.pais=t.value;setPaisKit();if(CFG.pais)CFG.kit='pais';saveCfg();renderLocker();GL.pKey=null;GL.crowdKey=null;return;}if(t.name==='kit')CFG.kit=t.value;else if(t.name==='glove')CFG.glove=t.value;else if(t.name==='design')CFG.design=t.value;else if(t.name==='cut'||t.name==='beard'||t.name==='tat')CFG[t.name]=t.value;else if(t.name==='lang'){CFG.lang=t.value;saveCfg();location.reload();return;}else if(t.name==='stage')CFG.stage=t.value;else if(t.name==='kickctrl'){CFG.kickCtrl=t.value;}else if(t.name==='quality'){CFG.quality=t.value;if(GL.ok){const nt=initialTier();if(nt!==GL.tier){GL.tier=nt;glApplyTier();}}}saveCfg();});
 function newPrizes(){const now=unlockedIds(),base=S.prizeBase||now;const fresh=now.filter(x=>!base.includes(x));S.prizeBase=now;return fresh;}
 function showPrizes(list){
   const el=$('rPrizes');
@@ -2540,7 +2602,7 @@ function glSync(dt){
   JK=1-Math.exp(-dt*(S.turn==='kick'?16:22));
   if(GL.adTex&&!reduce)GL.adTex.offset.x=(S.time*0.012)%1;
   const sk=CFG.stage;if(GL.adTex&&GL.adFont!==(G.fontsOk||0)){GL.adFont=G.fontsOk||0;drawAds(GL.adTex.image);GL.adTex.needsUpdate=true;}if(GL.stageKey!==sk){GL.stageKey=sk;glBuildStage();GL.pKey=null;}
-  const pk=[CFG.kit,CFG.design,CFG.cut,CFG.beard,CFG.tat,CFG.glove,CFG.name,CFG.num,G.fontsOk||0,curRival().code].join('|');if(GL.pKey!==pk){GL.pKey=pk;glBuildPlayers();}
+  const pk=[CFG.kit,CFG.pais,CFG.design,CFG.cut,CFG.beard,CFG.tat,CFG.glove,CFG.name,CFG.num,G.fontsOk||0,curRival().code].join('|');if(GL.pKey!==pk){GL.pKey=pk;glBuildPlayers();}
   if(!GL.ball)glBuildBall();
   {const bk=CFG.ball||'clasico';if(GL.ballKey!==bk){if(GL.ballKey!=null){GL.ball.material.map=ballTexture();GL.ball.material.needsUpdate=true;}GL.ballKey=bk;}}
   GL.kview=S.turn==='kick';GL.introOn=S.phase==='intro';
@@ -2556,7 +2618,7 @@ function glSync(dt){
   const real=GL.meK.userData.real;
   if(GL.kview){if(real)poseKickReal(dt);else poseKickScene();}else if(real){poseKeeperReal(dt);poseRivalReal(dt);}else{poseKeeperMe();poseRivalStriker();}
   placeBall();rippleNet();confettiStep(dt);flaresStep(dt);flashesStep(dt);poseExtras(dt);
-  if(GL.crowdMesh){const ck=CFG.kit+'|'+curRival().code+'|'+CFG.name+'|'+(G.fontsOk||0);if(GL.crowdKey!==ck){GL.crowdKey=ck;recolorCrowd();recolorFlags();drawBanners();}
+  if(GL.crowdMesh){const ck=CFG.kit+'|'+CFG.pais+'|'+curRival().code+'|'+CFG.name+'|'+(G.fontsOk||0);if(GL.crowdKey!==ck){GL.crowdKey=ck;recolorCrowd();recolorFlags();drawBanners();}
     const tense=playing()&&((S.turn==='save'&&S.phase==='runup')||(S.turn==='kick'&&(S.phase==='aim'||S.phase==='krun')));
     const tg=(S.joy||0)>0?Math.min(1.2,0.3+S.joy):(tense?0:0.05);GL.crowdU.excite.value+=(tg-GL.crowdU.excite.value)*Math.min(1,dt*5);GL.crowdU.time.value=S.time;GL.crowdU.hideZ.value=GL.rp.camera===GL.cam?-9.3:-1e5;}
   if(GL.backBoard){const cm=GL.rp.camera,v=cm!==GL.cam&&!(cm===GL.camR&&cm.position.z<-4.7);GL.backBoard.forEach(m=>m.visible=v);}
@@ -4207,7 +4269,7 @@ function recolorFlags(){
   if(!GL.flagMesh)return;const g=GL.flagMesh.geometry,A=g.attributes.colA,Bc=g.attributes.colB,c=new THREE.Color(),r=curRival();
   const kit=KITS[CFG.kit].c,misc=[['#ffd23f','#1f5fb5'],['#ffffff','#e63946'],['#2fbf71','#ffffff'],['#1b1f26','#ffd23f']];
   GL.flagSpots.forEach((s,i)=>{let a,b;
-    if(s.team===1){a=r.color;b=s.alt?r.shorts:'#ffffff';}else if(s.team===0){a=kit;b=s.alt?'#1b1f26':'#ffffff';if(s.swap)[a,b]=[b,a];}else[a,b]=misc[i%misc.length];
+    if(s.team===1){a=r.color;b=s.alt?r.shorts:'#ffffff';}else if(s.team===0){const pc=paisColores();if(pc){[a,b]=pc;}else{a=kit;b=s.alt?'#1b1f26':'#ffffff';}if(s.swap)[a,b]=[b,a];}else[a,b]=misc[i%misc.length];
     c.set(a);A.array.set([c.r,c.g,c.b],i*3);c.set(b);Bc.array.set([c.r,c.g,c.b],i*3);});
   A.needsUpdate=Bc.needsUpdate=true;
 }
