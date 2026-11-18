@@ -402,7 +402,7 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
         <div class="bracket" id="bracket"></div>
         <div id="cupList"></div>
         <h2 id="iStage">Cuartos de final</h2>
-        <div class="vs"><span>vs</span><span class="badge" id="iBadge"></span><strong id="iTeam">Los Pumas</strong></div>
+        <div class="vs"><span>vs</span><span class="badge" id="iBadge"></span><strong id="iTeam">Argentina</strong></div>
         <p class="small" id="iDesc"></p>
         <p class="small" id="iRole"></p>
         <div class="btns">
@@ -531,7 +531,7 @@ const EN={
 // álbum y racha (7.13)
 'Álbum':'Album','Abrir sobre':'Open pack','¡Jugar!':'Play!','Los rivales':'Rivals','Las copas':'Cups','Los estadios':'Stadiums','Los tiros':'Shots',
 'Guantes de oro':'Golden gloves','Balón de oro':'Golden ball','La hinchada':'The fans','El túnel':'The tunnel','Cancha del barrio':'Street pitch','Estadio de la final':'Final stadium',
-'Los Pumas':'Los Pumas','Los Halcones':'Los Halcones','Los Tiburones':'Los Tiburones',
+
 '¡Nueva!':'New!','Repetida +1 ★':'Duplicate +1 ★','¡Sobre nuevo!':'New pack!','¡Poder recargado!':'Power recharged!',
 '¡Página completa! +15 ★':'Page complete! +15 ★','¡Álbum completo! +50 ★':'Album complete! +50 ★','¡Sobre del día de regalo!':'Free daily pack!',
 'Cada atajada o gol llena el sobre de arriba a la izquierda; en racha se llena más rápido.':'Every save or goal fills the pack in the top left; streaks fill it faster.',
@@ -665,11 +665,11 @@ const DIFF={
   normal: {n:'Normal', dur:1.45,decay:0.95,min:0.60,speed:1.00,reach:1.00,run:0.95,diveT:0.48,team:0.75},
   dificil:{n:'Difícil',dur:1.20,decay:0.94,min:0.50,speed:0.95,reach:0.92,run:0.85,diveT:0.42,team:0.70}};
 const RIVALS=[
-  {stage:'Cuartos de final',short:'Cuartos',lower:'cuartos de final',team:'Los Pumas',code:'PUM',kName:'Tito',gkName:'Pancho',pref:{L:0.7,C:0.1,R:0.2},high:0.05,gkPref:{L:0.2,C:0.15,R:0.65},skin:'#c99a78',hair:'#1b130d',gkSkin:'#ecc9ae',gkHair:'#3a2314',color:'#e0a526',shorts:'#5a3b10',gk:'#2fbf71',gkDesc:'Su arquero, Pancho, se tira tarde: patea fuerte a un rincón.',
+  {stage:'Cuartos de final',short:'Cuartos',lower:'cuartos de final',team:'Argentina',code:'ARG',pais:'argentina',kName:'Tito',gkName:'Pancho',pref:{L:0.7,C:0.1,R:0.2},high:0.05,gkPref:{L:0.2,C:0.15,R:0.65},skin:'#c99a78',hair:'#1b130d',gkSkin:'#ecc9ae',gkHair:'#3a2314',color:'#75aadb',shorts:'#ffffff',gk:'#2fbf71',gkDesc:'Su arquero, Pancho, se tira tarde: patea fuerte a un rincón.',
    desc:'Su goleador, Tito, patea suave y no sabe disimular: mira hacia dónde se inclina.',lvl:1,types:['rasante','colocado'],honesty:1,stutter:0,feint:0},
-  {stage:'Semifinal',short:'Semifinal',lower:'semifinal',team:'Los Halcones',code:'HAL',kName:'Benja',gkName:'Rulo',pref:{L:0.25,C:0.1,R:0.65},high:0.35,gkPref:{L:0.5,C:0.3,R:0.2},skin:'#ffffff',hair:'#c49a5a',gkSkin:'#9c6f52',gkHair:'#111111',color:'#2f5fd8',shorts:'#f6f3e8',gk:'#ff7a2f',gkDesc:'Su arquero, Rulo, a veces adivina el lado: usa el efecto para engañarlo.',
+  {stage:'Semifinal',short:'Semifinal',lower:'semifinal',team:'Brasil',code:'BRA',pais:'brasil',kName:'Benja',gkName:'Rulo',pref:{L:0.25,C:0.1,R:0.65},high:0.35,gkPref:{L:0.5,C:0.3,R:0.2},skin:'#ffffff',hair:'#c49a5a',gkSkin:'#9c6f52',gkHair:'#111111',color:'#ffdf00',shorts:'#1f5fb5',gk:'#8a5cf6',gkDesc:'Su arquero, Rulo, a veces adivina el lado: usa el efecto para engañarlo.',
    desc:'Su goleador, Benja, le pega fuerte y a veces amaga. Si se frena antes de patear, ¡ojo!',lvl:5,types:['rasante','colocado','potente','alto','efecto'],honesty:0.8,stutter:0.25,feint:0.8},
-  {stage:'Final',short:'Final',lower:'final',team:'Los Tiburones',code:'TIB',kName:'Maxi',gkName:'Muro',pref:{L:0.45,C:0.1,R:0.45},high:0.45,gkPref:{L:0.45,C:0.1,R:0.45},skin:'#8a5f45',hair:'#111111',gkSkin:'#ffffff',gkHair:'#6b4423',color:'#1b9aaa',shorts:'#0d3b45',gk:'#e63946',gkDesc:'Su arquero, Muro, lee casi todo: busca los ángulos de arriba.',
+  {stage:'Final',short:'Final',lower:'final',team:'España',code:'ESP',pais:'espana',kName:'Maxi',gkName:'Muro',pref:{L:0.45,C:0.1,R:0.45},high:0.45,gkPref:{L:0.45,C:0.1,R:0.45},skin:'#8a5f45',hair:'#111111',gkSkin:'#ffffff',gkHair:'#6b4423',color:'#c60b1e',shorts:'#1f3a93',gk:'#ffd23f',gkDesc:'Su arquero, Muro, lee casi todo: busca los ángulos de arriba.',
    desc:'Su goleador, Maxi, es el mejor del torneo: amaga, la pica al medio y la clava al ángulo.',lvl:9,types:['rasante','colocado','potente','alto','efecto','picadita'],honesty:0.62,stutter:0.4,feint:0.7}];
 const DEF_RIVAL={team:'Rivales',code:'RIV',skin:'#ecc9ae',hair:'#2a1a10',gkSkin:'#c99a78',gkHair:'#5a3a22',color:'#2f5fd8',shorts:'#f6f3e8',gk:'#2fbf71'};
 const TYPES={
@@ -849,7 +849,7 @@ function hud(){
   $('hudR').hidden=!(m==='endless'||m==='home');$('quit').hidden=!playing();
   if(m==='tour'){const sh=S.tour.sh,r=RIVALS[S.tour.round];
     $('hudLl').textContent=sh.them.length>5?'Muerte súbita':r.short;$('hudLv').textContent=`${cnt(sh.us)}–${cnt(sh.them)}`;
-    $('rivTag').textContent=r.code;if(S.tour.duo)$('usTag').textContent=S.tour.code1;else $('usTag').innerHTML=usTagHTML();dots('dUs',sh.us);dots('dThem',sh.them);}
+    $('rivTag').innerHTML=(r.pais&&PAISES[r.pais]?`<img class="flg" src="${bandera(r.pais,30,20)}" alt="">`:'')+r.code;if(S.tour.duo)$('usTag').textContent=S.tour.code1;else $('usTag').innerHTML=usTagHTML();dots('dUs',sh.us);dots('dThem',sh.them);}
   else if(m==='tut'){$('hudLl').textContent='Tutorial';$('hudLv').textContent=`${Math.min(3,S.tut.step+1)}/3`;}
   else if(m==='endless'){$('hudLl').textContent=S.role==='kicker'?'Goles':S.role==='both'?'Puntos':'Atajadas';$('hudLv').textContent=S.saves;}
   else{$('hudLl').textContent='Total';$('hudLv').textContent=S.total;}
@@ -860,7 +860,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.17 · 18 nov 2026';
+const VERSION='7.18 · 18 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -958,12 +958,12 @@ function howDraw(x,w,h,t,K,inp){
    A la tercera seguida se recarga el poder especial. El primer partido de cada día regala un sobre. */
 const ALB_PAGES=['Los rivales','Las copas','Los estadios','Los tiros'];
 const ALBUM=[
-  {id:'tito',pg:0,n:'Tito',s:'Goleador',t:'Los Pumas',k:'pl',num:9,c:'#e63946'},
-  {id:'pancho',pg:0,n:'Pancho',s:'Arquero',t:'Los Pumas',k:'pl',num:1,c:'#e63946'},
-  {id:'benja',pg:0,n:'Benja',s:'Goleador',t:'Los Halcones',k:'pl',num:9,c:'#2f5fd8'},
-  {id:'rulo',pg:0,n:'Rulo',s:'Arquero',t:'Los Halcones',k:'pl',num:1,c:'#2f5fd8'},
-  {id:'maxi',pg:0,n:'Maxi',s:'Goleador',t:'Los Tiburones',k:'pl',num:10,c:'#1b9aaa',sh:1},
-  {id:'muro',pg:0,n:'Muro',s:'Arquero',t:'Los Tiburones',k:'pl',num:1,c:'#1b9aaa'},
+  {id:'tito',pg:0,n:'Tito',s:'Goleador',t:'Argentina',k:'pl',num:9,c:'#75aadb'},
+  {id:'pancho',pg:0,n:'Pancho',s:'Arquero',t:'Argentina',k:'pl',num:1,c:'#75aadb'},
+  {id:'benja',pg:0,n:'Benja',s:'Goleador',t:'Brasil',k:'pl',num:9,c:'#e2b33c'},
+  {id:'rulo',pg:0,n:'Rulo',s:'Arquero',t:'Brasil',k:'pl',num:1,c:'#e2b33c'},
+  {id:'maxi',pg:0,n:'Maxi',s:'Goleador',t:'España',k:'pl',num:10,c:'#c60b1e',sh:1},
+  {id:'muro',pg:0,n:'Muro',s:'Arquero',t:'España',k:'pl',num:1,c:'#c60b1e'},
   {id:'c0',pg:1,n:'Copa del Barrio',k:'cup',c:'#d08a4a'},
   {id:'c1',pg:1,n:'Copa de la Ciudad',k:'cup',c:'#cfd8de'},
   {id:'c2',pg:1,n:'Copa Nacional',k:'cup',c:'#ffd23f'},
@@ -978,7 +978,7 @@ const ALBUM=[
   {id:'tunel',pg:2,n:'El túnel',k:'tun',c:'#3a3f4a'},
   {id:'t0',pg:3,n:'Rasante',k:'shot',v:0,c:'#2fbf71'},
   {id:'t1',pg:3,n:'Colocado',k:'shot',v:1,c:'#2fbf71'},
-  {id:'t2',pg:3,n:'Bombazo',k:'shot',v:2,c:'#e63946'},
+  {id:'t2',pg:3,n:'Bombazo',k:'shot',v:2,c:'#75aadb'},
   {id:'t3',pg:3,n:'Al ángulo',k:'shot',v:3,c:'#8a5cf6'},
   {id:'t4',pg:3,n:'Con efecto',k:'shot',v:4,c:'#4cc3ff'},
   {id:'t5',pg:3,n:'Picadita',k:'shot',v:5,c:'#ffd23f',sh:1}];
@@ -1421,7 +1421,7 @@ function showIntro(){
   $('bracket').innerHTML=RIVALS.map((x,j)=>`<span class="chip${j<i?' done':j===i?' now':''}">${j<i?'✓ ':''}${x.short}</span>`).join('');
   S.role=roleNow();ROLE=S.role;S.turn=S.role==='kicker'?'kick':'save';
   $('cupList').innerHTML=cupHTML(i);
-  $('iStage').textContent=r.stage;$('iTeam').textContent=r.team;$('iBadge').style.background=r.color;
+  $('iStage').textContent=r.stage;$('iTeam').textContent=r.team;$('iBadge').style.background=r.pais&&PAISES[r.pais]?`center/cover url(${bandera(r.pais)})`:r.color;
   $('iDesc').textContent=S.role==='keeper'?strikerFact(r):S.role==='kicker'?keeperFact(r):strikerFact(r)+' '+keeperFact(r);
   $('iRole').textContent=`${copaNow().n} · temporada ${TEMP.n} · ${S.role==='keeper'?'tú atajas':S.role==='kicker'?'tú pateas':'tú pateas y atajas'} · 5 penales por lado`;
   show('intro');hud();setTimeout(()=>$('iGo').focus({preventScroll:true}),50);
@@ -2868,7 +2868,7 @@ const HEADS={leo:[0.991,1.002,0.985],josh:[1.303,1.174,1.239],c28:[0.372,0.204,0
    el juego sabe abrir: así no quedan como archivos sueltos que se puedan bajar aparte (términos de Adobe, sección 3.6).
    Lo arma build.py desde modelos/. RES_V es una huella del contenido (evita usar una copia vieja guardada). Si el paquete
    no está (como en la copia de Claude), los modelos salen de la versión en texto (.js). */
-const RES_V='899e8c24',VOZ_V={voz:'447d8333',voz_en:'37f4b007'};let PACK=null;
+const RES_V='899e8c24',VOZ_V={voz:'43fded78',voz_en:'fd9e1aab'};let PACK=null;
 function packGet(){if(!PACK)PACK=datGet('recursos.dat',RES_V);return PACK;}
 /* Lee un paquete .dat (mismo formato para recursos y voces; las voces van sin revolver: semilla 0) */
 function datGet(file,v){
@@ -3028,7 +3028,7 @@ function skinMaterial(base,geo,o){
 }
 const SKIN_BASE=[0.53,0.31,0.225]; // color medio de la piel del modelo (para el brazo de manga corta)
 const BOOTS=['#16181c','#f4f4ef','#e6f23c','#ff4a3d','#2f7bff','#16181c','#ff8a1f'];
-const KIT_ST={PUM:2,HAL:3,TIB:4,CON:1,TOR:2,DEL:3,LOB:4};
+const KIT_ST={ARG:2,BRA:1,ESP:1,MEX:1,URU:1,ITA:1,GER:1,FRA:1}; /* 2 = rayas (Argentina), 1 = lisa con vivos */
 function makeReal(o){
   const T=THREE,g=GL.charGLB,m=GL.SU.clone(g.scene),root=new T.Group(),inner=new T.Group();root.add(inner);inner.add(m);
   const f=(o.height||1.9)/1.785,bw=o.build||1;m.scale.set(0.01*f*bw,0.01*f,0.01*f*bw);
@@ -3689,20 +3689,22 @@ function drawPressure(){
    Cada copa sortea a los 7 rivales en un cuadro: cuartos, semifinal y final. Los otros partidos se simulan.
    El equipo pone la personalidad (nombres, colores, mañas) y la ronda pone la dificultad. */
 const TEAMS=[
-  {team:'Los Pumas',code:'PUM',color:'#e0a526',shorts:'#5a3b10',gk:'#2fbf71',kName:'Tito',gkName:'Pancho',pref:{L:0.7,C:0.1,R:0.2},high:0.05,gkPref:{L:0.2,C:0.15,R:0.65},skin:'#c99a78',hair:'#1b130d',gkSkin:'#ecc9ae',gkHair:'#3a2314',
+  {team:'Argentina',code:'ARG',pais:'argentina',color:'#75aadb',shorts:'#ffffff',gk:'#2fbf71',kName:'Tito',gkName:'Pancho',pref:{L:0.7,C:0.1,R:0.2},high:0.05,gkPref:{L:0.2,C:0.15,R:0.65},skin:'#c99a78',hair:'#1b130d',gkSkin:'#ecc9ae',gkHair:'#3a2314',
    kStyle:'patea suave y no sabe disimular: mira hacia dónde se inclina.',gkStyle:'se tira tarde: patea fuerte a un rincón.'},
-  {team:'Los Halcones',code:'HAL',color:'#2f5fd8',shorts:'#f6f3e8',gk:'#ff7a2f',kName:'Benja',gkName:'Rulo',pref:{L:0.25,C:0.1,R:0.65},high:0.35,gkPref:{L:0.5,C:0.3,R:0.2},skin:'#ffffff',hair:'#c49a5a',gkSkin:'#9c6f52',gkHair:'#111111',
+  {team:'Brasil',code:'BRA',pais:'brasil',color:'#ffdf00',shorts:'#1f5fb5',gk:'#8a5cf6',kName:'Benja',gkName:'Rulo',pref:{L:0.25,C:0.1,R:0.65},high:0.35,gkPref:{L:0.5,C:0.3,R:0.2},skin:'#ffffff',hair:'#c49a5a',gkSkin:'#9c6f52',gkHair:'#111111',
    kStyle:'le pega fuerte y a veces amaga. Si se frena antes de patear, ¡ojo!',gkStyle:'a veces adivina el lado: usa el efecto para engañarlo.'},
-  {team:'Los Tiburones',code:'TIB',color:'#1b9aaa',shorts:'#0d3b45',gk:'#e63946',kName:'Maxi',gkName:'Muro',pref:{L:0.45,C:0.1,R:0.45},high:0.45,gkPref:{L:0.45,C:0.1,R:0.45},skin:'#8a5f45',hair:'#111111',gkSkin:'#ffffff',gkHair:'#6b4423',
+  {team:'España',code:'ESP',pais:'espana',color:'#c60b1e',shorts:'#1f3a93',gk:'#ffd23f',kName:'Maxi',gkName:'Muro',pref:{L:0.45,C:0.1,R:0.45},high:0.45,gkPref:{L:0.45,C:0.1,R:0.45},skin:'#8a5f45',hair:'#111111',gkSkin:'#ffffff',gkHair:'#6b4423',
    kStyle:'amaga, la pica al medio y la clava al ángulo.',gkStyle:'lee casi todo: busca los ángulos de arriba.'},
-  {team:'Los Cóndores',code:'CON',color:'#8a5cf6',shorts:'#2a1d4a',gk:'#ffd23f',kName:'Nacho',gkName:'Toño',pref:{L:0.35,C:0.35,R:0.3},high:0.2,gkPref:{L:0.3,C:0.45,R:0.25},skin:'#ecc9ae',hair:'#6b4423',gkSkin:'#c99a78',gkHair:'#1b130d',
+  {team:'México',code:'MEX',pais:'mexico',color:'#006847',shorts:'#ffffff',gk:'#ff7a2f',kName:'Nacho',gkName:'Toño',pref:{L:0.35,C:0.35,R:0.3},high:0.2,gkPref:{L:0.3,C:0.45,R:0.25},skin:'#ecc9ae',hair:'#6b4423',gkSkin:'#c99a78',gkHair:'#1b130d',
    kStyle:'le encanta tirarla al medio cuando el arquero se mueve.',gkStyle:'se queda parado hasta el final: los rincones bajos le cuestan.'},
-  {team:'Los Toros',code:'TOR',color:'#c62828',shorts:'#f6f3e8',gk:'#4cc3ff',kName:'Rocco',gkName:'Beto',pref:{L:0.55,C:0.05,R:0.4},high:0.5,gkPref:{L:0.5,C:0.05,R:0.45},skin:'#9c6f52',hair:'#111111',gkSkin:'#ffffff',gkHair:'#c49a5a',
+  {team:'Uruguay',code:'URU',pais:'uruguay',color:'#5cbfeb',shorts:'#111111',gk:'#ffd23f',kName:'Rocco',gkName:'Beto',pref:{L:0.55,C:0.05,R:0.4},high:0.5,gkPref:{L:0.5,C:0.05,R:0.45},skin:'#9c6f52',hair:'#111111',gkSkin:'#ffffff',gkHair:'#c49a5a',
    kStyle:'le pega con todo y casi siempre arriba.',gkStyle:'se lanza muy temprano: un tiro suave al medio lo descoloca.'},
-  {team:'Los Delfines',code:'DEL',color:'#4cc3ff',shorts:'#0f2a52',gk:'#ff5fa2',kName:'Lalo',gkName:'Fede',pref:{L:0.15,C:0.1,R:0.75},high:0.15,gkPref:{L:0.65,C:0.1,R:0.25},skin:'#ffffff',hair:'#3a2314',gkSkin:'#74513b',gkHair:'#111111',
+  {team:'Italia',code:'ITA',pais:'italia',color:'#1e6fd1',shorts:'#ffffff',gk:'#2fbf71',kName:'Lalo',gkName:'Fede',pref:{L:0.15,C:0.1,R:0.75},high:0.15,gkPref:{L:0.65,C:0.1,R:0.25},skin:'#ffffff',hair:'#3a2314',gkSkin:'#74513b',gkHair:'#111111',
    kStyle:'casi siempre cruza el tiro, rasante y colocado.',gkStyle:'se tira casi siempre al mismo lado.'},
-  {team:'Los Lobos',code:'LOB',color:'#3a3f48',shorts:'#111111',gk:'#7ee04a',kName:'Kevin',gkName:'Iván',pref:{L:0.4,C:0.2,R:0.4},high:0.3,gkPref:{L:0.4,C:0.2,R:0.4},skin:'#c99a78',hair:'#111111',gkSkin:'#ecc9ae',gkHair:'#6b4423',
-   kStyle:'es frío como el hielo: amaga y espera que te muevas.',gkStyle:'es alto y llega a todo arriba: búscale los rincones bajos.'}];
+  {team:'Alemania',code:'GER',pais:'alemania',color:'#f6f3e8',shorts:'#111111',gk:'#e63946',kName:'Kevin',gkName:'Iván',pref:{L:0.4,C:0.2,R:0.4},high:0.3,gkPref:{L:0.4,C:0.2,R:0.4},skin:'#c99a78',hair:'#111111',gkSkin:'#ecc9ae',gkHair:'#6b4423',
+   kStyle:'es frío como el hielo: amaga y espera que te muevas.',gkStyle:'es alto y llega a todo arriba: búscale los rincones bajos.'},
+  {team:'Francia',code:'FRA',pais:'francia',color:'#1f3a93',shorts:'#ffffff',gk:'#ffd23f',kName:'Leo',gkName:'Hugo',pref:{L:0.3,C:0.2,R:0.5},high:0.3,gkPref:{L:0.35,C:0.25,R:0.4},skin:'#74513b',hair:'#111111',gkSkin:'#ecc9ae',gkHair:'#3a2314',
+   kStyle:'patea con calma y elige el rincón a último momento.',gkStyle:'adivina bien los tiros bajos: prueba arriba.'}];
 const ROUNDS=[
   {stage:'Cuartos de final',short:'Cuartos',lower:'cuartos de final',lvl:1,types:['rasante','colocado'],honesty:1,stutter:0,feint:0},
   {stage:'Semifinal',short:'Semifinal',lower:'semifinal',lvl:5,types:['rasante','colocado','potente','alto','efecto'],honesty:0.8,stutter:0.25,feint:0.8},
@@ -3711,7 +3713,8 @@ function rivalFor(t,i){return{...ROUNDS[i],...t,desc:`Su goleador, ${t.kName}, $
 function simScore(){const w=2+Math.floor(Math.random()*4),l=Math.max(0,w-1-Math.floor(Math.random()*2));return[w,l];}
 function simMatch(a,b){const[w,l]=simScore(),aw=Math.random()<0.5;return{a,b,win:aw?a:b,sa:aw?w:l,sb:aw?l:w};}
 function newCup(){
-  const t=TEAMS.slice();for(let i=t.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[t[i],t[j]]=[t[j],t[i]];}
+  let t=TEAMS.filter(x=>x.pais!==CFG.pais);if(t.length>7)t=t.filter(x=>x.code!=='FRA'); /* siempre 7 rivales y nunca tu propio país */
+  for(let i=t.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[t[i],t[j]]=[t[j],t[i]];}
   const qf=[{a:'US',b:t[0]},simMatch(t[1],t[2]),simMatch(t[3],t[4]),simMatch(t[5],t[6])];
   const sf2=simMatch(qf[2].win,qf[3].win);
   S.tour.cup={qf,sf:[{a:'US',b:qf[1].win},sf2]};
@@ -3910,7 +3913,7 @@ $('mute').addEventListener('click',()=>{if(SON.out)SON.out.gain.setTargetAtTime(
    o «Mi voz»: frases grabadas en el mismo teléfono (se guardan en el navegador, no salen del equipo).
    Cada clave tiene varias variantes y se sacan como de una bolsa: no se repite una hasta usar las demás.
    Según la jugada elige frases más precisas (al ángulo, engañó al arquero, voló, racha, marcador). */
-const VOZ_N={"g_tut0":1,"g_tut1":1,"g_tut2":1,"g_bien":3,"g_otra":1,"g_tutfin":1,"g_ap1":1,"g_ap2":1,"g_des":1,"g_duo1":1,"g_duo2":1,"inicio":6,"semi":3,"final":3,"prepara":10,"preparak":5,"primer":2,"gol":12,"golazo":5,"golengano":4,"golmedio":2,"golrasante":2,"golfuerte":3,"paloadentro":3,"golequipo":4,"atajada":10,"atajvuelo":5,"atajparado":3,"golrival":8,"golrivalengano":3,"golrivalpicada":2,"atajrival":6,"atajrivalcatch":2,"fallaequipo":4,"palo":4,"travesano":3,"afuera":4,"arriba":3,"palorival":3,"afuerarival":3,"racha2":2,"racha3":2,"rachag3":2,"dec_metewin":2,"dec_metelose":2,"dec_atajawin":2,"dec_atajalose":2,"dec_muerte":2,"dec_vida":2,"ganamos":5,"alafinal":3,"campeon":4,"perdimos":5,"findesafio":4,"record":2,"rival_PUM":2,"golr_PUM":2,"gkr_PUM":2,"rival_HAL":2,"golr_HAL":2,"gkr_HAL":2,"rival_TIB":2,"golr_TIB":2,"gkr_TIB":2,"rival_CON":2,"golr_CON":2,"gkr_CON":2,"rival_TOR":2,"golr_TOR":2,"gkr_TOR":2,"rival_DEL":2,"golr_DEL":2,"gkr_DEL":2,"rival_LOB":2,"golr_LOB":2,"gkr_LOB":2,"m_0_1":1,"m_0_2":1,"m_0_3":1,"m_1_0":1,"m_1_1":1,"m_1_2":1,"m_1_3":1,"m_1_4":1,"m_2_0":1,"m_2_1":1,"m_2_2":1,"m_2_3":1,"m_2_4":1,"m_2_5":1,"m_3_0":1,"m_3_1":1,"m_3_2":1,"m_3_3":1,"m_3_4":1,"m_3_5":1,"m_3_6":1,"m_4_1":1,"m_4_2":1,"m_4_3":1,"m_4_4":1,"m_4_5":1,"m_4_6":1,"m_4_7":1,"m_5_2":1,"m_5_3":1,"m_5_4":1,"m_5_5":1,"m_5_6":1,"m_5_7":1,"m_6_3":1,"m_6_4":1,"m_6_5":1,"m_6_6":1,"m_6_7":1,"m_7_4":1,"m_7_5":1,"m_7_6":1,"m_7_7":1};
+const VOZ_N={"g_tut0":1,"g_tut1":1,"g_tut2":1,"g_bien":3,"g_otra":1,"g_tutfin":1,"g_ap1":1,"g_ap2":1,"g_des":1,"g_duo1":1,"g_duo2":1,"inicio":6,"semi":3,"final":3,"prepara":10,"preparak":5,"primer":2,"gol":12,"golazo":5,"golengano":4,"golmedio":2,"golrasante":2,"golfuerte":3,"paloadentro":3,"golequipo":4,"atajada":10,"atajvuelo":5,"atajparado":3,"golrival":8,"golrivalengano":3,"golrivalpicada":2,"atajrival":6,"atajrivalcatch":2,"fallaequipo":4,"palo":4,"travesano":3,"afuera":4,"arriba":3,"palorival":3,"afuerarival":3,"racha2":2,"racha3":2,"rachag3":2,"dec_metewin":2,"dec_metelose":2,"dec_atajawin":2,"dec_atajalose":2,"dec_muerte":2,"dec_vida":2,"ganamos":5,"alafinal":3,"campeon":4,"perdimos":5,"findesafio":4,"record":2,"m_0_1":1,"m_0_2":1,"m_0_3":1,"m_1_0":1,"m_1_1":1,"m_1_2":1,"m_1_3":1,"m_1_4":1,"m_2_0":1,"m_2_1":1,"m_2_2":1,"m_2_3":1,"m_2_4":1,"m_2_5":1,"m_3_0":1,"m_3_1":1,"m_3_2":1,"m_3_3":1,"m_3_4":1,"m_3_5":1,"m_3_6":1,"m_4_1":1,"m_4_2":1,"m_4_3":1,"m_4_4":1,"m_4_5":1,"m_4_6":1,"m_4_7":1,"m_5_2":1,"m_5_3":1,"m_5_4":1,"m_5_5":1,"m_5_6":1,"m_5_7":1,"m_6_3":1,"m_6_4":1,"m_6_5":1,"m_6_6":1,"m_6_7":1,"m_7_4":1,"m_7_5":1,"m_7_6":1,"m_7_7":1,"rival_ARG":2,"golr_ARG":2,"gkr_ARG":2,"rival_BRA":2,"golr_BRA":2,"gkr_BRA":2,"rival_ESP":2,"golr_ESP":2,"gkr_ESP":2,"rival_MEX":2,"golr_MEX":2,"gkr_MEX":2,"rival_URU":2,"golr_URU":2,"gkr_URU":2,"rival_ITA":2,"golr_ITA":2,"gkr_ITA":2,"rival_GER":2,"golr_GER":2,"gkr_GER":2,"rival_FRA":2,"golr_FRA":2,"gkr_FRA":2};
 const VOZ_DIR=LANG==='en'?'voz_en':'voz'; // el relator tiene sus frases grabadas en cada idioma
 const VOZ={el:null,q:[],last:{},bag:{},urls:{},blob:{},ab:{},tm:0};
 const vozMode=()=>CFG.voz==='off'||CFG.voz==='mia'?CFG.voz:'juego';
