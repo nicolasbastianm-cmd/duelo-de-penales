@@ -344,6 +344,10 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
             <label><input type="radio" name="voz" id="vz-juego" value="juego"><span>Voz del juego</span></label>
             <label><input type="radio" name="voz" id="vz-mia" value="mia"><span>Mi voz<small>Grabada aquí</small></span></label>
           </div><button class="ghost" id="btnVoces" type="button">Grabar mi voz</button></fieldset>
+          <fieldset><legend>Música</legend><div class="seg" id="musSeg">
+            <label><input type="radio" name="musica" id="mu-si" value="si"><span>Encendida</span></label>
+            <label><input type="radio" name="musica" id="mu-no" value="no"><span>Apagada</span></label>
+          </div></fieldset>
           <fieldset><legend>Calidad gráfica</legend><div class="seg" id="qSeg">
             <label><input type="radio" name="quality" id="q-auto" value="auto"><span>Automática<small>Se ajusta sola</small></span></label>
             <label><input type="radio" name="quality" id="q-alta" value="alta"><span>Alta</span></label>
@@ -473,7 +477,7 @@ const EN={
 'Torneo ganado':'Tournament won','Torneo sin ganar':'Tournament not won yet','TÚ':'YOU','RIV':'RIV','vs':'vs',
 // vestuario
 'Nombre':'Name','Número':'Number','Arquero':'Keeper','Camiseta':'Shirt','Diseño de la camiseta':'Shirt design','Guantes':'Gloves','Peinado':'Haircut','Barba':'Beard','Tatuajes':'Tattoos','Cancha':'Stadium',
-'Control para patear':'Shooting control','Apuntar y fuerza':'Aim and power','Deslizar':'Swipe','Relator':'Commentator','Apagado':'Off','Voz del juego':'Game voice','Mi voz':'My voice','Grabada aquí':'Recorded here','Grabar mi voz':'Record my voice',
+'Control para patear':'Shooting control','Apuntar y fuerza':'Aim and power','Deslizar':'Swipe','Relator':'Commentator','Apagado':'Off','Música':'Music','Encendida':'On','Apagada':'Off','Voz del juego':'Game voice','Mi voz':'My voice','Grabada aquí':'Recorded here','Grabar mi voz':'Record my voice',
 'Calidad gráfica':'Graphics quality','Automática':'Automatic','Se ajusta sola':'Adjusts itself','Alta':'High','Media':'Medium','Baja':'Low','Más fluida':'Smoother','Listo':'Done','Idioma':'Language',
 'Rayas':'Stripes','Franjas':'Hoops','Banda':'Sash','Lisa con vivos':'Plain with trim','Clásico':'Classic','Degradado':'Fade','Rapado':'Buzz cut','Cresta':'Mohawk','Moño':'Bun',
 'Sin barba':'No beard','Corta':'Short','Tupida':'Full','Bigote':'Moustache','Sin tatuajes':'No tattoos','Un brazo':'One arm','Dos brazos':'Both arms','Brazos y pierna':'Arms and leg',
@@ -876,10 +880,10 @@ function hud(){
   lifeEls.forEach((el,i)=>el.classList.toggle('lost',i>=S.lives));
 }
 const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo','album','howto'];
-function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();}
+function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.20 · 18 nov 2026';
+const VERSION='7.21 · 18 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -1153,7 +1157,7 @@ function swatches(elId,set,name,cur){
 function renderLocker(){
   if(!isUnlocked(KITS[CFG.kit]))CFG.kit='naranjo';if(!isUnlocked(GLOVES[CFG.glove]))CFG.glove='amarillo';if(!isUnlocked(STAGES[CFG.stage]))CFG.stage='estadio';
   {const lg=$('lg-'+LANG);if(lg)lg.checked=true;}
-  $('name').value=CFG.name;$('num').value=CFG.num;{const q=$('q-'+CFG.quality);if(q)q.checked=true;const kc=$('kc-'+kickCtrl());if(kc)kc.checked=true;renderVozCfg();}
+  $('name').value=CFG.name;$('num').value=CFG.num;{const q=$('q-'+CFG.quality);if(q)q.checked=true;const kc=$('kc-'+kickCtrl());if(kc)kc.checked=true;renderVozCfg();{const mu=$('mu-'+(CFG.musica==='no'?'no':'si'));if(mu)mu.checked=true;}}
   setPaisKit();renderPais();swatches('kitSw',KITS,'kit',CFG.kit);swatches('gloveSw',GLOVES,'glove',CFG.glove);
   if(!DESIGNS[CFG.design])CFG.design='rayas';$('disSeg').innerHTML=Object.entries(DESIGNS).map(([k,v])=>`<label><input type="radio" name="design" value="${k}"${k===CFG.design?' checked':''}><span>${v.n}</span></label>`).join('');
   for(const[id,name,tab]of[['cutSeg','cut',PEINADOS],['beardSeg','beard',BARBAS],['tatSeg','tat',TATS]]){if(!tab[CFG[name]])CFG[name]=Object.keys(tab)[0];
@@ -1484,7 +1488,7 @@ function endMatch(w){
   if(S.tour&&S.tour.duo)return duoEnd(w);
   if(DIAG.t0){DIAG.dur=(performance.now()-DIAG.t0)/1000;DIAG.shots=S.tour.sh.us.length+S.tour.sh.them.length;DIAG.t0=0;}
   const r=RIVALS[S.tour.round],sh=S.tour.sh,score=`${cnt(sh.us)}–${cnt(sh.them)}`;
-  S.mode='card';S.phase='idle';S.banner=null;sfx.final();crowdStop();vozEnd(w);
+  S.mode='card';S.phase='idle';S.banner=null;sfx.final();crowdStop();vozEnd(w);if(w==='us')musPlay('gana');else musStop(0.3);
   $('rBig').textContent=score;
   const rs=$('rStars');rs.hidden=true;let extra='';
   if(w==='us'){const ms=matchStars();lsSet('arquerito-estrellas',String(getStars()+ms.s));
@@ -3948,6 +3952,31 @@ function sonWake(){if(AC&&AC.state!=='running'&&!document.hidden){try{AC.resume(
 document.addEventListener('visibilitychange',()=>{if(!AC)return;if(document.hidden){try{AC.suspend();}catch(e){}}else sonWake();});
 ['pointerdown','touchend','keydown'].forEach(ev=>document.addEventListener(ev,sonWake,{passive:true}));
 $('mute').addEventListener('click',()=>{if(SON.out)SON.out.gain.setTargetAtTime(CFG.muted?0:1,AC.currentTime,0.03);if(CFG.muted)sonLatido(false);});
+
+/* ---------- Música (7.21) ----------
+   Menú: «Funky House» de Of Far Different Nature (CC0), recortada a 36 compases para repetirse sin corte.
+   Al ganar un partido: «Triumphant» de Emma_MA (CC0), 15 s con fundido. Fuentes en musica/ y LICENCIAS.md.
+   Suena por el mismo motor que el resto (SON.out), así que el botón de silencio también la calla. CFG.musica='no' la apaga sola. */
+const MUS={buf:{},cur:null,want:null,loading:false},MUS_MENU=['home','locker','voces','shop','vitrina','album','duo'];
+function musOn(){return CFG.musica!=='no'&&!CFG.muted;}
+async function musLoad(){if(MUS.loading)return;MUS.loading=true;
+  for(const[k,f]of[['menu','musica_menu.mp3'],['gana','musica_gana.mp3']]){try{const r=await fetch(f);if(!r.ok)throw 0;MUS.buf[k]=await decodeAB(await r.arrayBuffer());if(MUS.want===k&&!MUS.cur)musPlay(k);}catch(e){console.warn('Sin música',f);}}}
+function musStop(fade){const c=MUS.cur;MUS.cur=null;MUS.want=null;if(!c||!AC)return;const t=AC.currentTime,d=fade==null?0.6:fade;
+  try{c.g.gain.cancelScheduledValues(t);c.g.gain.setValueAtTime(c.g.gain.value,t);c.g.gain.linearRampToValueAtTime(0,t+d);c.s.stop(t+d+0.05);}catch(e){}}
+function musPlay(k){
+  if(MUS.cur&&MUS.cur.k===k)return;if(MUS.cur)musStop(0.4);MUS.want=k;
+  if(!AC||!SON.ok||!musOn())return;const b=MUS.buf[k];if(!b){musLoad();return;}
+  const s=AC.createBufferSource(),g=AC.createGain(),t=AC.currentTime,v=k==='menu'?0.3:0.6,t0=t+(k==='gana'?0.7:0);s.buffer=b;
+  if(k==='menu'){s.loop=true;s.loopStart=0;s.loopEnd=Math.min(b.duration,67.5);}
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t0+(k==='menu'?1.5:0.1));
+  s.connect(g);g.connect(SON.out);s.start(t0);const c={k,s,g};MUS.cur=c;s.onended=()=>{if(MUS.cur===c){MUS.cur=null;if(k==='gana')musNow();}};}
+/* qué debe sonar según la pantalla: el tema del menú en el menú y sus pantallas; en la cancha, nada */
+function musScene(id){if(id&&MUS_MENU.includes(id)){if(!(MUS.cur&&MUS.cur.k==='gana'))musPlay('menu');}else if(id!=='result'&&MUS.cur)musStop();}
+function musNow(){const o=OVERLAYS.find(x=>!$(x).hidden);musScene(o||null);}
+document.addEventListener('pointerdown',()=>{if(!AC&&OVERLAYS.some(x=>MUS_MENU.includes(x)&&!$(x).hidden))audioInit();setTimeout(()=>{if(AC&&!MUS.cur)musNow();},120);},true);
+$('mute').addEventListener('click',()=>{if(CFG.muted)musStop(0.2);else musNow();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)musStop(0.1);});
+$('locker').addEventListener('change',e=>{if(e.target.name!=='musica')return;CFG.musica=e.target.value;saveCfg();audioInit();if(CFG.musica==='no')musStop(0.3);else musNow();});
 
 /* ---------- Relator ----------
    Frases cortas en cada momento del partido. Dos fuentes: la voz del juego (archivos voz/clave_n.mp3)
