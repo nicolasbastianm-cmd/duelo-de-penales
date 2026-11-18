@@ -810,7 +810,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.13 · 18 nov 2026';
+const VERSION='7.14 · 18 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnAlb').textContent=ALB.packs>0?`Álbum (${ALB.packs})`:'Álbum';$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -1880,13 +1880,13 @@ async function glLoad(){
       import('three/addons/postprocessing/OutputPass.js'),import('three/addons/objects/Sky.js')]);
     THREE=T;GL.mods={EffectComposer,RenderPass,UnrealBloomPass,ShaderPass,OutputPass,Sky};
     const r=new T.WebGLRenderer({canvas:$('gl'),antialias:false,powerPreference:'high-performance'});
-    r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=0.95;r.shadowMap.enabled=true;r.shadowMap.type=T.PCFSoftShadowMap;
+    r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=1.05;r.shadowMap.enabled=true;r.shadowMap.type=T.PCFSoftShadowMap;
     GL.r=r;GL.scene=new T.Scene();GL.cam=new T.PerspectiveCamera(30,1,0.5,6000);GL.camI=new T.PerspectiveCamera(46,1,0.5,6000);GL.camR=new T.PerspectiveCamera(40,1,0.1,6000);GL.camK=new T.PerspectiveCamera(50,1,0.1,6000);
     GL.tier=initialTier();
     glComposer();GL.ok=true;$('gl').hidden=false;glResize();renderRoleUI();loadChar();
   }catch(e){console.warn('3D no disponible, se usa 2D',e);GL.ok=false;GL.failed=true;renderRoleUI();}
 }
-const GRADE={uniforms:{tDiffuse:{value:null},time:{value:0},vig:{value:0.3},grain:{value:0.025},sat:{value:1.08},con:{value:1.06}},
+const GRADE={uniforms:{tDiffuse:{value:null},time:{value:0},vig:{value:0.3},grain:{value:0.02},sat:{value:1.2},con:{value:1.1}},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
   fragmentShader:`uniform sampler2D tDiffuse;uniform float time,vig,grain,sat,con;varying vec2 vUv;
   void main(){vec4 c=texture2D(tDiffuse,vUv);vec3 col=c.rgb;float l=dot(col,vec3(0.2126,0.7152,0.0722));col=mix(vec3(l),col,sat);
@@ -2231,11 +2231,11 @@ function glBuildStage(){
     sc.environment=pm.fromScene(es,0.04).texture;GL.envI=0.5;
   }else{
     const sky=new GL.mods.Sky();sky.scale.setScalar(4500);const u=sky.material.uniforms;
-    u.turbidity.value=st==='final'?5:st==='estadio'?2.8:3.5;u.rayleigh.value=1.6;u.mieCoefficient.value=0.004;u.mieDirectionalG.value=0.82;
+    u.turbidity.value=st==='final'?4:st==='estadio'?2.0:2.6;u.rayleigh.value=2.4;u.mieCoefficient.value=0.004;u.mieDirectionalG.value=0.82;
     const sun=(st==='barrio'?new T.Vector3(0.42,0.5,-0.76):new T.Vector3(0.42,0.62,-0.66)).normalize();u.sunPosition.value.copy(sun);grp.add(sky);
     const es=new T.Scene(),sk2=new GL.mods.Sky();sk2.scale.setScalar(4500);Object.keys(u).forEach(k=>{if(sk2.material.uniforms[k])sk2.material.uniforms[k].value=u[k].value;});es.add(sk2);
     sc.environment=pm.fromScene(es,0).texture;GL.envI=0.6;
-    const fogC=st==='final'?'#c3d0da':'#c8d9e3';sc.fog=new T.FogExp2(fogC,0.0028);sc.background=null;
+    const fogC=st==='final'?'#b7cde0':'#b4d0ea';sc.fog=new T.FogExp2(fogC,0.0021);sc.background=null;
     grp.add(new T.HemisphereLight('#dceeff','#4f6e3a',0.9));addLight(grp,[sun.x*40,sun.y*40,sun.z*40+6],'#fff1dc',3.4,2048);
     const ct=cloudTexture();
     for(let i=0;i<16;i++){const a=srand(i+40)*Math.PI*2,R=1400+srand(i+41)*900,s=new T.Sprite(new T.SpriteMaterial({map:ct,fog:false,depthWrite:false,transparent:true,opacity:0.85}));
