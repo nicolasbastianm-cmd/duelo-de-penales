@@ -122,6 +122,11 @@ input[type=text]:focus-visible,input[type=number]:focus-visible{outline:3px soli
 .mode small{font-family:var(--body);font-size:14px;font-weight:600}
 .minor{display:flex;gap:10px}
 .card.alb{max-width:420px}
+.card.how canvas{position:static;inset:auto;width:100%;height:auto;aspect-ratio:300/170;border-radius:12px;display:block;touch-action:auto}
+.hwsteps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;text-align:left}
+.hwsteps li{display:flex;align-items:center;gap:10px;font-family:var(--display);font-size:20px}
+.hwsteps li b{flex:none;width:30px;height:30px;border-radius:50%;background:var(--sun);color:var(--ink);display:grid;place-items:center;font-size:17px}
+.hwsteps li small{display:block;font-family:var(--body);font-size:13px;opacity:.8}
 .alpages{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .alpages .ghost{font-size:13px;padding:6px 4px}.alpages .ghost.on{background:var(--chalk);color:var(--ink)}
 .algrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -311,6 +316,14 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
       </div>
     </div>
 
+    <div class="overlay" id="howto" hidden>
+      <div class="card how">
+        <h2 id="hwTitle"></h2>
+        <canvas id="hwCv" width="300" height="170" aria-hidden="true"></canvas>
+        <ol class="hwsteps" id="hwSteps"></ol>
+        <button class="go" id="hwGo" type="button">¡Vamos!</button>
+      </div>
+    </div>
     <div class="overlay" id="album" hidden>
       <div class="card alb">
         <h2>Álbum</h2>
@@ -479,6 +492,10 @@ const EN={
 'Uy… gol de ellos.':'Oh… goal for them.','¡Lo atajó el arquero!':'The keeper saved it!','Palo o afuera':'Post or wide','¡Uyyy, por poquito!':'Ohhh, so close!','Penal decisivo':'Deciding penalty',
 '¡Ganamos! ¡A la siguiente ronda!':'We won! On to the next round!','Campeones':'Champions','¡Campeones! ¡La copa es nuestra!':'Champions! The cup is ours!','¡Otra vez será! ¡Vamos de nuevo!':'Next time! Let us go again!',
 'Camisetas':'Shirts','Amarilla':'Yellow','Balones':'Balls','Fuego':'Fire','De oro':'Golden','Festejos':'Celebrations','La voltereta':'Backflip','El baile':'The dance',
+// tarjetas de cómo se juega (7.15)
+'¡Eres el arquero!':"You're the keeper!",'¡Gol!':'Goal!','¡Te toca patear!':'Your turn to shoot!','¡Vamos!':"Let's go!",'Muévete':'Move','Lánzate':'Dive','¡Atájala!':'Save it!',
+'Con las flechas':'With the arrow keys','Mueve el mouse':'Move the mouse','Arrastra el dedo':'Drag your finger','Barra espaciadora':'Space bar','Haz clic':'Click','Desliza hacia el balón':'Swipe towards the ball',
+'Toca el arco':'Tap the goal','Apunta con las flechas':'Aim with the arrow keys','Donde quieres patear':'Where you want to shoot','Para la barra en verde':'Stop the bar on green','Con la barra espaciadora':'With the space bar','Toca otra vez':'Tap again',
 // álbum y racha (7.13)
 'Álbum':'Album','Abrir sobre':'Open pack','Los rivales':'Rivals','Las copas':'Cups','Los estadios':'Stadiums','Los tiros':'Shots',
 'Guantes de oro':'Golden gloves','Balón de oro':'Golden ball','La hinchada':'The fans','El túnel':'The tunnel','Cancha del barrio':'Street pitch','Estadio de la final':'Final stadium',
@@ -806,11 +823,11 @@ function hud(){
   $('best').textContent=S.best;$('bestLabel').textContent='Récord '+D().n.toLowerCase();
   lifeEls.forEach((el,i)=>el.classList.toggle('lost',i>=S.lives));
 }
-const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo','album'];
+const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo','album','howto'];
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.14 · 18 nov 2026';
+const VERSION='7.15 · 18 nov 2026';
 function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnAlb').textContent=ALB.packs>0?`Álbum (${ALB.packs})`:'Álbum';$('btnShop').textContent='Tienda ★ '+balance();
   $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
@@ -851,6 +868,53 @@ function goHome(){
   ROLE=null;S.role=null;S.kick=null;S.swipe=null;S.turn=CFG.role==='kicker'&&GL.ok?'kick':'save';
   S.mode='home';S.phase='idle';S.tour=null;S.tut=null;S.banner=null;S.msg=null;S.ball={state:'spot',u:0,trail:[]};S.striker=null;
   crowdStop();S.best=getBest();renderHome();show('home');hud();
+}
+
+/* ---------- Cómo se juega, con dibujos ----------
+   Antes del tutorial (atajar) y antes del primer tiro propio (patear) aparece una tarjeta con una animación chica y 3 pasos
+   de pocas palabras, como en los juegos de la competencia. Un botón y a jugar. */
+function howInput(){return S.input==='key'?'key':S.input==='mouse'?'mouse':S.input==='touch'?'touch':matchMedia('(pointer: coarse)').matches?'touch':'mouse';}
+function howTo(kind,then){
+  const inp=howInput(),K=kind==='kick';
+  const steps=K?[['Toca el arco',inp==='key'?'Apunta con las flechas':'Donde quieres patear'],['Para la barra en verde',inp==='key'?'Con la barra espaciadora':'Toca otra vez'],['¡Gol!','']]
+    :[['Muévete',inp==='key'?'Con las flechas':inp==='mouse'?'Mueve el mouse':'Arrastra el dedo'],['Lánzate',inp==='key'?'Barra espaciadora':inp==='mouse'?'Haz clic':'Desliza hacia el balón'],['¡Atájala!','']];
+  $('hwTitle').textContent=K?'¡Te toca patear!':'¡Eres el arquero!';
+  $('hwSteps').innerHTML=steps.map((s,i)=>`<li><b>${i+1}</b><span>${s[0]}${s[1]?`<small>${s[1]}</small>`:''}</span></li>`).join('');
+  const go=$('hwGo');go.textContent='¡Vamos!';show('howto');const cvh=$('hwCv'),x=cvh.getContext('2d'),t0=performance.now();let run=true;
+  const loop=()=>{if(!run||$('howto').hidden)return;howDraw(x,cvh.width,cvh.height,((performance.now()-t0)/1000)%2.6,K,inp);requestAnimationFrame(loop);};loop();
+  go.onclick=()=>{run=false;show(null);audioInit();then&&then();};setTimeout(()=>go.focus({preventScroll:true}),60);
+}
+function howDraw(x,w,h,t,K,inp){
+  x.clearRect(0,0,w,h);const g=x.createLinearGradient(0,0,0,h);g.addColorStop(0,'#7cc3ff');g.addColorStop(0.42,'#bfe3ff');g.addColorStop(0.42,'#3e9a45');g.addColorStop(1,'#2f7d37');x.fillStyle=g;x.fillRect(0,0,w,h);
+  for(let i=0;i<6;i++){x.fillStyle=i%2?'rgba(255,255,255,.05)':'rgba(0,0,0,.04)';x.fillRect(0,h*0.42+i*(h*0.58/6),w,h*0.58/6);}
+  const gx=w*0.18,gw=w*0.64,gy=h*0.16,gh=h*0.42;x.strokeStyle='#fff';x.lineWidth=5;x.lineCap='round';x.beginPath();x.moveTo(gx,gy+gh);x.lineTo(gx,gy);x.lineTo(gx+gw,gy);x.lineTo(gx+gw,gy+gh);x.stroke();
+  x.strokeStyle='rgba(255,255,255,.35)';x.lineWidth=1;for(let i=1;i<10;i++){x.beginPath();x.moveTo(gx+gw*i/10,gy);x.lineTo(gx+gw*i/10,gy+gh);x.stroke();}for(let j=1;j<5;j++){x.beginPath();x.moveTo(gx,gy+gh*j/5);x.lineTo(gx+gw,gy+gh*j/5);x.stroke();}
+  const ball=(bx,by,r)=>{x.fillStyle='#fff';x.beginPath();x.arc(bx,by,r,0,7);x.fill();x.strokeStyle='#0f2a17';x.lineWidth=1.5;x.stroke();x.fillStyle='#0f2a17';x.beginPath();x.arc(bx,by,r*0.35,0,7);x.fill();};
+  const hand=(px,py,press)=>{x.save();x.translate(px,py);x.fillStyle='#f6f3e8';x.strokeStyle='#0f2a17';x.lineWidth=2;
+    if(inp==='mouse'){x.beginPath();x.moveTo(0,0);x.lineTo(0,22);x.lineTo(6,16);x.lineTo(11,26);x.lineTo(15,24);x.lineTo(10,14);x.lineTo(18,14);x.closePath();x.fill();x.stroke();}
+    else if(inp==='key'){x.fillRect(-26,-10,52,20);x.strokeRect(-26,-10,52,20);x.fillStyle='#0f2a17';x.font='bold 11px sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('◀  ▶',0,1);}
+    else{x.beginPath();x.ellipse(0,8,8,13,0,0,7);x.fill();x.stroke();x.beginPath();x.ellipse(0,-6,4.5,9,0,0,7);x.fill();x.stroke();}
+    if(press){x.strokeStyle=C.sun;x.lineWidth=3;x.beginPath();x.arc(0,-8,14,0,7);x.stroke();}x.restore();};
+  if(!K){
+    const side=Math.floor(performance.now()/2600)%2?-1:1,tx=w/2+side*gw*0.36,ty=gy+gh*0.55,u=Math.min(1,t/1.6);
+    const kx0=w/2,dive=u>0.62,kxm=kx0+(tx-kx0)*Math.min(1,u/0.62)*0.55,kx=dive?kxm+(tx-kxm)*Math.min(1,(u-0.62)/0.25):kxm,ky=gy+gh*0.62;
+    x.save();x.translate(kx,ky);x.rotate(dive?side*Math.min(1,(u-0.62)/0.2)*1.2:0);x.fillStyle='#ff7a2f';x.fillRect(-9,-24,18,26);x.fillStyle='#f0c9a6';x.beginPath();x.arc(0,-31,7,0,7);x.fill();
+    x.strokeStyle='#ff7a2f';x.lineWidth=6;x.beginPath();x.moveTo(-9,-20);x.lineTo(-20,-34);x.moveTo(9,-20);x.lineTo(20,-34);x.stroke();x.fillStyle=C.sun;x.beginPath();x.arc(-21,-36,4,0,7);x.arc(21,-36,4,0,7);x.fill();
+    x.strokeStyle='#f6f3e8';x.lineWidth=6;x.beginPath();x.moveTo(-5,2);x.lineTo(-7,16);x.moveTo(5,2);x.lineTo(7,16);x.stroke();x.restore();
+    const bu=Math.min(1,u/0.9),bx=w/2+(tx-w/2)*bu,by=h*0.95+(ty-h*0.95)*bu-Math.sin(Math.PI*bu)*h*0.12;ball(bx,by,7*(1-bu*0.35));
+    const hx=kx,hy=h*0.88;hand(hx,hy,dive&&u<0.8);
+    if(dive&&u<0.85&&inp!=='key'){x.strokeStyle=C.sun;x.lineWidth=3;x.beginPath();x.moveTo(hx-side*30,hy+4);x.lineTo(hx-side*8,hy-10);x.stroke();}
+    if(u>=0.9){x.fillStyle=C.sun;x.font=`800 20px ${DISPLAY}`;x.textAlign='center';x.fillText(tr('¡ATAJADA!'),w/2,h*0.12+8);}
+  }else{
+    const tx=gx+gw*0.82,ty=gy+gh*0.28,u=t/2.6;
+    x.fillStyle='#2f5fd8';x.fillRect(w/2-7,gy+gh*0.52,14,22);x.fillStyle='#f0c9a6';x.beginPath();x.arc(w/2,gy+gh*0.46,6,0,7);x.fill();
+    if(u>0.12){const a=Math.min(1,(u-0.12)/0.1);x.strokeStyle=C.sun;x.lineWidth=3;x.globalAlpha=a;x.beginPath();x.arc(tx,ty,10+6*Math.sin(u*20),0,7);x.stroke();x.globalAlpha=1;}
+    const bw=w*0.5,bxp=w*0.25,byp=h*0.9;x.fillStyle='rgba(15,42,23,.75)';x.fillRect(bxp,byp,bw,10);x.fillStyle='#2fbf71';x.fillRect(bxp+bw*0.62,byp,bw*0.2,10);
+    const pw=u<0.3?0:Math.min(0.72,(u-0.3)/0.3*0.72);x.fillStyle='#fff';x.fillRect(bxp+bw*pw-2,byp-3,4,16);
+    const shot=u>0.62,su=shot?Math.min(1,(u-0.62)/0.18):0,bx=w/2+(tx-w/2)*su,by=h*0.8+(ty-h*0.8)*su;ball(bx,by,8*(1-su*0.4));
+    if(u<0.62)hand(u<0.3?tx+6:bxp+bw*0.72,u<0.3?ty+10:byp+16,(u>0.14&&u<0.22)||(u>0.56&&u<0.62));
+    if(su>=1){x.fillStyle=C.sun;x.font=`800 22px ${DISPLAY}`;x.textAlign='center';x.fillText(tr('¡GOL!'),w/2,h*0.12+8);}
+  }
 }
 
 /* ---------- Racha y álbum de láminas ----------
@@ -1245,7 +1309,8 @@ function decided(sh){
   if(rA===rB&&rA>=5&&gA!==gB)return gA>gB?'us':'them';
   return null;
 }
-function startTutorial(after){
+function startTutorial(after){howTo('keeper',()=>startTutorial0(after));}
+function startTutorial0(after){
   S.mode='tut';S.tut={step:0,tries:0};S.afterTut=after;S.tour=null;resetKeeper();show(null);crowdStart();hud();newRound();cv.focus({preventScroll:true});
 }
 function maybeTut(fn){if(!CFG.tutDone&&roleNow()!=='kicker')startTutorial(fn);else fn();}
@@ -3084,6 +3149,7 @@ function kickHow(){
   return (CFG.kickCount||0)<1?'Desliza el dedo desde el balón hacia donde quieres patear.':'Desliza más rápido para patear más alto. Curva el dedo para darle efecto.';
 }
 function newKickRound(){
+  if(!CFG.howK&&!(S.tour&&S.tour.duo)&&S.input!=='key'&&kickCtrl()==='apuntar'){CFG.howK=true;saveCfg();howTo('kick',newKickRound);S.phase='idle';return;}
   S.turn='kick';S.phase='aim';S.ripple=null;S.msg=null;S.celeb=null;
   S.kick={t:0,step:'aim',pw:0,drag:null,lvl:kickLevel(),aim:{x:0,y:1.2},ai:{x:0,dir:null,diveAt:99,stay:false},b:{x:0,y:0.11,z:11,vx:0,vy:0,vz:0,spin:0},res:null,shot:null};
   S.banner=(CFG.kickCount||0)<2||S.input==='key'?{title:'Tu turno de patear',sub:kickHow,t:0,dur:Infinity}:(S.role==='both'?{title:'¡Te toca patear!',sub:'',t:0,dur:1.4}:null);
