@@ -120,6 +120,24 @@ input[type=text]:focus-visible,input[type=number]:focus-visible{outline:3px soli
 .go.alt:active{box-shadow:0 2px 0 #b3ad98}
 .mode{display:flex;flex-direction:column;align-items:center;gap:1px}
 .mode small{font-family:var(--body);font-size:14px;font-weight:600}
+.go.play{display:flex;align-items:center;justify-content:center;gap:14px;font-size:34px;padding:14px 16px 16px;animation:latido 2.2s ease-in-out infinite}
+.go.play svg{width:40px;height:40px;flex:none}
+.go.play span{display:flex;flex-direction:column;align-items:flex-start;text-align:left;line-height:1}
+.go.play small{font-family:var(--body);font-size:13px;font-weight:700;opacity:.85;margin-top:3px}
+@keyframes latido{0%,100%{transform:scale(1)}50%{transform:scale(1.035)}}
+@media (prefers-reduced-motion:reduce){.go.play{animation:none}}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modes .go{font-size:18px;padding:9px 6px 11px;gap:2px}
+.modes .go svg{width:28px;height:28px}
+.modes .go small{font-size:12px;line-height:1.2}
+.mtiles{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.mtile{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;background:rgba(246,243,232,.08);border:2px solid rgba(246,243,232,.4);border-radius:12px;color:var(--chalk);padding:8px 2px 6px;font-family:var(--display);font-size:13px;cursor:pointer;min-width:0}
+.mtile span{color:var(--chalk)}
+.mtile svg{width:26px;height:26px}
+.mtile span{max-width:100%;text-align:center;line-height:1.05;font-size:12px;overflow-wrap:anywhere}
+.mtile:active{transform:translateY(2px)}
+.mtile .bdg{position:absolute;top:-8px;right:-4px;background:var(--alarm);color:#fff;border-radius:10px;font-family:var(--body);font-size:11px;font-weight:800;padding:1px 6px}
+.mtile .bdg.st{background:var(--sun);color:var(--ink)}
 .minor{display:flex;gap:10px}
 .card.alb{max-width:420px}
 .card.how canvas{position:static;inset:auto;width:100%;height:auto;aspect-ratio:300/170;border-radius:12px;display:block;touch-action:auto}
@@ -258,17 +276,17 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
             <label><input type="radio" name="diff" id="d-dificil" value="dificil"><span>Difícil</span></label>
           </div>
         </fieldset>
-        <button class="go mode" id="btnTour" type="button"><span>Torneo</span><small>3 partidos de penales hasta la copa</small></button>
-        <button class="go alt mode" id="btnDuo" type="button"><span>Duelo de dos</span><small>Dos jugadores en el mismo teléfono</small></button>
-        <button class="go alt mode" id="btnEndless" type="button"><span>Desafío infinito</span><small id="endlessSub">¿Cuántas atajas con 3 vidas?</small></button>
-        <div class="minor">
-          <button class="ghost" id="btnLocker" type="button">Vestuario</button>
-          <button class="ghost" id="btnShop" type="button">Tienda</button>
-          <button class="ghost" id="btnAlb" type="button">Álbum</button>
+        <button class="go play" id="btnTour" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v15l13-7.5z" fill="currentColor" stroke="none"/></svg><span><b>¡Jugar!</b><small id="tourSub">Copa del Barrio</small></span></button>
+        <div class="modes">
+          <button class="go alt mode" id="btnDuo" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="8" r="3"/><path d="M2.5 20c0-3.5 2.5-6 5.5-6s5.5 2.5 5.5 6M11.5 15.2c1.2-.8 3-1.2 5-1.2 3 0 5 2.5 5 6"/></svg><span>Duelo de dos</span><small>Dos jugadores en el mismo teléfono</small></button>
+          <button class="go alt mode" id="btnEndless" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8.5c-2.2 0-3.6 1.6-3.6 3.5S4.8 15.5 7 15.5c3.5 0 6.5-7 10-7 2.2 0 3.6 1.6 3.6 3.5s-1.4 3.5-3.6 3.5c-3.5 0-6.5-7-10-7z"/></svg><span>Desafío infinito</span><small id="endlessSub">¿Cuántas atajas con 3 vidas?</small></button>
         </div>
-        <div class="minor">
-          <button class="ghost" id="btnVit" type="button">Vitrina</button>
-          <button class="ghost" id="btnTut" type="button">Tutorial</button>
+        <div class="mtiles">
+          <button class="mtile" id="btnLocker" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3 3 6l2 4 2-1v11h10V9l2 1 2-4-5-3c-.8 1.8-2.3 3-4 3S8.8 4.8 8 3z"/></svg><span>Vestuario</span></button>
+          <button class="mtile" id="btnShop" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 8h14l-1.2 12H6.2z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/></svg><span>Tienda</span><b class="bdg st" id="shopBdg"></b></button>
+          <button class="mtile" id="btnAlb" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 5H10a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H3.5zM20.5 5H14a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6.5z"/></svg><span>Álbum</span><b class="bdg" id="albBdg" hidden></b></button>
+          <button class="mtile" id="btnVit" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v3M9 20h6M10 16h4v4h-4z"/></svg><span>Vitrina</span></button>
+          <button class="mtile" id="btnTut" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.8-2.4 2.2-2.4 3.8M12 17.2h.01"/></svg><span>Tutorial</span></button>
         </div>
         <p class="small ver" id="ver"></p>
       </div>
@@ -497,7 +515,7 @@ const EN={
 'Con las flechas':'With the arrow keys','Mueve el mouse':'Move the mouse','Arrastra el dedo':'Drag your finger','Barra espaciadora':'Space bar','Haz clic':'Click','Desliza hacia el balón':'Swipe towards the ball',
 'Toca el arco':'Tap the goal','Apunta con las flechas':'Aim with the arrow keys','Donde quieres patear':'Where you want to shoot','Para la barra en verde':'Stop the bar on green','Con la barra espaciadora':'With the space bar','Toca otra vez':'Tap again',
 // álbum y racha (7.13)
-'Álbum':'Album','Abrir sobre':'Open pack','Los rivales':'Rivals','Las copas':'Cups','Los estadios':'Stadiums','Los tiros':'Shots',
+'Álbum':'Album','Abrir sobre':'Open pack','¡Jugar!':'Play!','Los rivales':'Rivals','Las copas':'Cups','Los estadios':'Stadiums','Los tiros':'Shots',
 'Guantes de oro':'Golden gloves','Balón de oro':'Golden ball','La hinchada':'The fans','El túnel':'The tunnel','Cancha del barrio':'Street pitch','Estadio de la final':'Final stadium',
 'Los Pumas':'Los Pumas','Los Halcones':'Los Halcones','Los Tiburones':'Los Tiburones',
 '¡Nueva!':'New!','Repetida +1 ★':'Duplicate +1 ★','¡Sobre nuevo!':'New pack!','¡Poder recargado!':'Power recharged!',
@@ -532,6 +550,7 @@ const EN_RX1=[
 [/^(Medalla nueva|Medallas nuevas): (.+) \(\+(\d+) ★\)\.?$/,k=>(k[1]==='Medalla nueva'?'New medal: ':'New medals: ')+k[2].split(', ').map(tr).join(', ')+' (+'+k[3]+' ★).'],
 ];
 const EN_RX=[
+[/^copa (\d+) de 4$/,'cup $1 of 4'],
 [/^Álbum \((\d+)\)$/,'Album ($1)'],[/^Abrir sobre \((\d+)\)$/,'Open pack ($1)'],[/^(\d+) de (\d+) láminas$/,'$1 of $2 stickers'],[/^(Los rivales|Las copas|Los estadios|Los tiros) (\d+)\/(\d+)$/,'$1 $2/$3'],
 [/^Versión (.+)$/,'Version $1'],[/^Nivel (\d+)$/,'Level $1'],[/^Tienda ★ (\d+)$/,'Shop ★ $1'],[/^(\d+)\/(\d+) para el nivel (\d+)$/,'$1/$2 to level $3'],
 [/^Récord (.+)$/,k=>'Best on '+tr(k[1].replace(/^./,c=>c.toUpperCase())).toLowerCase()],
@@ -827,9 +846,11 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.15 · 18 nov 2026';
-function renderHome(){$('ver').textContent='Versión '+VERSION;$('btnAlb').textContent=ALB.packs>0?`Álbum (${ALB.packs})`:'Álbum';$('btnShop').textContent='Tienda ★ '+balance();
-  $('btnTour').innerHTML=`<span>${copaNow().n}</span><small>Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4 · 3 partidos</small>`;
+const VERSION='7.16 · 18 nov 2026';
+/* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
+function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
+function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
+  $('tourSub').textContent=`${copaNow().n} · Temporada ${TEMP.n} · copa ${TEMP.copa+1} de 4`;
   $('cups').innerHTML=Object.entries(DIFF).map(([k,d])=>`<div class="cup${TROPHIES[k]?' won':''}" title="${TROPHIES[k]?'Torneo ganado':'Torneo sin ganar'} en ${d.n.toLowerCase()}">${CUP.replace('FILL',TROPHIES[k]?'currentColor':'none')}${d.n}</div>`).join('');
   document.querySelector(`#d-${CFG.diff}`).checked=true;renderRoleUI();renderProgress();
 }
@@ -1024,7 +1045,7 @@ function renderAlbum(){
   $('alGrid').innerHTML=ALBUM.filter(x=>x.pg===albPg).map(it=>ALB.have[it.id]?`<img class="lam" src="${lamina(it)}" alt="${it.n}">`:`<div class="lam empty"><span>?</span></div>`).join('');
   $('alSub').textContent=`${albCount()} de ${ALBUM.length} láminas`;
   const b=$('alOpen');b.hidden=!(ALB.packs>0);b.textContent=`Abrir sobre (${ALB.packs})`;
-  $('btnAlb').textContent=ALB.packs>0?`Álbum (${ALB.packs})`:'Álbum';
+  homeBadges();
 }
 function openAlbum(){albPg=0;$('alPack').hidden=true;$('alPack').innerHTML='';renderAlbum();show('album');}
 function openPack(){
@@ -4124,7 +4145,7 @@ function renderShop(msg){
   $('shopBal').textContent='★ '+bal;$('shopMsg').textContent=msg||'Gana partidos y desafíos para juntar estrellas.';
   $('shopList').innerHTML=cats.map(c=>`<h3>${c}</h3><div class="tiles">`+items.filter(x=>x.cat===c).map(x=>{const own=isOwned(x.id),on=own&&x.on&&x.on();
     return`<button type="button" class="tile${own?' own':''}${on?' on':''}${!own&&bal<x.price?' poor':''}" data-id="${x.id}" aria-label="${x.n}, ${own?'ya es tuyo':x.price+' estrellas'}">${x.vis}<b>${x.n}</b><span>${on?'✓ En uso':own?(x.eq?'Usar':'✓ Tuyo'):'★ '+x.price}</span></button>`;}).join('')+'</div>').join('');
-  $('btnShop').textContent='Tienda ★ '+bal;
+  homeBadges();
 }
 function shopTap(id){
   const x=shopItems().find(q=>q.id===id);if(!x)return;audioInit();
