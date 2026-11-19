@@ -134,7 +134,7 @@ input[type=text]:focus-visible,input[type=number]:focus-visible{outline:3px soli
 .mtile{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;background:rgba(246,243,232,.08);border:2px solid rgba(246,243,232,.4);border-radius:12px;color:var(--chalk);padding:8px 2px 6px;font-family:var(--display);font-size:13px;cursor:pointer;min-width:0}
 .mtile span{color:var(--chalk)}
 .mtile svg{width:26px;height:26px}
-.mtile span{max-width:100%;text-align:center;line-height:1.05;font-size:12px;overflow-wrap:anywhere}
+.mtile span{max-width:100%;text-align:center;line-height:1.05;font-size:clamp(9px,2.8vw,12px);white-space:nowrap;overflow-wrap:normal}
 .mtile:active{transform:translateY(2px)}
 .mtile .bdg{position:absolute;top:-8px;right:-4px;background:var(--alarm);color:#fff;border-radius:10px;font-family:var(--body);font-size:11px;font-weight:800;padding:1px 6px}
 .mtile .bdg.st{background:var(--sun);color:var(--ink)}
@@ -154,6 +154,8 @@ h1.lkt .emb{flex:none;width:1.8em;height:1.07em;margin:0 -.1em .4em;background:u
 .go,.ghost,.mtile,.link-btn{transition:transform .08s}
 .paises{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
 .pais{position:relative;cursor:pointer}
+.pp{background:none;border:0;color:inherit;font:inherit;padding:0}.pp:active span{border-color:var(--sun)}
+#ppList{margin:12px 0}
 .pais input{position:absolute;opacity:0;width:1px;height:1px;margin:0}
 .pais span{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;font-weight:700;line-height:1.1;text-align:center;padding:5px 2px;border:2px solid transparent;border-radius:10px}
 .pais img,.pais .nof{width:42px;height:28px;border-radius:4px;display:block}
@@ -370,6 +372,14 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
         <button class="go" id="hwGo" type="button">¡Vamos!</button>
       </div>
     </div>
+    <div class="overlay" id="paisPick" hidden>
+      <div class="card">
+        <h2>¿De qué país eres?</h2>
+        <p class="small">Tu equipo juega con su camiseta y la hinchada se viste con sus colores. Lo puedes cambiar en el Vestuario.</p>
+        <div class="paises" id="ppList"></div>
+        <button class="ghost" id="ppSkip" type="button">Ahora no</button>
+      </div>
+    </div>
     <div class="overlay" id="album" hidden>
       <div class="card alb">
         <h2>Álbum</h2>
@@ -477,7 +487,7 @@ const EN={
 'Torneo ganado':'Tournament won','Torneo sin ganar':'Tournament not won yet','TÚ':'YOU','RIV':'RIV','vs':'vs',
 // vestuario
 'Nombre':'Name','Número':'Number','Arquero':'Keeper','Camiseta':'Shirt','Diseño de la camiseta':'Shirt design','Guantes':'Gloves','Peinado':'Haircut','Barba':'Beard','Tatuajes':'Tattoos','Cancha':'Stadium',
-'Control para patear':'Shooting control','Apuntar y fuerza':'Aim and power','Deslizar':'Swipe','Relator':'Commentator','Apagado':'Off','Música':'Music','Encendida':'On','Apagada':'Off','Voz del juego':'Game voice','Mi voz':'My voice','Grabada aquí':'Recorded here','Grabar mi voz':'Record my voice',
+'Control para patear':'Shooting control','Apuntar y fuerza':'Aim and power','Deslizar':'Swipe','Relator':'Commentator','¿De qué país eres?':'Where are you from?','Tu equipo juega con su camiseta y la hinchada se viste con sus colores. Lo puedes cambiar en el Vestuario.':'Your team plays in its shirt and the fans wear its colours. You can change it in the Locker room.','Ahora no':'Not now','Apagado':'Off','Música':'Music','Encendida':'On','Apagada':'Off','Voz del juego':'Game voice','Mi voz':'My voice','Grabada aquí':'Recorded here','Grabar mi voz':'Record my voice',
 'Calidad gráfica':'Graphics quality','Automática':'Automatic','Se ajusta sola':'Adjusts itself','Alta':'High','Media':'Medium','Baja':'Low','Más fluida':'Smoother','Listo':'Done','Idioma':'Language',
 'Rayas':'Stripes','Franjas':'Hoops','Banda':'Sash','Lisa con vivos':'Plain with trim','Clásico':'Classic','Degradado':'Fade','Rapado':'Buzz cut','Cresta':'Mohawk','Moño':'Bun',
 'Sin barba':'No beard','Corta':'Short','Tupida':'Full','Bigote':'Moustache','Sin tatuajes':'No tattoos','Un brazo':'One arm','Dos brazos':'Both arms','Brazos y pierna':'Arms and leg',
@@ -788,7 +798,7 @@ function audioInit(){
     noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
   catch(e){AC=null;}
   if(AC)sonInit();
-  if(AC)AC.addEventListener('statechange',()=>{if(AC.state!=='running'&&!document.hidden&&playing())DIAG.st++;});
+  if(AC)AC.addEventListener('statechange',()=>{if(AC.state!=='running'&&!document.hidden&&playing())DIAG.st++;if(AC.state==='running'&&typeof musNow==='function')try{if(!MUS.cur)musNow();}catch(e){}});
   vozUnlock();
 }
 function env(g,t0,a,dur,vol){g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol,t0+a);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);}
@@ -879,11 +889,11 @@ function hud(){
   $('best').textContent=S.best;$('bestLabel').textContent='Récord '+D().n.toLowerCase();
   lifeEls.forEach((el,i)=>el.classList.toggle('lost',i>=S.lives));
 }
-const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo','album','howto'];
-function show(id){OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
+const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo','album','howto','paisPick'];
+function show(id){if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.21 · 18 nov 2026';
+const VERSION='7.22 · 18 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -1146,6 +1156,14 @@ function renderPais(){
     Object.entries(PAISES).map(([k,P])=>`<label class="pais"><input type="radio" name="pais" value="${k}"${k===CFG.pais?' checked':''}><span><img src="${bandera(k)}" alt="">${P.n}</span></label>`).join('');
 }
 setPaisKit(); /* al cargar: si ya eligió país, la camiseta «Selección» existe antes de dibujar nada */
+/* Elegir país al empezar (7.22): una vez, al llegar al menú después del primer partido (la primera visita sigue
+   yendo directo a jugar). Si dice «Ahora no», no se vuelve a preguntar; se cambia en el Vestuario. */
+function paisAsk(){if(CFG.pais||CFG.paisAsk||!CFG.tutDone)return false;
+  $('ppList').innerHTML=Object.entries(PAISES).map(([k,P])=>`<button type="button" class="pais pp" data-p="${k}"><span><img src="${bandera(k)}" alt="">${P.n}</span></button>`).join('');
+  show('paisPick');return true;}
+$('ppList').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(!b)return;CFG.pais=b.dataset.p;CFG.paisAsk=true;setPaisKit();CFG.kit='pais';saveCfg();GL.pKey=null;GL.crowdKey=null;renderHome();show('home');});
+$('ppSkip').addEventListener('click',()=>{CFG.paisAsk=true;saveCfg();renderHome();show('home');});
+setTimeout(()=>{if(!$('home').hidden)try{paisAsk();}catch(e){}},0); /* el menú viene visible desde el HTML, sin pasar por show() */
 function usTagHTML(){return (CFG.pais&&PAISES[CFG.pais]?`<img class="flg" src="${bandera(CFG.pais,30,20)}" alt="">`:'')+'TÚ';}
 
 /* ---------- Vestuario y premios ---------- */
@@ -3957,7 +3975,7 @@ $('mute').addEventListener('click',()=>{if(SON.out)SON.out.gain.setTargetAtTime(
    Menú: «Funky House» de Of Far Different Nature (CC0), recortada a 36 compases para repetirse sin corte.
    Al ganar un partido: «Triumphant» de Emma_MA (CC0), 15 s con fundido. Fuentes en musica/ y LICENCIAS.md.
    Suena por el mismo motor que el resto (SON.out), así que el botón de silencio también la calla. CFG.musica='no' la apaga sola. */
-const MUS={buf:{},cur:null,want:null,loading:false},MUS_MENU=['home','locker','voces','shop','vitrina','album','duo'];
+const MUS={buf:{},cur:null,want:null,loading:false},MUS_MENU=['home','locker','voces','shop','vitrina','album','duo','paisPick'];
 function musOn(){return CFG.musica!=='no'&&!CFG.muted;}
 async function musLoad(){if(MUS.loading)return;MUS.loading=true;
   for(const[k,f]of[['menu','musica_menu.mp3'],['gana','musica_gana.mp3']]){try{const r=await fetch(f);if(!r.ok)throw 0;MUS.buf[k]=await decodeAB(await r.arrayBuffer());if(MUS.want===k&&!MUS.cur)musPlay(k);}catch(e){console.warn('Sin música',f);}}}
@@ -3973,7 +3991,10 @@ function musPlay(k){
 /* qué debe sonar según la pantalla: el tema del menú en el menú y sus pantallas; en la cancha, nada */
 function musScene(id){if(id&&MUS_MENU.includes(id)){if(!(MUS.cur&&MUS.cur.k==='gana'))musPlay('menu');}else if(id!=='result'&&MUS.cur)musStop();}
 function musNow(){const o=OVERLAYS.find(x=>!$(x).hidden);musScene(o||null);}
-document.addEventListener('pointerdown',()=>{if(!AC&&OVERLAYS.some(x=>MUS_MENU.includes(x)&&!$(x).hidden))audioInit();setTimeout(()=>{if(AC&&!MUS.cur)musNow();},120);},true);
+/* El navegador solo deja sonar algo después de un toque. En iPhone el sonido se desbloquea al SOLTAR el dedo (touchend/click),
+   no al apoyarlo (pointerdown), así que se intenta en todos esos eventos; audioInit() reanuda el motor si quedó suspendido. (7.22) */
+function musTap(){if(OVERLAYS.some(x=>MUS_MENU.includes(x)&&!$(x).hidden)){audioInit();setTimeout(()=>{if(AC&&AC.state==='running'&&!MUS.cur)musNow();},150);}}
+for(const ev of['pointerdown','touchend','click','keydown'])document.addEventListener(ev,musTap,true);
 $('mute').addEventListener('click',()=>{if(CFG.muted)musStop(0.2);else musNow();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)musStop(0.1);});
 $('locker').addEventListener('change',e=>{if(e.target.name!=='musica')return;CFG.musica=e.target.value;saveCfg();audioInit();if(CFG.musica==='no')musStop(0.3);else musNow();});
