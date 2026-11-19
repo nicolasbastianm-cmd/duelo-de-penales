@@ -604,7 +604,7 @@ const EN_RX=[
 [/^Alcance del arquero \+(\d+)%$/,'Keeper reach +$1%'],
 [/^Llevas (\d+) puntos \(cada atajada o gol suma 1\)\.$/,'You have $1 points (each save or goal adds 1).'],[/^Próximo premio: (.+) a las (\d+)\.$/,k=>'Next prize: '+tr(k[1].replace(/^./,c=>c.toUpperCase())).toLowerCase()+' at '+k[2]+'.'],
 [/^\(se gana con (.+)\)$/,'(unlock: $1)'],[/^(.+) \(se gana con (.+)\)$/,'$1 (unlock: $2)'],[/^Temporada (\d+)$/,'Season $1'],[/^(\d+) copas? ganadas?$/,'$1 cups won'],[/^TÚ vs (.+)$/,'YOU vs $1'],[/^(GOLES|PUNTOS|ATAJADAS)  (\d+)$/,k=>({GOLES:'GOALS',PUNTOS:'POINTS',ATAJADAS:'SAVES'})[k[1]]+'  '+k[2]],[/^VIDAS  (.+)$/,'LIVES  $1'],[/^TÚ  (\d+) - (\d+)  (.+)$/,'YOU  $1 - $2  $3'],[/^¡Goooool de (.+)!$/,'Goooal by $1!'],
-[/^Diagnóstico técnico: versión (.+)$/,'Diagnostics: version $1'],[/^último partido (.+)$/,'last match $1'],[/^(\d+) s \((\d+) penales\)$/,'$1 s ($2 penalties)'],[/^audio atrasado (\d+) veces$/,'audio late $1 times'],[/^pausas del sistema (\d+)$/,'system pauses $1'],
+[/^Diagnóstico técnico: versión (.+)$/,'Diagnostics: version $1'],[/^último partido (.+)$/,'last match $1'],[/^(\d+) s \((\d+) penales\)$/,'$1 s ($2 penalties)'],[/^audio atrasado (\d+) veces$/,'audio late $1 times'],[/^sonido (\d+) Hz, búfer (.+), (\w+), cortes (\d+)$/,'sound $1 Hz, buffer $2, $3, dropouts $4'],[/^pausas del sistema (\d+)$/,'system pauses $1'],
 [/^tirones de imagen (\d+)$/,'frame hitches $1'],[/^(\S+) cuadros\/s$/,'$1 fps'],[/^resolución (.+)$/,'resolution $1'],[/^calidad (baja|media|alta)( \(30 cuadros\/s\))?$/,k=>'quality '+tr(k[1])+(k[2]?' (30 fps)':'')],[/^partió en (.+), bajó (\d+)$/,'started at $1, dropped $2'],
 [/^dibujo (.+) ms \(máx (.+)\)$/,'draw $1 ms (max $2)'],[/^núcleos (.+)$/,'cores $1'],[/^jugado (\d+) s$/,'played $1 s'],[/^repeticiones (\d+)$/,'replays $1'],[/^movimiento reducido (.+)$/,'reduced motion $1'],[/^pantalla (.+)$/,'screen $1'],[/^SESIÓN ANTERIOR: (.+)$/,'PREVIOUS SESSION: $1'],
 [/^Datos de juego desde (\S+)$/,'Play data since $1'],[/^(\d+) min jugados$/,'$1 min played'],[/^(copa|infinito|duelo) (\S+) (atajando|pateando|los dos|-): (\d+) partidos \((.+)\)$/,k=>({copa:'cup',infinito:'endless',duelo:'duel'})[k[1]]+' '+({facil:'easy',normal:'normal',dificil:'hard'}[k[2]]||k[2])+' '+({atajando:'saving',pateando:'shooting','los dos':'both'}[k[3]]||k[3])+': '+k[4]+' matches ('+k[5].replace('ganó','won').replace('perdió','lost').replace('abandonó','quit').replace('terminó','finished')+')'],
@@ -800,7 +800,7 @@ function audioInit(){
     noiseBuf=AC.createBuffer(1,AC.sampleRate*2,AC.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}
   catch(e){AC=null;}
   if(AC)sonInit();
-  if(AC)AC.addEventListener('statechange',()=>{if(AC.state!=='running'&&!document.hidden&&playing())DIAG.st++;if(AC.state==='running'&&typeof musNow==='function')try{if(!MUS.cur)musNow();}catch(e){}});
+  if(AC)AC.addEventListener('statechange',()=>{if(AC.state!=='running'&&!document.hidden&&playing())DIAG.st++;if(AC.state==='running'&&typeof musNow==='function')try{if(!MUS.cur)musNow();}catch(e){} if(AC.state!=='running'&&AC.state!=='closed'&&!document.hidden){DIAG.st2=(DIAG.st2||0)+1;setTimeout(sonWake,600);setTimeout(sonWake,2000);}});
   vozUnlock();
 }
 function env(g,t0,a,dur,vol){g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol,t0+a);g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);}
@@ -895,7 +895,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.24 · 19 nov 2026';
+const VERSION='7.25 · 19 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -4521,9 +4521,13 @@ function diagFrame(now,raw){
 }
 /* El diagnóstico se guarda mientras se juega: así sigue disponible aunque la app se cierre y se vuelva a abrir. */
 function diagText(){const cur=diagNow();if(DIAG.fps)return cur;const old=lsGet('penales-diag','');return old?cur+' ‖ SESIÓN ANTERIOR: '+old.replace(/^.*?versión/,'versión'):cur;}
+/* Cortes de sonido (7.25): cada 250 ms se compara el reloj del audio con el real; si el audio avanzó más de 40 ms menos,
+   hubo un corte (falta de datos en la salida). Sirve para ver qué pasa con CarPlay, donde Nicolás oye el sonido entrecortado. */
+setInterval(()=>{if(!AC||AC.state!=='running'||document.hidden){DIAG.cw=0;return;}const now=performance.now(),a=AC.currentTime;
+  if(DIAG.cw){const w=now-DIAG.cw,d=(a-DIAG.ca)*1000;if(w-d>40)DIAG.cut=(DIAG.cut||0)+1;}DIAG.cw=now;DIAG.ca=a;},250);
 function diagNow(){
   const ios=(navigator.userAgent.match(/OS (\d+)_(\d+)/)||[]).slice(1).join('.'),q=['alta','media','baja'][GL.tier]||'-';
-  return`Diagnóstico técnico: versión ${VERSION} · último partido ${DIAG.dur?Math.round(DIAG.dur)+' s ('+DIAG.shots+' penales)':'-'} · audio atrasado ${DIAG.a} veces · pausas del sistema ${DIAG.st} · tirones de imagen ${DIAG.img} · ${DIAG.fps||'-'} cuadros/s · resolución ×${glPR().toFixed(2)} · calidad ${q}${GL.phoneCap?' (30 cuadros/s)':''} · partió en ${['alta','media','baja'][GL.tier0]||'-'}, bajó ${DIAG.baja||0} · dibujo ${DIAG.ms?DIAG.ms.toFixed(1):'-'} ms (máx ${DIAG.mx?Math.round(DIAG.mx):'-'}) · núcleos ${navigator.hardwareConcurrency||'-'}${ios?' · iOS '+ios:''} · jugado ${DIAG.sec||0} s · repeticiones ${DIAG.rp||0} · movimiento reducido ${reduce?'sí':'no'} · pantalla ${Math.round(W)}×${Math.round(H)} ×${window.devicePixelRatio||1}`;
+  return`Diagnóstico técnico: versión ${VERSION} · último partido ${DIAG.dur?Math.round(DIAG.dur)+' s ('+DIAG.shots+' penales)':'-'} · audio atrasado ${DIAG.a} veces · pausas del sistema ${DIAG.st} · tirones de imagen ${DIAG.img} · ${DIAG.fps||'-'} cuadros/s · resolución ×${glPR().toFixed(2)} · calidad ${q}${GL.phoneCap?' (30 cuadros/s)':''} · partió en ${['alta','media','baja'][GL.tier0]||'-'}, bajó ${DIAG.baja||0} · dibujo ${DIAG.ms?DIAG.ms.toFixed(1):'-'} ms (máx ${DIAG.mx?Math.round(DIAG.mx):'-'}) · núcleos ${navigator.hardwareConcurrency||'-'}${ios?' · iOS '+ios:''} · jugado ${DIAG.sec||0} s · repeticiones ${DIAG.rp||0} · movimiento reducido ${reduce?'sí':'no'}${AC?` · sonido ${AC.sampleRate} Hz, búfer ${Math.round((AC.baseLatency||0)*1000)}+${Math.round((AC.outputLatency||0)*1000)} ms, ${AC.state}, cortes ${DIAG.cut||0}`:''} · pantalla ${Math.round(W)}×${Math.round(H)} ×${window.devicePixelRatio||1}`;
 }
 
 /* ---------- Bucle ---------- */
