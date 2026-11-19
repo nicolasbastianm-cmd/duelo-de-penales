@@ -893,7 +893,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.22 · 18 nov 2026';
+const VERSION='7.23 · 19 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -1114,22 +1114,22 @@ function openPack(){
    Banderas dibujadas aquí mismo (sin imágenes de afuera), con los colores de cada selección para la camiseta y la hinchada.
    Elegir un país crea la camiseta «Selección» (KITS.pais) y la deja puesta; se puede cambiar de camiseta igual. */
 const PAISES={
-  chile:{n:'Chile',c:'#d52b1e',t:'#ffffff',f:['chile']},
-  argentina:{n:'Argentina',c:'#75aadb',t:'#ffffff',f:['h',['#74acdf','#ffffff','#74acdf']],sol:'#f6b40e'},
-  brasil:{n:'Brasil',c:'#ffdf00',t:'#009b3a',f:['brasil']},
-  uruguay:{n:'Uruguay',c:'#5cbfeb',t:'#0f2a17',f:['uruguay']},
-  peru:{n:'Perú',c:'#ffffff',t:'#d91023',f:['v',['#d91023','#ffffff','#d91023']]},
-  colombia:{n:'Colombia',c:'#fcd116',t:'#003893',f:['h',['#fcd116','#fcd116','#003893','#ce1126']]},
-  mexico:{n:'México',c:'#006847',t:'#ffffff',f:['v',['#006847','#ffffff','#ce1126']],escudo:'#8a5a2b'},
-  espana:{n:'España',c:'#c60b1e',t:'#ffc400',f:['h',['#aa151b','#f1bf00','#f1bf00','#aa151b']]},
-  francia:{n:'Francia',c:'#1f3a93',t:'#ffffff',f:['v',['#002395','#ffffff','#ed2939']]},
-  italia:{n:'Italia',c:'#1e6fd1',t:'#ffffff',f:['v',['#009246','#ffffff','#ce2b37']]},
-  alemania:{n:'Alemania',c:'#f6f3e8',t:'#111111',f:['h',['#000000','#dd0000','#ffce00']]},
-  portugal:{n:'Portugal',c:'#c8102e',t:'#046a38',f:['portugal']},
-  inglaterra:{n:'Inglaterra',c:'#f6f3e8',t:'#1a2a6c',f:['cruz']},
-  paisesbajos:{n:'Países Bajos',c:'#ff7a00',t:'#1b1f26',f:['h',['#ae1c28','#ffffff','#21468b']]},
-  eeuu:{n:'Estados Unidos',c:'#f6f3e8',t:'#1f3a93',f:['eeuu']},
-  japon:{n:'Japón',c:'#123b8f',t:'#ffffff',f:['disco']}};
+  chile:{n:'Chile',c:'#d52b1e',t:'#ffffff',c2:'#ffffff',sh:'#1f3a93',so:'#ffffff',st:1,nc:'#ffffff',f:['chile']},
+  argentina:{n:'Argentina',c:'#75aadb',t:'#ffffff',c2:'#ffffff',sh:'#1b1f26',so:'#ffffff',st:2,nc:'#1b1f26',f:['h',['#74acdf','#ffffff','#74acdf']],sol:'#f6b40e'},
+  brasil:{n:'Brasil',c:'#ffdf00',t:'#009b3a',c2:'#009b3a',sh:'#1f5fb5',so:'#ffffff',st:1,nc:'#009b3a',f:['brasil']},
+  uruguay:{n:'Uruguay',c:'#5cbfeb',t:'#0f2a17',c2:'#111111',sh:'#111111',so:'#111111',st:1,nc:'#111111',f:['uruguay']},
+  peru:{n:'Perú',c:'#ffffff',t:'#d91023',c2:'#d91023',sh:'#ffffff',so:'#ffffff',st:4,nc:'#d91023',f:['v',['#d91023','#ffffff','#d91023']]},
+  colombia:{n:'Colombia',c:'#fcd116',t:'#003893',c2:'#003893',sh:'#003893',so:'#ce1126',st:1,nc:'#003893',f:['h',['#fcd116','#fcd116','#003893','#ce1126']]},
+  mexico:{n:'México',c:'#006847',t:'#ffffff',c2:'#ffffff',sh:'#ffffff',so:'#ce1126',st:1,nc:'#ffffff',f:['v',['#006847','#ffffff','#ce1126']],escudo:'#8a5a2b'},
+  espana:{n:'España',c:'#c60b1e',t:'#ffc400',c2:'#ffc400',sh:'#1f3a93',so:'#1f3a93',st:1,nc:'#ffc400',f:['h',['#aa151b','#f1bf00','#f1bf00','#aa151b']]},
+  francia:{n:'Francia',c:'#1f3a93',t:'#ffffff',c2:'#ffffff',sh:'#ffffff',so:'#c8102e',st:1,nc:'#ffffff',f:['v',['#002395','#ffffff','#ed2939']]},
+  italia:{n:'Italia',c:'#1e6fd1',t:'#ffffff',c2:'#ffffff',sh:'#ffffff',so:'#1e6fd1',st:1,nc:'#ffffff',f:['v',['#009246','#ffffff','#ce2b37']]},
+  alemania:{n:'Alemania',c:'#f6f3e8',t:'#111111',c2:'#111111',sh:'#111111',so:'#f6f3e8',st:1,nc:'#111111',f:['h',['#000000','#dd0000','#ffce00']]},
+  portugal:{n:'Portugal',c:'#c8102e',t:'#046a38',c2:'#046a38',sh:'#046a38',so:'#c8102e',st:1,nc:'#ffd23f',f:['portugal']},
+  inglaterra:{n:'Inglaterra',c:'#f6f3e8',t:'#1a2a6c',c2:'#1a2a6c',sh:'#1a2a6c',so:'#f6f3e8',st:1,nc:'#1a2a6c',f:['cruz']},
+  paisesbajos:{n:'Países Bajos',c:'#ff7a00',t:'#1b1f26',c2:'#1b1f26',sh:'#1b1f26',so:'#ff7a00',st:1,nc:'#1b1f26',f:['h',['#ae1c28','#ffffff','#21468b']]},
+  eeuu:{n:'Estados Unidos',c:'#f6f3e8',t:'#1f3a93',c2:'#1f3a93',sh:'#1f3a93',so:'#f6f3e8',st:1,nc:'#1f3a93',f:['eeuu']},
+  japon:{n:'Japón',c:'#123b8f',t:'#ffffff',c2:'#ffffff',sh:'#123b8f',so:'#123b8f',st:1,nc:'#ffffff',f:['disco']}};
 const FLAGC={};
 function bandera(id,w=60,h=40){
   const k=id+'|'+w;if(FLAGC[k])return FLAGC[k];const P=PAISES[id],cv2=document.createElement('canvas');cv2.width=w;cv2.height=h;const x=cv2.getContext('2d'),f=P.f;
@@ -1148,7 +1148,7 @@ function bandera(id,w=60,h=40){
   x.strokeStyle='rgba(0,0,0,.25)';x.lineWidth=1;x.strokeRect(0.5,0.5,w-1,h-1);
   return FLAGC[k]=cv2.toDataURL('image/png');
 }
-function setPaisKit(){if(CFG.pais&&PAISES[CFG.pais]){const P=PAISES[CFG.pais];KITS.pais={c:P.c,t:P.t,n:'Selección',p:'Camiseta de la selección'};}else{delete KITS.pais;if(CFG.kit==='pais')CFG.kit='naranjo';}}
+function setPaisKit(){if(CFG.pais&&PAISES[CFG.pais]){const P=PAISES[CFG.pais];KITS.pais={c:P.c,t:P.t,c2:P.c2,sh:P.sh,so:P.so,st:P.st,nc:P.nc,n:'Selección',p:'Camiseta de la selección'};}else{delete KITS.pais;if(CFG.kit==='pais')CFG.kit='naranjo';}}
 /* dos colores para las banderas de la hinchada: los dos primeros de la bandera del país */
 function paisColores(){const P=PAISES[CFG.pais];if(!P)return null;const f=P.f;return f[0]==='h'||f[0]==='v'?[f[1][0],f[1][1]===f[1][0]?f[1][2]:f[1][1]]:{chile:['#d52b1e','#ffffff'],brasil:['#009b3a','#fedf00'],uruguay:['#0038a8','#ffffff'],portugal:['#046a38','#da291c'],cruz:['#ffffff','#ce1124'],eeuu:['#b22234','#ffffff'],disco:['#ffffff','#bc002d']}[f[0]];}
 function renderPais(){
@@ -1164,6 +1164,13 @@ function paisAsk(){if(CFG.pais||CFG.paisAsk||!CFG.tutDone)return false;
 $('ppList').addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(!b)return;CFG.pais=b.dataset.p;CFG.paisAsk=true;setPaisKit();CFG.kit='pais';saveCfg();GL.pKey=null;GL.crowdKey=null;renderHome();show('home');});
 $('ppSkip').addEventListener('click',()=>{CFG.paisAsk=true;saveCfg();renderHome();show('home');});
 setTimeout(()=>{if(!$('home').hidden)try{paisAsk();}catch(e){}},0); /* el menú viene visible desde el HTML, sin pasar por show() */
+/* Uniforme completo (7.23): la camiseta «Selección» trae short, medias, vivos y diseño típicos de su país (sin escudos
+   ni marcas); las demás camisetas usan el diseño que eligió el jugador y short blanco, como antes. Los rivales igual. */
+function usKitP(){const k=KITS[CFG.kit]||KITS.naranjo;return{shirt:k.c,c2:k.c2||k.t,shorts:k.sh||'#f3f2ec',socks:k.so||k.c,style:k.st||(DESIGNS[CFG.design]||DESIGNS.rayas).s,numColor:k.nc||k.t};}
+function hexD(a,b){const x=parseInt(a.slice(1),16),y=parseInt(b.slice(1),16);return Math.hypot((x>>16)-(y>>16),((x>>8)&255)-((y>>8)&255),(x&255)-(y&255));}
+function rivKitP(r){const P=r&&PAISES[r.pais],k=P?{shirt:r.color,c2:P.c2,shorts:P.sh,socks:P.so,style:P.st}:{shirt:r.color,c2:r.shorts,shorts:r.shorts,socks:'#f3f2ec',style:KIT_ST[r.code]||1};
+  /* si viste casi igual que tu equipo, el rival sale con su segundo uniforme: camiseta del color de su short y al revés */
+  const us=(KITS[CFG.kit]||KITS.naranjo).c;if(hexD(k.shirt,us)<110){const sh=k.shorts;k.shorts=k.shirt;k.shirt=sh;k.socks=sh;k.c2=k.shorts;}return k;}
 function usTagHTML(){return (CFG.pais&&PAISES[CFG.pais]?`<img class="flg" src="${bandera(CFG.pais,30,20)}" alt="">`:'')+'TÚ';}
 
 /* ---------- Vestuario y premios ---------- */
@@ -1387,7 +1394,7 @@ function duoModels(who){
   if(!GL.ok||!GL.charGLB||!GL.meS||!GL.meS.userData.real)return;
   if(!who){if(GL.duoAlt){const a=GL.duoAlt;a.s.visible=a.k.visible=false;GL.meS=a.s0;GL.rivK=a.k0;}return;}
   if(!GL.duoAlt||GL.duoAlt.s0.parent!==GL.scene){const kit=KITS[CFG.kit],r=curRival(),me=meLook();
-    const s=makeReal({tat:[1,0],boots:BOOTS[4],style:KIT_ST[r.code]||1,c2:r.shorts,shirt:r.color,shorts:r.shorts,socks:'#f3f2ec',num:10,name:S.tour.n2,numColor:'#ffffff',skin:r.skin,hair:r.hair,height:1.85});
+    const s=makeReal({tat:[1,0],boots:BOOTS[4],...rivKitP(r),num:10,name:S.tour.n2,numColor:'#ffffff',skin:r.skin,hair:r.hair,height:1.85});
     const k=makeReal({cut:me.cut,beard:me.beard,mus:me.mus,style:7,c2:col(kit.c,0.5),shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,numColor:kit.t,height:1.92});
     s.visible=k.visible=false;GL.scene.add(s);GL.scene.add(k);GL.duoAlt={s,k,s0:GL.meS,k0:GL.rivK};}
   const a=GL.duoAlt;for(const m of[a.s,a.k,a.s0,a.k0])m.visible=false;
@@ -2555,8 +2562,8 @@ function glBuildPlayers(){
   const sc=GL.scene;if(GL.duoAlt){const a=GL.duoAlt;for(const m of[a.s,a.k,a.s0,a.k0])sc.remove(m);GL.meS=a.s0;GL.rivK=a.k0;GL.duoAlt=null;}if(GL.rivPool){for(const m of GL.rivPool)sc.remove(m);GL.rivPool=null;}for(const k of['meK','meS','rivS','rivK']){if(GL[k]){sc.remove(GL[k]);if(!GL[k].userData.real)disposeTree(GL[k]);}}
   if(GL.charGLB){const kit=KITS[CFG.kit],r=curRival(),me=meLook();
     GL.meK=makeReal({cut:me.cut,beard:me.beard,mus:me.mus,legTat:me.legTat,style:7,c2:col(kit.c,0.5),shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,name:CFG.name,numColor:kit.t,height:1.9});
-    GL.meS=makeReal({...me,capt:true,boots:BOOTS[(CFG.num||1)%BOOTS.length],style:(DESIGNS[CFG.design]||DESIGNS.rayas).s,c2:kit.t,shirt:kit.c,shorts:'#f3f2ec',socks:kit.c,num:CFG.num,name:CFG.name,numColor:kit.t,height:1.85});
-    GL.rivS=makeReal({tat:[0,1],legTat:-1,head:HEAD_IDS[((r.code||'A').charCodeAt(1)||0)%HEAD_IDS.length],beard:[0.95,0.6,0.95][((r.code||'A').charCodeAt(1)||0)%3],boots:BOOTS[3],shirt:r.color,shorts:r.shorts,socks:'#f3f2ec',style:KIT_ST[r.code]||1,c2:r.shorts,num:9,skin:r.skin,hair:r.hair,height:2.0});
+    GL.meS=makeReal({...me,capt:true,boots:BOOTS[(CFG.num||1)%BOOTS.length],...usKitP(),num:CFG.num,name:CFG.name,height:1.85});
+    GL.rivS=makeReal({tat:[0,1],legTat:-1,head:HEAD_IDS[((r.code||'A').charCodeAt(1)||0)%HEAD_IDS.length],beard:[0.95,0.6,0.95][((r.code||'A').charCodeAt(1)||0)%3],boots:BOOTS[3],...rivKitP(r),num:9,skin:r.skin,hair:r.hair,height:2.0});
     GL.rivK=makeReal({head:HEAD_IDS[((r.code||'A').charCodeAt(2)||1)%HEAD_IDS.length],style:7,c2:col(r.gk,0.5),beard:0.85,pants:true,cap:(r.code||'').charCodeAt(0)%2?col(r.gk,0.55):null,shirt:r.gk,shorts:'#1b1f26',socks:r.gk,glove:'#f6f3e8',num:1,skin:r.gkSkin,hair:r.gkHair,height:1.92});
     /* En una tanda cada penal lo patea un jugador distinto: cinco pateadores rivales que se turnan. El primero es la figura
        del equipo; los otros cuatro son los mismos compañeros que esperan en el círculo central (mismo número y mismo aspecto). */
@@ -3566,7 +3573,7 @@ function glBuildExtras(){
   if(!GL.charGLB)return;
   const grp=new THREE.Group(),kit=KITS[CFG.kit],r=curRival(),n=[9,9,6][GL.tier||0],nums=EX_NUMS;GL.team=[];
   for(const side of[0,1])for(let i=0;i<n;i++){
-    const m=makeReal({...exLook(i,side),shirt:side?r.color:kit.c,shorts:side?r.shorts:'#f3f2ec',socks:side?'#f3f2ec':kit.c,style:side?KIT_ST[r.code]||1:(DESIGNS[CFG.design]||DESIGNS.rayas).s,c2:side?r.shorts:kit.t,num:nums[i],capt:i===0&&side===1,height:1.72+((i*37+side*11)%10)/38});m.userData.num=nums[i];
+    const m=makeReal({...exLook(i,side),...(side?rivKitP(r):usKitP()),num:nums[i],capt:i===0&&side===1,height:1.72+((i*37+side*11)%10)/38});m.userData.num=nums[i];
     m.position.set((side?1:-1)*(0.9+i*0.7),0,52.5);m.rotation.y=Math.PI+(side?-0.08:0.08);
     m.traverse(q=>{if(q.isMesh)q.castShadow=false;});m.userData.side=side;m.userData.idx=i;m.userData.home=[m.position.x,m.position.z,m.rotation.y];m.userData.ph=i*0.31+side*0.17;grp.add(m);GL.team.push(m);}
   rivMark();
@@ -3752,7 +3759,7 @@ function drawPressure(){
    Cada copa sortea a los 7 rivales en un cuadro: cuartos, semifinal y final. Los otros partidos se simulan.
    El equipo pone la personalidad (nombres, colores, mañas) y la ronda pone la dificultad. */
 const TEAMS=[
-  {team:'Argentina',code:'ARG',pais:'argentina',color:'#75aadb',shorts:'#ffffff',gk:'#2fbf71',kName:'Tito',gkName:'Pancho',pref:{L:0.7,C:0.1,R:0.2},high:0.05,gkPref:{L:0.2,C:0.15,R:0.65},skin:'#c99a78',hair:'#1b130d',gkSkin:'#ecc9ae',gkHair:'#3a2314',
+  {team:'Argentina',code:'ARG',pais:'argentina',color:'#75aadb',shorts:'#1b1f26',gk:'#2fbf71',kName:'Tito',gkName:'Pancho',pref:{L:0.7,C:0.1,R:0.2},high:0.05,gkPref:{L:0.2,C:0.15,R:0.65},skin:'#c99a78',hair:'#1b130d',gkSkin:'#ecc9ae',gkHair:'#3a2314',
    kStyle:'patea suave y no sabe disimular: mira hacia dónde se inclina.',gkStyle:'se tira tarde: patea fuerte a un rincón.'},
   {team:'Brasil',code:'BRA',pais:'brasil',color:'#ffdf00',shorts:'#1f5fb5',gk:'#8a5cf6',kName:'Benja',gkName:'Rulo',pref:{L:0.25,C:0.1,R:0.65},high:0.35,gkPref:{L:0.5,C:0.3,R:0.2},skin:'#ffffff',hair:'#c49a5a',gkSkin:'#9c6f52',gkHair:'#111111',
    kStyle:'le pega fuerte y a veces amaga. Si se frena antes de patear, ¡ojo!',gkStyle:'a veces adivina el lado: usa el efecto para engañarlo.'},
