@@ -895,7 +895,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.25 · 19 nov 2026';
+const VERSION='7.26 · 19 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -1394,6 +1394,7 @@ function duoPicked(dir){
 /* Cuando patea el jugador 2 se cambian los muñecos de la vista de patear: él con la camiseta de su equipo y, al arco, el arquero del jugador 1 */
 function duoModels(who){
   if(!GL.ok||!GL.charGLB||!GL.meS||!GL.meS.userData.real)return;
+  if(!GL.duoAlt)usPick(-1);
   if(!who){if(GL.duoAlt){const a=GL.duoAlt;a.s.visible=a.k.visible=false;GL.meS=a.s0;GL.rivK=a.k0;}return;}
   if(!GL.duoAlt||GL.duoAlt.s0.parent!==GL.scene){const kit=KITS[CFG.kit],r=curRival(),me=meLook();
     const s=makeReal({tat:[1,0],boots:BOOTS[4],...rivKitP(r),num:10,name:S.tour.n2,numColor:'#ffffff',skin:r.skin,hair:r.hair,height:1.85});
@@ -2572,7 +2573,7 @@ function makePlayer(o){
 }
 function meLook(){const c=PEINADOS[CFG.cut]||PEINADOS.normal,b=BARBAS[CFG.beard]||BARBAS.no,t=TATS[CFG.tat]||TATS.no;return{cut:c.c,beard:b.b,mus:b.m,tat:t.t,legTat:t.l};}
 function glBuildPlayers(){
-  const sc=GL.scene;if(GL.duoAlt){const a=GL.duoAlt;for(const m of[a.s,a.k,a.s0,a.k0])sc.remove(m);GL.meS=a.s0;GL.rivK=a.k0;GL.duoAlt=null;}if(GL.rivPool){for(const m of GL.rivPool)sc.remove(m);GL.rivPool=null;}for(const k of['meK','meS','rivS','rivK']){if(GL[k]){sc.remove(GL[k]);if(!GL[k].userData.real)disposeTree(GL[k]);}}
+  const sc=GL.scene;if(GL.duoAlt){const a=GL.duoAlt;for(const m of[a.s,a.k,a.s0,a.k0])sc.remove(m);GL.meS=a.s0;GL.rivK=a.k0;GL.duoAlt=null;}if(GL.rivPool){for(const m of GL.rivPool)sc.remove(m);GL.rivPool=null;}if(GL.usPool){for(const m of GL.usPool)sc.remove(m);GL.usPool=null;}for(const k of['meK','meS','rivS','rivK']){if(GL[k]){sc.remove(GL[k]);if(!GL[k].userData.real)disposeTree(GL[k]);}}
   if(GL.charGLB){const kit=KITS[CFG.kit],r=curRival(),me=meLook();
     GL.meK=makeReal({cut:me.cut,beard:me.beard,mus:me.mus,legTat:me.legTat,style:7,c2:col(kit.c,0.5),shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,name:CFG.name,numColor:kit.t,height:1.9});
     GL.meS=makeReal({...me,capt:true,boots:BOOTS[(CFG.num||1)%BOOTS.length],...usKitP(),num:CFG.num,name:CFG.name,height:1.85});
@@ -2581,9 +2582,14 @@ function glBuildPlayers(){
     /* En una tanda cada penal lo patea un jugador distinto: cinco pateadores rivales que se turnan. El primero es la figura
        del equipo; los otros cuatro son los mismos compañeros que esperan en el círculo central (mismo número y mismo aspecto). */
     GL.rivPool=[GL.rivS];GL.rivS.userData.num=9;
-    for(const num of[10,7,11,8]){const i=EX_NUMS.indexOf(num),m=makeReal({...exLook(i,1),shirt:r.color,shorts:r.shorts,socks:'#f3f2ec',style:KIT_ST[r.code]||1,c2:r.shorts,num,height:1.93+((i*37+11)%10)/90});
+    for(const num of[10,7,11,8]){const i=EX_NUMS.indexOf(num),m=makeReal({...exLook(i,1),...rivKitP(r),num,height:1.93+((i*37+11)%10)/90});
       m.userData.num=num;m.visible=false;GL.rivPool.push(m);}
-    for(const k of['meK','meS','rivS','rivK'])sc.add(GL[k]);for(const m of GL.rivPool)if(m!==GL.rivS)sc.add(m);glBuildExtras();return;}
+    /* Tu equipo igual (7.26): si eres arquero (o «Los dos»), tu personaje queda en el arco y patean cinco compañeros que se
+       turnan, con números distintos al tuyo. Si solo pateas, pateas siempre tú (GL.usPool[0]). */
+    GL.usPool=[GL.meS];GL.meS.userData.num=CFG.num;
+    for(const num of[9,10,7,11,8,6].filter(n=>n!==+CFG.num).slice(0,5)){const i=EX_NUMS.indexOf(num),m=makeReal({...exLook(i>=0?i:4,0),...usKitP(),num,height:1.86+((num*37)%10)/90});
+      m.userData.num=num;m.visible=false;GL.usPool.push(m);}
+    for(const k of['meK','meS','rivS','rivK'])sc.add(GL[k]);for(const m of GL.rivPool)if(m!==GL.rivS)sc.add(m);for(const m of GL.usPool)if(m!==GL.meS)sc.add(m);glBuildExtras();return;}
   const kit=KITS[CFG.kit],r=curRival(),plate=()=>plateTexture(CFG.name,CFG.num,kit.t);
   GL.meK=makePlayer({shirt:kit.c,trim:col(kit.c,0.5),shorts:col(kit.c,0.45),socks:kit.c,band:col(kit.c,0.45),hair:'#3a2414',glove:GLOVES[CFG.glove].c,keeper:true,plate:plate()});GL.meK.scale.setScalar(1.17);
   GL.meS=makePlayer({shirt:kit.c,trim:col(kit.c,0.5),shorts:'#f3f2ec',socks:kit.c,band:'#f3f2ec',hair:'#3a2414',plate:plate(),sole:kit.c});GL.meS.scale.setScalar(1.12);
@@ -3317,6 +3323,7 @@ function kickHow(){
 function newKickRound(){
   if(!CFG.howK&&!(S.tour&&S.tour.duo)&&S.input!=='key'&&kickCtrl()==='apuntar'){CFG.howK=true;saveCfg();howTo('kick',newKickRound);S.phase='idle';return;}
   S.turn='kick';S.phase='aim';S.ripple=null;S.msg=null;S.celeb=null;
+  if(!(S.tour&&S.tour.duo))usPick(S.mode==='tour'&&S.tour&&S.tour.sh?S.tour.sh.us.length:(S.shotN||0));
   S.kick={t:0,step:'aim',pw:0,drag:null,lvl:kickLevel(),aim:{x:0,y:1.2},ai:{x:0,dir:null,diveAt:99,stay:false},b:{x:0,y:0.11,z:11,vx:0,vy:0,vz:0,spin:0},res:null,shot:null};
   S.banner=(CFG.kickCount||0)<2||S.input==='key'?{title:'Tu turno de patear',sub:kickHow,t:0,dur:Infinity}:(S.role==='both'?{title:'¡Te toca patear!',sub:'',t:0,dur:1.4}:null);
   // (el cartel «¿Dónde se tira…?» se quitó: tapaba la jugada y a los niños les estorbaba)
@@ -3580,6 +3587,14 @@ function rivPick(i){
   const P=GL.rivPool;if(!P||!P.length)return;const m=P[((i%P.length)+P.length)%P.length];
   if(m!==GL.rivS){m.visible=GL.rivS.visible;GL.rivS.visible=false;GL.rivS=m;}rivMark();
 }
+/* Pateador de tu equipo para el penal i (i<0: tú). En el duelo y si solo pateas, siempre tú. */
+function usPick(i){
+  const P=GL.usPool;if(!P||!P.length||!GL.meS)return;
+  const yo=i<0||(S.role||CFG.role)==='kicker'||S.mode==='tut'||(S.tour&&S.tour.duo)||P.length<2;
+  const m=yo?P[0]:P[1+(i%(P.length-1))];
+  if(m!==GL.meS){m.visible=GL.meS.visible;GL.meS.visible=false;GL.meS=m;}usMark();
+}
+function usMark(){if(!GL.team||!GL.meS)return;const n=GL.meS.userData.num;for(const q of GL.team)if(q.userData.side===0)q.visible=q.userData.num!==n;}
 function rivMark(){if(!GL.team||!GL.rivS)return;const n=GL.rivS.userData.num;for(const q of GL.team)if(q.userData.side===1)q.visible=q.userData.num!==n;}
 function glBuildExtras(){
   if(GL.extras){GL.scene.remove(GL.extras);GL.extras=null;}if(GL.sideGrp){GL.scene.remove(GL.sideGrp);GL.sideGrp=null;}
