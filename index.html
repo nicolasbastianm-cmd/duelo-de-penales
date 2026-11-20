@@ -906,7 +906,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){if(id!=='result'&&typeof copa3D==='function')try{copa3D(false);const f=$('fw2d');if(f)f.remove();}catch(e){}if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.30 · 20 nov 2026';
+const VERSION='7.33 · 20 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -1179,11 +1179,12 @@ $('ppSkip').addEventListener('click',()=>{CFG.paisAsk=true;saveCfg();renderHome(
 setTimeout(()=>{if(!$('home').hidden)try{paisAsk();}catch(e){}},0); /* el menú viene visible desde el HTML, sin pasar por show() */
 /* Uniforme completo (7.23): la camiseta «Selección» trae short, medias, vivos y diseño típicos de su país (sin escudos
    ni marcas); las demás camisetas usan el diseño que eligió el jugador y short blanco, como antes. Los rivales igual. */
-function usKitP(){const k=KITS[CFG.kit]||KITS.naranjo;return{flag:CFG.kit==='pais'?CFG.pais:null,shirt:k.c,c2:k.c2||k.t,shorts:k.sh||'#f3f2ec',socks:k.so||k.c,style:k.st||(DESIGNS[CFG.design]||DESIGNS.rayas).s,numColor:k.nc||k.t};}
+function socksOk(so,sh,shirt){return hexD(so,sh)>80?so:hexD(shirt,sh)>80?shirt:'#f6f6f2';} /* 7.33: las medias nunca del mismo color que el short */
+function usKitP(){const k=KITS[CFG.kit]||KITS.naranjo,sh=k.sh||'#f3f2ec';return{flag:CFG.kit==='pais'?CFG.pais:null,shirt:k.c,c2:k.c2||k.t,shorts:sh,socks:socksOk(k.so||k.c,sh,k.c),style:k.st||(DESIGNS[CFG.design]||DESIGNS.rayas).s,numColor:k.nc||k.t};}
 function hexD(a,b){const x=parseInt(a.slice(1),16),y=parseInt(b.slice(1),16);return Math.hypot((x>>16)-(y>>16),((x>>8)&255)-((y>>8)&255),(x&255)-(y&255));}
 function rivKitP(r){const P=r&&PAISES[r.pais],k=P?{flag:r.pais,shirt:r.color,c2:P.c2,shorts:P.sh,socks:P.so,style:P.st}:{shirt:r.color,c2:r.shorts,shorts:r.shorts,socks:'#f3f2ec',style:KIT_ST[r.code]||1};
   /* si viste casi igual que tu equipo, el rival sale con su segundo uniforme: camiseta del color de su short y al revés */
-  const us=(KITS[CFG.kit]||KITS.naranjo).c;if(hexD(k.shirt,us)<110){const sh=k.shorts;k.shorts=k.shirt;k.shirt=sh;k.socks=sh;k.c2=k.shorts;}return k;}
+  const us=(KITS[CFG.kit]||KITS.naranjo).c;if(hexD(k.shirt,us)<110){const sh=k.shorts;k.shorts=k.shirt;k.shirt=sh;k.socks=sh;k.c2=k.shorts;}k.socks=socksOk(k.socks,k.shorts,k.shirt);return k;}
 function usTagHTML(){return (CFG.pais&&PAISES[CFG.pais]?`<img class="flg" src="${bandera(CFG.pais,30,20)}" alt="">`:'')+'TÚ';}
 
 /* ---------- Vestuario y premios ---------- */
@@ -1535,7 +1536,7 @@ function stageAuto(round){
   if(CFG.stageAuto===false)return;const ok=k=>STAGES[k]&&isUnlocked(STAGES[k]),cur=CFG.stage;let pick=null;
   if(round===2)pick=ok('final')&&Math.random()<0.6?'final':ok('noche')?'noche':null;
   else if(round===1)pick=ok('atardecer')?'atardecer':ok('noche')?'noche':null;
-  if(!pick){const U=Object.keys(STAGES).filter(k=>ok(k)&&k!=='final'&&k!==cur);pick=U.length?U[Math.floor(Math.random()*U.length)]:cur;}
+  if(!pick){const U=Object.keys(STAGES).filter(k=>ok(k)&&k!=='final'&&k!=='barrio'&&k!==cur); /* el barrio no entra en la rotación: se ve poco real (Nicolás, 20-11) */pick=U.length?U[Math.floor(Math.random()*U.length)]:cur;}
   if(pick&&pick!==cur){CFG.stage=pick;saveCfg();}
 }
 function startMatch(){
@@ -2626,7 +2627,7 @@ function glBuildPlayers(){
     GL.meK=makeReal({cut:me.cut,beard:me.beard,mus:me.mus,legTat:me.legTat,style:7,c2:col(kit.c,0.5),shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,name:CFG.name,numColor:kit.t,height:1.9});
     GL.meS=makeReal({...me,capt:true,boots:BOOTS[(CFG.num||1)%BOOTS.length],...usKitP(),num:CFG.num,name:CFG.name,height:1.85});
     GL.rivS=makeReal({tat:[0,1],legTat:-1,head:HEAD_IDS[((r.code||'A').charCodeAt(1)||0)%HEAD_IDS.length],beard:[0.95,0.6,0.95][((r.code||'A').charCodeAt(1)||0)%3],boots:BOOTS[3],...rivKitP(r),num:9,name:apellido(r.pais,9),skin:r.skin,hair:r.hair,height:2.0});
-    GL.rivK=makeReal({head:HEAD_IDS[((r.code||'A').charCodeAt(2)||1)%HEAD_IDS.length],style:7,c2:col(r.gk,0.5),beard:0.85,pants:true,cap:(r.code||'').charCodeAt(0)%2?col(r.gk,0.55):null,shirt:r.gk,shorts:'#1b1f26',socks:r.gk,glove:'#f6f3e8',num:1,skin:r.gkSkin,hair:r.gkHair,height:1.92});
+    GL.rivK=makeReal({head:HEAD_IDS[((r.code||'A').charCodeAt(2)||1)%HEAD_IDS.length],style:7,c2:col(r.gk,0.5),beard:0.85,pants:true,cap:null,/* 7.32: sin gorra (se veía cuadrada) */shirt:r.gk,shorts:'#1b1f26',socks:r.gk,glove:'#f6f3e8',num:1,skin:r.gkSkin,hair:r.gkHair,height:1.92});
     /* En una tanda cada penal lo patea un jugador distinto: cinco pateadores rivales que se turnan. El primero es la figura
        del equipo; los otros cuatro son los mismos compañeros que esperan en el círculo central (mismo número y mismo aspecto). */
     GL.rivPool=[GL.rivS];GL.rivS.userData.num=9;
@@ -3131,9 +3132,9 @@ function headBeard(base,geo,beard,mus){
       float jaw=smoothstep(top+0.012,top-0.012,by)*smoothstep(0.105,0.16,by)*zf;
       float mu=smoothstep(0.395,0.38,by)*smoothstep(0.325,0.34,by)*(1.0-smoothstep(0.10,0.14,ax))*zf;
       float lip=1.0-smoothstep(0.8,1.2,length(vec2(ax/0.105,(by-0.295)/0.046)));
-      float gr=fract(sin(dot(floor(vHd.xy*460.0),vec2(12.9898,78.233)))*43758.5453);
+      vec2 bq=vHd.xy*vec2(1300.0,380.0);float gr=fract(sin(dot(floor(bq),vec2(12.9898,78.233)))*43758.5453)*0.6+fract(sin(dot(floor(bq*vec2(1.7,1.2)+7.0),vec2(39.346,11.135)))*24634.63)*0.4;
       float sk=max(jaw*hbe.x,mu*max(hbe.x,hbe.y))*(1.0-lip)*(0.5+0.5*gr);
-      diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(0.17,0.14,0.13),clamp(sk*1.25,0.,1.));}`);};
+      diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(0.17,0.14,0.13)*(0.55+0.9*gr),clamp(sk*1.25,0.,1.));}`);};
   m.customProgramCacheKey=()=>'hbeard2';return m;
 }
 function skinMaterial(base,geo,o){
@@ -3149,9 +3150,13 @@ function skinMaterial(base,geo,o){
       float jaw=smoothstep(topY+0.003,topY-0.004,by)*smoothstep(0.8385,0.8445,by)*zf;
       float mus=smoothstep(0.8755,0.8735,by)*smoothstep(0.8675,0.8690,by)*(1.0-smoothstep(0.017,0.025,ax))*zf;
       float lip=smoothstep(0.8685,0.8672,by)*smoothstep(0.8608,0.8622,by)*(1.0-smoothstep(0.014,0.019,ax));
-      float gr=fract(sin(dot(floor(vSk.xy*2600.0),vec2(12.9898,78.233)))*43758.5453);
+      vec2 bq=vSk.xy*vec2(7000.0,2000.0);float gr=fract(sin(dot(floor(bq),vec2(12.9898,78.233)))*43758.5453)*0.6+fract(sin(dot(floor(bq*vec2(1.7,1.2)+7.0),vec2(39.346,11.135)))*24634.63)*0.4;
       float sk=max(jaw*sbe.x,mus*max(sbe.x,sbe.y))*(1.0-lip)*(0.55+0.45*gr);
-      diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(0.20,0.165,0.15),clamp(sk*1.2,0.,1.));
+      diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(0.20,0.165,0.15)*(0.55+0.9*gr),clamp(sk*1.2,0.,1.));
+      { /* 7.32: piel con poros y leve variación de tono (antes era pareja como plástico) */
+        vec3 pq=vSk*vec3(900.0,900.0,900.0);float pn=fract(sin(dot(floor(pq),vec3(12.9898,78.233,37.719)))*43758.5453);
+        vec3 lq=vSk*vec3(40.0,40.0,40.0);float ln=fract(sin(dot(floor(lq),vec3(7.13,3.71,9.17)))*1753.5453);
+        diffuseColor.rgb*=0.975+0.05*pn;diffuseColor.rgb*=mix(vec3(1.0),vec3(1.03,0.985,0.975),ln*0.6);}
       float bnd=smoothstep(0.9280,0.9292,by)*smoothstep(0.9372,0.9360,by)*(1.0-smoothstep(0.07,0.08,ax))*sbd.x; // cintillo en la frente
       float pnt=smoothstep(0.364,0.356,by)*(1.0-smoothstep(0.13,0.15,ax))*sbd.y; // pantalón largo: la pierna entre el short y la media
       diffuseColor.rgb=mix(diffuseColor.rgb,sbc,bnd);
@@ -3203,6 +3208,12 @@ function makeReal(o){
     else if(/Body/.test(part)){n.material=skinMaterial(n.material,n.geometry,o);}
     if(n.material.isMeshStandardMaterial){n.material.envMapIntensity=GL.envI||0.6;addRim(n.material);
       for(const k of['map','normalMap']){const tx=n.material[k];if(tx&&tx.anisotropy<4){tx.anisotropy=Math.min(8,GL.r.capabilities.getMaxAnisotropy());tx.needsUpdate=true;}}}});
+  /* 7.32: contextura atlética (antes parecían maniquíes): brazos, muslos y pantorrillas más gruesos. Se escala cada hueso
+     de lado (el eje Y del hueso va a lo largo del miembro) y se compensa en el hijo, para que manos y pies queden igual. */
+  {const mu=o.musc==null?(o.glove?0.6:0.85):o.musc;if(mu>0&&B.LeftArm){const sc=(b,x)=>{if(b)b.scale.set(x,1,x);};
+    const a=1+0.17*mu,f=1+0.11*mu,t=1+0.12*mu,c=1+0.14*mu;
+    if(B.Neck&&B.Head){B.Neck.scale.set(1,1.22,1);B.Head.scale.set(1,1/1.22,1);} /* cuello visible */
+    for(const sd of['Left','Right']){sc(B[sd+'Arm'],a);sc(B[sd+'ForeArm'],f/a);sc(B[sd+'Hand'],1/f);sc(B[sd+'UpLeg'],t);sc(B[sd+'Leg'],c/t);sc(B[sd+'Foot'],1/c);}}}
   if(o.num!=null&&B.Spine2){const tB=numberPlate(o.name,o.num,o.numColor||contrast(o.shirt),1),tF=numberPlate('',o.num,o.numColor||contrast(o.shirt),1,o.flag);
     const sk=shirtN&&shirtN.isSkinnedMesh&&shirtN.skeleton,bi=sk?sk.bones.findIndex(q=>/Spine2(_\d+)?$/.test(q.name)):-1,U=shirtN&&shirtN.material.userData;
     if(bi>=0&&U&&U.knT){ // estampado: se calcula dónde cae la placa en la camiseta en reposo y el sombreador la pinta sobre la tela
@@ -3747,7 +3758,7 @@ function glBuildExtras(){
   const grp=new THREE.Group(),kit=KITS[CFG.kit],r=curRival(),n=[9,9,6][GL.tier||0],nums=EX_NUMS;GL.team=[];
   for(const side of[0,1])for(let i=0;i<n;i++){
     const m=makeReal({...exLook(i,side,side?teamSeed(r.pais||r.code):teamSeed(CFG.pais)),...(side?rivKitP(r):usKitP()),num:nums[i],name:apellido(side?r.pais:CFG.pais,nums[i]),capt:i===0&&side===1,height:1.72+((i*37+side*11)%10)/38});m.userData.num=nums[i];
-    m.position.set((side?1:-1)*(0.9+i*0.7),0,52.5);m.rotation.y=Math.PI+(side?-0.08:0.08);
+    m.position.set((side?1:-1)*(0.95+i*0.82),0,52.5);m.rotation.y=Math.PI+(side?-0.08:0.08);
     m.traverse(q=>{if(q.isMesh)q.castShadow=false;});m.userData.side=side;m.userData.idx=i;m.userData.home=[m.position.x,m.position.z,m.rotation.y];m.userData.ph=i*0.31+side*0.17;grp.add(m);GL.team.push(m);}
   rivMark();
   GL.ref=makeReal({head:'c01',style:1,c2:'#ffd23f',shirt:'#161616',shorts:'#161616',socks:'#161616',skin:'#e6b896',hair:'#2a2a2a',height:1.86});
@@ -3761,7 +3772,7 @@ function glBuildExtras(){
     const ar=still(makeReal({head:'leo',style:1,c2:'#ffd23f',shirt:'#161616',shorts:'#161616',socks:'#161616',skin:'#c99a78',hair:'#1b130d',height:1.8}),-9.16,0.1,Math.PI/2,2.1);
     {const hd=ar.userData.B.RightHand;if(hd){const fl=new THREE.Group(),st=mesh(new THREE.CylinderGeometry(0.9,0.9,46,8),M('#d8d8d8'),false);st.position.y=20;fl.add(st);
       const pn=new THREE.Mesh(new THREE.PlaneGeometry(26,19),new THREE.MeshBasicMaterial({color:'#ffd23f',side:THREE.DoubleSide}));pn.position.set(13,33,0);fl.add(pn);hd.add(fl);}}
-    GL.wkThem=still(makeReal({head:HEAD_IDS[((r.code||'A').charCodeAt(2)||1)%HEAD_IDS.length],style:7,c2:col(r.gk,0.5),beard:0.85,pants:true,cap:(r.code||'').charCodeAt(0)%2?col(r.gk,0.55):null,shirt:r.gk,shorts:'#1b1f26',socks:r.gk,glove:'#f6f3e8',num:1,skin:r.gkSkin,hair:r.gkHair,height:1.92}),20.16,0.15,-1.08,0.9);
+    GL.wkThem=still(makeReal({head:HEAD_IDS[((r.code||'A').charCodeAt(2)||1)%HEAD_IDS.length],style:7,c2:col(r.gk,0.5),beard:0.85,pants:true,cap:null,/* 7.32: sin gorra (se veía cuadrada) */shirt:r.gk,shorts:'#1b1f26',socks:r.gk,glove:'#f6f3e8',num:1,skin:r.gkSkin,hair:r.gkHair,height:1.92}),20.16,0.15,-1.08,0.9);
     GL.wkUs=still(makeReal({cut:meLook().cut,beard:meLook().beard,mus:meLook().mus,style:7,c2:col(kit.c,0.5),shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,numColor:kit.t,height:1.9}),20.16,0.15,-1.08,1.6);
     // camarógrafos de TV detrás de cada cámara, de cuerpo entero
     for(const sd of[-1,1])still(makeReal({head:sd<0?'c28':'josh',style:0,pants:true,shirt:sd<0?'#3a4250':'#2f5d46',shorts:'#1b1f26',socks:'#1b1f26',skin:sd<0?'#c99a78':'#8d5524',hair:'#1b130d',height:1.76}),sd*5.12,-4.2,-sd*0.3,sd<0?0.4:1.3);
