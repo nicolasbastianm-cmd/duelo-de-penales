@@ -906,7 +906,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){if(id!=='result'&&typeof copa3D==='function')try{copa3D(false);const f=$('fw2d');if(f)f.remove();}catch(e){}if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.38 · 20 nov 2026';
+const VERSION='7.39 · 20 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -4519,22 +4519,23 @@ $('vitDone').addEventListener('click',()=>{renderHome();show('home');});
 /* ---------- Hinchada: banderas que flamean y lienzos en las tribunas ----------
    Banderas en mástiles que la gente agita (más fuerte cuando hay gol o atajada) y lienzos con texto
    colgados en el frente de las tribunas. Todo en una sola pieza de geometría para que el teléfono no sufra. */
-const FLAG_VS=`attribute vec3 offset;attribute vec4 prm;attribute vec3 colA;attribute vec3 colB;attribute float part;
-uniform float time,excite,hideZ;varying vec2 vUv;varying vec3 vA,vB;varying float vPat,vSh,vPart,vDepth;
+const FLAG_VS=`attribute vec3 offset;attribute vec4 prm;attribute vec3 colA;attribute vec3 colB;attribute float part;attribute float fid;
+uniform float time,excite,hideZ;varying vec2 vUv;varying vec3 vA,vB;varying float vPat,vSh,vPart,vDepth,vFid;
 void main(){
   if(offset.z<hideZ){gl_Position=vec4(2.0,2.0,2.0,1.0);return;}
-  float rot=prm.x,sz=prm.y,ph=prm.z,ex=clamp(excite,0.0,1.2);vPat=prm.w;vA=colA;vB=colB;vPart=part;vUv=uv;
+  float rot=prm.x,sz=prm.y,ph=prm.z,ex=clamp(excite,0.0,1.2);vPat=prm.w;vA=colA;vB=colB;vPart=part;vUv=uv;vFid=fid;
   vec3 p=position;float wv=0.0;
   if(part<0.5){float u=(p.x-0.03)/1.5;wv=sin(u*5.5-time*(4.5+ex*3.5)+ph*6.2831)*(0.08+0.14*ex)*u;p.z+=wv;p.y-=u*u*0.10*(1.0-min(ex,1.0));}
   vSh=part<0.5?0.86+1.5*wv:0.65;
   float a=sin(time*(1.3+ex*2.2)+ph*6.2831)*(0.10+0.5*ex);float ca=cos(a),sa=sin(a);p.xy=vec2(p.x*ca-p.y*sa,p.x*sa+p.y*ca);
   p*=sz;float cr=cos(rot),sr=sin(rot);vec3 w=vec3(p.x*cr+p.z*sr,p.y,-p.x*sr+p.z*cr)+offset;
   vec4 mv=modelViewMatrix*vec4(w,1.0);vDepth=-mv.z;gl_Position=projectionMatrix*mv;}`;
-const FLAG_FS=`uniform vec3 fogColor;uniform float fogDensity,light;varying vec2 vUv;varying vec3 vA,vB;varying float vPat,vSh,vPart,vDepth;
+const FLAG_FS=`uniform vec3 fogColor;uniform float fogDensity,light;uniform sampler2D fat;uniform vec2 fgr;varying vec2 vUv;varying vec3 vA,vB;varying float vPat,vSh,vPart,vDepth,vFid;
 void main(){vec3 c;
   if(vPart>0.5)c=vec3(0.5);
   else{float u=vUv.x,v=vUv.y;
-    if(vPat<0.5)c=v>0.5?vA:vB;
+    if(vFid>-0.5){float col=mod(vFid,fgr.x),row=floor(vFid/fgr.x);c=texture2D(fat,vec2((col+0.03+u*0.94)/fgr.x,1.0-(row+0.03+(1.0-v)*0.94)/fgr.y)).rgb;} /* 7.39: bandera real del país */
+    else if(vPat<0.5)c=v>0.5?vA:vB;
     else if(vPat<1.5)c=abs(u-0.5)<0.18?vB:vA;
     else if(vPat<2.5)c=abs((v-0.5)-(u-0.5)*0.7)<0.14?vB:vA;
     else c=length((vec2(u,v)-0.5)*vec2(1.5,1.0))<0.24?vB:vA;
@@ -4549,20 +4550,27 @@ function flagsBuild(grp,spots,night,fin){
   const n=spots.length,off=new Float32Array(n*3),prm=new Float32Array(n*4);
   spots.forEach((s,i)=>{off.set([s.p[0],s.p[1],s.p[2]],i*3);prm.set([s.ry,s.sz,s.ph,s.pat],i*4);});
   g.setAttribute('offset',new T.InstancedBufferAttribute(off,3));g.setAttribute('prm',new T.InstancedBufferAttribute(prm,4));
+  g.setAttribute('fid',new T.InstancedBufferAttribute(new Float32Array(n).fill(-1),1));
   g.setAttribute('colA',new T.InstancedBufferAttribute(new Float32Array(n*3),3));g.setAttribute('colB',new T.InstancedBufferAttribute(new Float32Array(n*3),3));
   g.instanceCount=n;g.userData.n=n;
-  const fog=GL.scene.fog,u={time:GL.crowdU.time,excite:GL.crowdU.excite,hideZ:GL.crowdU.hideZ,fogColor:{value:fog.color.clone()},fogDensity:{value:fog.density||0},light:{value:night?0.8:fin?0.98:1}};
+  const fog=GL.scene.fog,u={time:GL.crowdU.time,excite:GL.crowdU.excite,hideZ:GL.crowdU.hideZ,fogColor:{value:fog.color.clone()},fogDensity:{value:fog.density||0},light:{value:night?0.8:fin?0.98:1},fat:{value:flagAtlas()},fgr:{value:new T.Vector2(FLAG_COLS,Math.ceil(FLAG_IDS.length/FLAG_COLS))}};
   const m=new T.Mesh(g,new T.ShaderMaterial({uniforms:u,vertexShader:FLAG_VS,fragmentShader:FLAG_FS,side:T.DoubleSide}));m.frustumCulled=false;grp.add(m);
   GL.flagMesh=m;GL.flagSpots=spots;applyFlagTier();
 }
+/* 7.39: atlas con las banderas de todos los países (las de la hinchada son las de los equipos que juegan) */
+const FLAG_IDS=Object.keys(PAISES),FLAG_COLS=4;
+function flagAtlas(){if(GL.flagAtlas)return GL.flagAtlas;const W=128,H=84,rows=Math.ceil(FLAG_IDS.length/FLAG_COLS),c=cnv(W*FLAG_COLS,H*rows),x=c.getContext('2d');
+  FLAG_IDS.forEach((id,i)=>{bandera(id,W,H);const f=FLAGCV[id+'|'+W];if(f)x.drawImage(f,(i%FLAG_COLS)*W,Math.floor(i/FLAG_COLS)*H);});return GL.flagAtlas=tex(c);}
 function applyFlagTier(){if(!GL.flagMesh)return;const g=GL.flagMesh.geometry;g.instanceCount=Math.floor(g.userData.n*(GL.tier===0?1:GL.tier===1?0.8:0.5));}
 function recolorFlags(){
   if(!GL.flagMesh)return;const g=GL.flagMesh.geometry,A=g.attributes.colA,Bc=g.attributes.colB,c=new THREE.Color(),r=curRival();
   const kit=KITS[CFG.kit].c,misc=[['#ffd23f','#1f5fb5'],['#ffffff','#e63946'],['#2fbf71','#ffffff'],['#1b1f26','#ffd23f']];
+  const F=g.attributes.fid,fi=k=>k&&PAISES[k]?FLAG_IDS.indexOf(k):-1,fUs=fi(CFG.pais),fThem=fi(r.pais);
   GL.flagSpots.forEach((s,i)=>{let a,b;
+    F.array[i]=s.team===1?fThem:s.team===0?fUs:(i%2?fThem:fUs);
     if(s.team===1){a=r.color;b=s.alt?r.shorts:'#ffffff';}else if(s.team===0){const pc=paisColores();if(pc){[a,b]=pc;}else{a=kit;b=s.alt?'#1b1f26':'#ffffff';}if(s.swap)[a,b]=[b,a];}else[a,b]=misc[i%misc.length];
     c.set(a);A.array.set([c.r,c.g,c.b],i*3);c.set(b);Bc.array.set([c.r,c.g,c.b],i*3);});
-  A.needsUpdate=Bc.needsUpdate=true;
+  A.needsUpdate=Bc.needsUpdate=F.needsUpdate=true;
 }
 /* Lienzos: un solo dibujo con 20 franjas de texto; cada lienzo usa una franja */
 const BAN_N=20;
