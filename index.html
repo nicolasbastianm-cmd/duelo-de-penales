@@ -906,7 +906,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){if(id!=='result'&&typeof copa3D==='function')try{copa3D(false);const f=$('fw2d');if(f)f.remove();}catch(e){}if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.40 · 20 nov 2026';
+const VERSION='7.41 · 20 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -2196,8 +2196,10 @@ function glSplitPass(){
       r.shadowMap.autoUpdate=false;cam.layers.set(1);cam.layers.enable(2);r.setRenderTarget(this.a);r.clear();r.render(this.scene,cam);   // fondo, a media resolución
       this.bh.render(r,this.b,this.a);this.bv.render(r,this.a,this.b);                                           // desenfoque
       this.cp.render(r,rb,this.a);                                                                               // el fondo al cuadro final (limpia también la profundidad)
+      const sbg=this.scene.background;this.scene.background=null; /* 7.41: con cielo de color (noche) el render limpiaba el cuadro y borraba las tribunas ya copiadas */
       cam.layers.set(1);r.setRenderTarget(rb);this.scene.overrideMaterial=this.om;r.render(this.scene,cam);this.scene.overrideMaterial=null; // solo la profundidad del fondo sólido: tapa lo que queda detrás
       r.shadowMap.autoUpdate=su;cam.layers.set(0);r.render(this.scene,cam);                                      // la jugada, nítida, encima
+      this.scene.background=sbg;
       cam.layers.enableAll();r.autoClear=ac;}
   }
   return SplitPass;
