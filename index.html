@@ -499,7 +499,7 @@ const EN={
 'Torneo ganado':'Tournament won','Torneo sin ganar':'Tournament not won yet','TÚ':'YOU','RIV':'RIV','vs':'vs',
 // vestuario
 'Nombre':'Name','Número':'Number','Arquero':'Keeper','Camiseta':'Shirt','Diseño de la camiseta':'Shirt design','Guantes':'Gloves','Peinado':'Haircut','Barba':'Beard','Tatuajes':'Tattoos','Cancha':'Stadium',
-'Control para patear':'Shooting control','Apuntar y fuerza':'Aim and power','Deslizar':'Swipe','Relator':'Commentator','Toca para empezar':'Tap to start','¿De qué país eres?':'Where are you from?','Tu equipo juega con su camiseta y la hinchada se viste con sus colores. Lo puedes cambiar en el Vestuario.':'Your team plays in its shirt and the fans wear its colours. You can change it in the Locker room.','Ahora no':'Not now','Apagado':'Off','Música':'Music','Encendida':'On','Apagada':'Off','Voz del juego':'Game voice','Mi voz':'My voice','Grabada aquí':'Recorded here','Grabar mi voz':'Record my voice',
+'Control para patear':'Shooting control','Apuntar y fuerza':'Aim and power','Deslizar':'Swipe','Relator':'Commentator','Automática':'Automatic','Cambia cada partido':'Changes every match','Toca para empezar':'Tap to start','¿De qué país eres?':'Where are you from?','Tu equipo juega con su camiseta y la hinchada se viste con sus colores. Lo puedes cambiar en el Vestuario.':'Your team plays in its shirt and the fans wear its colours. You can change it in the Locker room.','Ahora no':'Not now','Apagado':'Off','Música':'Music','Encendida':'On','Apagada':'Off','Voz del juego':'Game voice','Mi voz':'My voice','Grabada aquí':'Recorded here','Grabar mi voz':'Record my voice',
 'Calidad gráfica':'Graphics quality','Automática':'Automatic','Se ajusta sola':'Adjusts itself','Alta':'High','Media':'Medium','Baja':'Low','Más fluida':'Smoother','Listo':'Done','Idioma':'Language',
 'Rayas':'Stripes','Franjas':'Hoops','Banda':'Sash','Lisa con vivos':'Plain with trim','Clásico':'Classic','Degradado':'Fade','Rapado':'Buzz cut','Cresta':'Mohawk','Moño':'Bun',
 'Sin barba':'No beard','Corta':'Short','Tupida':'Full','Bigote':'Moustache','Sin tatuajes':'No tattoos','Un brazo':'One arm','Dos brazos':'Both arms','Brazos y pierna':'Arms and leg',
@@ -700,7 +700,6 @@ const GLOVES={
 const STAGES={
   estadio:{n:'Estadio',p:'Estadio',vol:0.04},
   atardecer:{n:'Atardecer',p:'Estadio al atardecer',vol:0.045,need:{saves:20}},
-  lluvia:{n:'Lluvia',p:'Estadio con lluvia',vol:0.04,need:{saves:30}},
   noche:{n:'Noche',p:'Estadio de noche',vol:0.045,need:{saves:40}},
   final:{n:'La final',p:'Estadio de la final',vol:0.07,need:{trophy:1}},
   barrio:{n:'Barrio',p:'Cancha del barrio',vol:0.025}};
@@ -904,10 +903,10 @@ function hud(){
   lifeEls.forEach((el,i)=>el.classList.toggle('lost',i>=S.lives));
 }
 const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo','album','howto','paisPick'];
-function show(id){if(id!=='result'&&typeof copa3D==='function')try{copa3D(false);}catch(e){}if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
+function show(id){if(id!=='result'&&typeof copa3D==='function')try{copa3D(false);const f=$('fw2d');if(f)f.remove();}catch(e){}if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.28 · 19 nov 2026';
+const VERSION='7.30 · 20 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -1144,9 +1143,9 @@ const PAISES={
   paisesbajos:{n:'Países Bajos',c:'#ff7a00',t:'#1b1f26',c2:'#1b1f26',sh:'#1b1f26',so:'#ff7a00',st:1,nc:'#1b1f26',f:['h',['#ae1c28','#ffffff','#21468b']]},
   eeuu:{n:'Estados Unidos',c:'#f6f3e8',t:'#1f3a93',c2:'#1f3a93',sh:'#1f3a93',so:'#f6f3e8',st:1,nc:'#1f3a93',f:['eeuu']},
   japon:{n:'Japón',c:'#123b8f',t:'#ffffff',c2:'#ffffff',sh:'#123b8f',so:'#123b8f',st:1,nc:'#ffffff',f:['disco']}};
-const FLAGC={};
+const FLAGC={},FLAGCV={};
 function bandera(id,w=60,h=40){
-  const k=id+'|'+w;if(FLAGC[k])return FLAGC[k];const P=PAISES[id],cv2=document.createElement('canvas');cv2.width=w;cv2.height=h;const x=cv2.getContext('2d'),f=P.f;
+  const k=id+'|'+w;if(FLAGC[k])return FLAGC[k];if(!PAISES[id])return'';const P=PAISES[id],cv2=document.createElement('canvas');cv2.width=w;cv2.height=h;const x=cv2.getContext('2d'),f=P.f;
   const star=(cx,cy,r,col)=>{x.fillStyle=col;x.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,rr=i%2?r*0.4:r;x.lineTo(cx+Math.cos(a)*rr,cy+Math.sin(a)*rr);}x.fill();};
   if(f[0]==='h'){f[1].forEach((c,i)=>{x.fillStyle=c;x.fillRect(0,h*i/f[1].length,w,h/f[1].length+1);});}
   else if(f[0]==='v'){f[1].forEach((c,i)=>{x.fillStyle=c;x.fillRect(w*i/f[1].length,0,w/f[1].length+1,h);});}
@@ -1160,7 +1159,7 @@ function bandera(id,w=60,h=40){
   if(P.sol){x.fillStyle=P.sol;x.beginPath();x.arc(w/2,h/2,h*0.1,0,7);x.fill();}
   if(P.escudo){x.fillStyle=P.escudo;x.beginPath();x.arc(w/2,h/2,h*0.12,0,7);x.fill();}
   x.strokeStyle='rgba(0,0,0,.25)';x.lineWidth=1;x.strokeRect(0.5,0.5,w-1,h-1);
-  return FLAGC[k]=cv2.toDataURL('image/png');
+  FLAGCV[k]=cv2;return FLAGC[k]=cv2.toDataURL('image/png');
 }
 function setPaisKit(){if(CFG.pais&&PAISES[CFG.pais]){const P=PAISES[CFG.pais];KITS.pais={c:P.c,t:P.t,c2:P.c2,sh:P.sh,so:P.so,st:P.st,nc:P.nc,n:'Selección',p:'Camiseta de la selección'};}else{delete KITS.pais;if(CFG.kit==='pais')CFG.kit='naranjo';}}
 /* dos colores para las banderas de la hinchada: los dos primeros de la bandera del país */
@@ -1180,9 +1179,9 @@ $('ppSkip').addEventListener('click',()=>{CFG.paisAsk=true;saveCfg();renderHome(
 setTimeout(()=>{if(!$('home').hidden)try{paisAsk();}catch(e){}},0); /* el menú viene visible desde el HTML, sin pasar por show() */
 /* Uniforme completo (7.23): la camiseta «Selección» trae short, medias, vivos y diseño típicos de su país (sin escudos
    ni marcas); las demás camisetas usan el diseño que eligió el jugador y short blanco, como antes. Los rivales igual. */
-function usKitP(){const k=KITS[CFG.kit]||KITS.naranjo;return{shirt:k.c,c2:k.c2||k.t,shorts:k.sh||'#f3f2ec',socks:k.so||k.c,style:k.st||(DESIGNS[CFG.design]||DESIGNS.rayas).s,numColor:k.nc||k.t};}
+function usKitP(){const k=KITS[CFG.kit]||KITS.naranjo;return{flag:CFG.kit==='pais'?CFG.pais:null,shirt:k.c,c2:k.c2||k.t,shorts:k.sh||'#f3f2ec',socks:k.so||k.c,style:k.st||(DESIGNS[CFG.design]||DESIGNS.rayas).s,numColor:k.nc||k.t};}
 function hexD(a,b){const x=parseInt(a.slice(1),16),y=parseInt(b.slice(1),16);return Math.hypot((x>>16)-(y>>16),((x>>8)&255)-((y>>8)&255),(x&255)-(y&255));}
-function rivKitP(r){const P=r&&PAISES[r.pais],k=P?{shirt:r.color,c2:P.c2,shorts:P.sh,socks:P.so,style:P.st}:{shirt:r.color,c2:r.shorts,shorts:r.shorts,socks:'#f3f2ec',style:KIT_ST[r.code]||1};
+function rivKitP(r){const P=r&&PAISES[r.pais],k=P?{flag:r.pais,shirt:r.color,c2:P.c2,shorts:P.sh,socks:P.so,style:P.st}:{shirt:r.color,c2:r.shorts,shorts:r.shorts,socks:'#f3f2ec',style:KIT_ST[r.code]||1};
   /* si viste casi igual que tu equipo, el rival sale con su segundo uniforme: camiseta del color de su short y al revés */
   const us=(KITS[CFG.kit]||KITS.naranjo).c;if(hexD(k.shirt,us)<110){const sh=k.shorts;k.shorts=k.shirt;k.shirt=sh;k.socks=sh;k.c2=k.shorts;}return k;}
 function usTagHTML(){return (CFG.pais&&PAISES[CFG.pais]?`<img class="flg" src="${bandera(CFG.pais,30,20)}" alt="">`:'')+'TÚ';}
@@ -1201,8 +1200,8 @@ function renderLocker(){
   if(!DESIGNS[CFG.design])CFG.design='rayas';$('disSeg').innerHTML=Object.entries(DESIGNS).map(([k,v])=>`<label><input type="radio" name="design" value="${k}"${k===CFG.design?' checked':''}><span>${v.n}</span></label>`).join('');
   for(const[id,name,tab]of[['cutSeg','cut',PEINADOS],['beardSeg','beard',BARBAS],['tatSeg','tat',TATS]]){if(!tab[CFG[name]])CFG[name]=Object.keys(tab)[0];
     $(id).innerHTML=Object.entries(tab).map(([k,v])=>`<label><input type="radio" name="${name}" value="${k}"${k===CFG[name]?' checked':''}><span>${v.n}</span></label>`).join('');}
-  $('stageSeg').innerHTML=Object.entries(STAGES).map(([k,v])=>{const lk=!isUnlocked(v);
-    return `<label><input type="radio" name="stage" id="stage-${k}" value="${k}"${lk?' disabled':''}${k===CFG.stage?' checked':''}><span>${v.n}${lk?`<small>${needText(v.need)}</small>`:''}</span></label>`;}).join('');
+  $('stageSeg').innerHTML=`<label><input type="radio" name="stage" id="stage-auto" value="auto"${CFG.stageAuto!==false?' checked':''}><span>Automática<small>Cambia cada partido</small></span></label>`+Object.entries(STAGES).map(([k,v])=>{const lk=!isUnlocked(v);
+    return `<label><input type="radio" name="stage" id="stage-${k}" value="${k}"${lk?' disabled':''}${CFG.stageAuto===false&&k===CFG.stage?' checked':''}><span>${v.n}${lk?`<small>${needText(v.need)}</small>`:''}</span></label>`;}).join('');
   const all=[...Object.values(KITS),...Object.values(GLOVES),...Object.values(STAGES)];
   const next=all.filter(v=>v.need&&v.need.saves&&S.total<v.need.saves).sort((a,b)=>a.need.saves-b.need.saves)[0];
   let txt=`Llevas ${S.total} puntos (cada atajada o gol suma 1). `;
@@ -1214,7 +1213,7 @@ function renderLocker(){
 $('name').addEventListener('input',e=>{CFG.name=e.target.value.slice(0,10);saveCfg();});
 $('num').addEventListener('input',e=>{const n=parseInt(e.target.value,10);if(n>=1&&n<=99){CFG.num=n;saveCfg();}});
 $('num').addEventListener('blur',e=>{e.target.value=CFG.num;});
-$('locker').addEventListener('change',e=>{const t=e.target;if(t.name==='pais'){CFG.pais=t.value;setPaisKit();if(CFG.pais)CFG.kit='pais';saveCfg();renderLocker();GL.pKey=null;GL.crowdKey=null;return;}if(t.name==='kit')CFG.kit=t.value;else if(t.name==='glove')CFG.glove=t.value;else if(t.name==='design')CFG.design=t.value;else if(t.name==='cut'||t.name==='beard'||t.name==='tat')CFG[t.name]=t.value;else if(t.name==='lang'){CFG.lang=t.value;saveCfg();location.reload();return;}else if(t.name==='stage')CFG.stage=t.value;else if(t.name==='kickctrl'){CFG.kickCtrl=t.value;}else if(t.name==='quality'){CFG.quality=t.value;if(GL.ok){const nt=initialTier();if(nt!==GL.tier){GL.tier=nt;glApplyTier();}}}saveCfg();});
+$('locker').addEventListener('change',e=>{const t=e.target;if(t.name==='pais'){CFG.pais=t.value;setPaisKit();if(CFG.pais)CFG.kit='pais';saveCfg();renderLocker();GL.pKey=null;GL.crowdKey=null;return;}if(t.name==='kit')CFG.kit=t.value;else if(t.name==='glove')CFG.glove=t.value;else if(t.name==='design')CFG.design=t.value;else if(t.name==='cut'||t.name==='beard'||t.name==='tat')CFG[t.name]=t.value;else if(t.name==='lang'){CFG.lang=t.value;saveCfg();location.reload();return;}else if(t.name==='stage'){if(t.value==='auto')CFG.stageAuto=true;else{CFG.stage=t.value;CFG.stageAuto=false;}}else if(t.name==='kickctrl'){CFG.kickCtrl=t.value;}else if(t.name==='quality'){CFG.quality=t.value;if(GL.ok){const nt=initialTier();if(nt!==GL.tier){GL.tier=nt;glApplyTier();}}}saveCfg();});
 function newPrizes(){const now=unlockedIds(),base=S.prizeBase||now;const fresh=now.filter(x=>!base.includes(x));S.prizeBase=now;return fresh;}
 function showPrizes(list){
   const el=$('rPrizes');
@@ -1467,6 +1466,7 @@ function startTutorial0(after){
 }
 function maybeTut(fn){if(!CFG.tutDone&&roleNow()!=='kicker')startTutorial(fn);else fn();}
 function startEndless(){
+  stageAuto(-1);
   S.role=roleNow();ROLE=S.role;
   S.xpGain=0;S.lvUp=null;
   S.racha=0;S.mode='endless';S.pow=1;S.powOn=null;S.vozVida=false;S.saves=0;S.lives=3;S.lvlSave=0;S.lvlKick=0;S.tIdx=-1;S.best=getBest();S.tour=null;S.seen=new Set(['rasante','colocado']);S.prizeBase=unlockedIds();
@@ -1529,8 +1529,17 @@ function firstVisit(){
   const unlock=()=>{audioInit();removeEventListener('pointerdown',unlock,true);removeEventListener('keydown',unlock,true);};
   addEventListener('pointerdown',unlock,true);addEventListener('keydown',unlock,true);
 }
+/* Cancha automática (7.29): si el jugador no eligió una fija, cada partido cambia. En la copa sube la emoción:
+   cuartos de día, semifinal al atardecer y la final de noche o en el estadio de la final (si ya los desbloqueó). */
+function stageAuto(round){
+  if(CFG.stageAuto===false)return;const ok=k=>STAGES[k]&&isUnlocked(STAGES[k]),cur=CFG.stage;let pick=null;
+  if(round===2)pick=ok('final')&&Math.random()<0.6?'final':ok('noche')?'noche':null;
+  else if(round===1)pick=ok('atardecer')?'atardecer':ok('noche')?'noche':null;
+  if(!pick){const U=Object.keys(STAGES).filter(k=>ok(k)&&k!=='final'&&k!==cur);pick=U.length?U[Math.floor(Math.random()*U.length)]:cur;}
+  if(pick&&pick!==cur){CFG.stage=pick;saveCfg();}
+}
 function startMatch(){
-  DIAG.t0=performance.now();
+  DIAG.t0=performance.now();stageAuto(S.tour&&!S.tour.duo?S.tour.round:-1);
   S.racha=0;S.mode='tour';S.pow=1;S.powOn=null;S.role=roleNow();ROLE=S.role;S.lvlSave=0;S.tour.sh={us:[],them:[]};Object.assign(S.tour,{hist:[],gkHist:[],toldS:false,toldK:false,vozMS:false,st:{saves:0,kicks:0,miss:0}});statAdd('part');S.xpGain=0;S.lvUp=null;resetKeeper();show(null);crowdStart();hud();
   if(GL.ok&&!reduce){const r=RIVALS[S.tour.round];S.phase='intro';S.introT=0;S.banner={title:r.stage,sub:'Tu equipo vs '+r.team,t:0,dur:introLen()-0.3};ambReact('entrance');}else themTurn();vozIntro();cv.focus({preventScroll:true});
 }
@@ -1561,7 +1570,7 @@ function endMatch(w){
       tempSave();medalScan();extra+=medalNote();
       $('rTitle').textContent='¡CAMPEONES!';$('rSub').textContent=`Ganaste la final a ${r.team}.`;
       $('rNote').textContent=nt+extra;showPrizes(newPrizes());
-      confetti(140);setTimeout(sfx.fanfare,600);fuegos(TEMP.copa===0?12:8);setTimeout(()=>copa3D(true),80);
+      confetti(140);setTimeout(sfx.fanfare,600);fuegos(TEMP.copa===0?12:8);fuegos2D(TEMP.copa===0?9:6);setTimeout(()=>copa3D(true),80);
       sobreBtns([{t:'Ver la vitrina',f:()=>{goHome();renderVit();show('vitrina');}},{t:'Volver al menú',f:goHome}]);
     }
   }else{
@@ -2616,17 +2625,17 @@ function glBuildPlayers(){
   if(GL.charGLB){const kit=KITS[CFG.kit],r=curRival(),me=meLook();
     GL.meK=makeReal({cut:me.cut,beard:me.beard,mus:me.mus,legTat:me.legTat,style:7,c2:col(kit.c,0.5),shirt:kit.c,shorts:col(kit.c,0.45),socks:kit.c,glove:GLOVES[CFG.glove].c,num:CFG.num,name:CFG.name,numColor:kit.t,height:1.9});
     GL.meS=makeReal({...me,capt:true,boots:BOOTS[(CFG.num||1)%BOOTS.length],...usKitP(),num:CFG.num,name:CFG.name,height:1.85});
-    GL.rivS=makeReal({tat:[0,1],legTat:-1,head:HEAD_IDS[((r.code||'A').charCodeAt(1)||0)%HEAD_IDS.length],beard:[0.95,0.6,0.95][((r.code||'A').charCodeAt(1)||0)%3],boots:BOOTS[3],...rivKitP(r),num:9,skin:r.skin,hair:r.hair,height:2.0});
+    GL.rivS=makeReal({tat:[0,1],legTat:-1,head:HEAD_IDS[((r.code||'A').charCodeAt(1)||0)%HEAD_IDS.length],beard:[0.95,0.6,0.95][((r.code||'A').charCodeAt(1)||0)%3],boots:BOOTS[3],...rivKitP(r),num:9,name:apellido(r.pais,9),skin:r.skin,hair:r.hair,height:2.0});
     GL.rivK=makeReal({head:HEAD_IDS[((r.code||'A').charCodeAt(2)||1)%HEAD_IDS.length],style:7,c2:col(r.gk,0.5),beard:0.85,pants:true,cap:(r.code||'').charCodeAt(0)%2?col(r.gk,0.55):null,shirt:r.gk,shorts:'#1b1f26',socks:r.gk,glove:'#f6f3e8',num:1,skin:r.gkSkin,hair:r.gkHair,height:1.92});
     /* En una tanda cada penal lo patea un jugador distinto: cinco pateadores rivales que se turnan. El primero es la figura
        del equipo; los otros cuatro son los mismos compañeros que esperan en el círculo central (mismo número y mismo aspecto). */
     GL.rivPool=[GL.rivS];GL.rivS.userData.num=9;
-    for(const num of[10,7,11,8]){const i=EX_NUMS.indexOf(num),m=makeReal({...exLook(i,1),...rivKitP(r),num,height:1.93+((i*37+11)%10)/90});
+    for(const num of[10,7,11,8]){const i=EX_NUMS.indexOf(num),m=makeReal({...exLook(i,1,teamSeed(r.pais||r.code)),...rivKitP(r),num,name:apellido(r.pais,num),height:1.93+((i*37+11)%10)/90});
       m.userData.num=num;m.visible=false;GL.rivPool.push(m);}
     /* Tu equipo igual (7.26): si eres arquero (o «Los dos»), tu personaje queda en el arco y patean cinco compañeros que se
        turnan, con números distintos al tuyo. Si solo pateas, pateas siempre tú (GL.usPool[0]). */
     GL.usPool=[GL.meS];GL.meS.userData.num=CFG.num;
-    for(const num of[9,10,7,11,8,6].filter(n=>n!==+CFG.num).slice(0,5)){const i=EX_NUMS.indexOf(num),m=makeReal({...exLook(i>=0?i:4,0),...usKitP(),num,height:1.86+((num*37)%10)/90});
+    for(const num of[9,10,7,11,8,6].filter(n=>n!==+CFG.num).slice(0,5)){const i=EX_NUMS.indexOf(num),m=makeReal({...exLook(i>=0?i:4,0,teamSeed(CFG.pais)),...usKitP(),num,name:apellido(CFG.pais,num),height:1.86+((num*37)%10)/90});
       m.userData.num=num;m.visible=false;GL.usPool.push(m);}
     for(const k of['meK','meS','rivS','rivK'])sc.add(GL[k]);for(const m of GL.rivPool)if(m!==GL.rivS)sc.add(m);for(const m of GL.usPool)if(m!==GL.meS)sc.add(m);glBuildExtras();return;}
   const kit=KITS[CFG.kit],r=curRival(),plate=()=>plateTexture(CFG.name,CFG.num,kit.t);
@@ -3090,8 +3099,12 @@ function kitMaterial(base,color,o={}){
   m.customProgramCacheKey=()=>'kit8';return m;
 }
 
-function numberPlate(name,num,colr,soloTex){
-  const c=cnv(256,256),x=c.getContext('2d');x.textAlign='center';x.textBaseline='middle';x.fillStyle=colr;x.strokeStyle='rgba(0,0,0,.25)';x.lineWidth=4;
+function numberPlate(name,num,colr,soloTex,flag){
+  const c=cnv(256,256),x=c.getContext('2d');
+  /* 7.30: en el pecho, una insignia con la bandera del país (escudo genérico, no el de ninguna federación) */
+  if(flag&&!name&&PAISES[flag]){bandera(flag,150,100);const fc=FLAGCV[flag+'|150'];const sh=()=>{x.beginPath();x.moveTo(52,36);x.lineTo(204,36);x.lineTo(204,140);x.quadraticCurveTo(200,200,128,232);x.quadraticCurveTo(56,200,52,140);x.closePath();};
+    x.save();sh();x.clip();x.fillStyle='#ffffff';x.fillRect(40,30,180,210);if(fc)x.drawImage(fc,52,36,152,140);x.restore();sh();x.lineWidth=12;x.strokeStyle='#e8c04a';x.stroke();
+    const t=tex(c);if(soloTex)return t;}x.textAlign='center';x.textBaseline='middle';x.fillStyle=colr;x.strokeStyle='rgba(0,0,0,.25)';x.lineWidth=4;
   const nm=(name||'').trim().toUpperCase();if(nm){let fs=40;x.font=`${fs}px ${DISPLAY}`;const w=x.measureText(nm).width;if(w>220){fs*=220/w;x.font=`${fs}px ${DISPLAY}`;}x.fillText(nm,128,34);}
   x.font=`${nm?150:170}px ${DISPLAY}`;x.strokeText(String(num),128,nm?156:136);x.fillText(String(num),128,nm?156:136);
   const t=tex(c);if(soloTex)return t;return new THREE.Mesh(new THREE.PlaneGeometry(30,30),new THREE.MeshStandardMaterial({map:t,transparent:true,roughness:0.85,polygonOffset:true,polygonOffsetFactor:-4,depthWrite:false}));
@@ -3190,7 +3203,7 @@ function makeReal(o){
     else if(/Body/.test(part)){n.material=skinMaterial(n.material,n.geometry,o);}
     if(n.material.isMeshStandardMaterial){n.material.envMapIntensity=GL.envI||0.6;addRim(n.material);
       for(const k of['map','normalMap']){const tx=n.material[k];if(tx&&tx.anisotropy<4){tx.anisotropy=Math.min(8,GL.r.capabilities.getMaxAnisotropy());tx.needsUpdate=true;}}}});
-  if(o.num!=null&&B.Spine2){const tB=numberPlate(o.name,o.num,o.numColor||contrast(o.shirt),1),tF=numberPlate('',o.num,o.numColor||contrast(o.shirt),1);
+  if(o.num!=null&&B.Spine2){const tB=numberPlate(o.name,o.num,o.numColor||contrast(o.shirt),1),tF=numberPlate('',o.num,o.numColor||contrast(o.shirt),1,o.flag);
     const sk=shirtN&&shirtN.isSkinnedMesh&&shirtN.skeleton,bi=sk?sk.bones.findIndex(q=>/Spine2(_\d+)?$/.test(q.name)):-1,U=shirtN&&shirtN.material.userData;
     if(bi>=0&&U&&U.knT){ // estampado: se calcula dónde cae la placa en la camiseta en reposo y el sombreador la pinta sobre la tela
       const toGeo=new T.Matrix4().copy(shirtN.bindMatrixInverse).multiply(new T.Matrix4().copy(sk.boneInverses[bi]).invert());
@@ -3332,6 +3345,7 @@ function poseKickReal(dt){
   // arquero rival
   const gk=GL.rivK;let name='idle',t=S.time%4.6,mir=false,x=ai.x,lift=0;
   if(!(k&&k.shot)&&gk.userData.acts.ss1&&gk.userData.acts.ss2){const v=Math.cos(S.time*1.3);if(Math.abs(v)>0.35){name=v>0?'ss1':'ss2';t=(S.time*0.85)%gk.userData.acts[name].getClip().duration;}}
+  if(k&&!k.shot&&S.phase==='aim'){const hp=S.time%3.4;if(hp<0.75)lift=Math.max(lift,Math.abs(Math.sin(hp/0.75*Math.PI*2))*0.1);} /* 7.30: saltitos en la línea */
   if(k&&k.shot){const s=k.shot,tArr=KT()+s.T;
     if(ai.dir!=null&&k.t>=ai.diveAt){const el=k.t-ai.diveAt,pr=clamp(el/0.42,0,1),e=smooth(0,1,pr);
       if(ai.dir===0){const A=gk.userData.acts;
@@ -3589,6 +3603,29 @@ function copa3D(on){
   const t0=performance.now();GL.copa={r,raf:0};
   const loop=()=>{if(!GL.copa)return;const t=(performance.now()-t0)/1000,k=Math.min(1,t/0.6);g.rotation.y=t*1.1;g.position.y=Math.sin(t*2.2)*0.05;g.scale.setScalar(0.25+0.75*(1-Math.pow(1-k,3)));r.render(sc,cam);GL.copa.raf=requestAnimationFrame(loop);};loop();
 }
+/* Fuegos artificiales en pantalla (7.29): en el teléfono la tarjeta de campeón tapa el fondo de la cancha, así que los
+   cohetes se dibujan en una capa encima de todo (sin tocar los botones) y estallan alrededor de la tarjeta. */
+function fuegos2D(seg){
+  if(reduce)return;let cv=$('fw2d');if(cv)cv.remove();cv=document.createElement('canvas');cv.id='fw2d';
+  cv.style.cssText='position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:80';document.body.appendChild(cv);
+  const dpr=Math.min(2,window.devicePixelRatio||1),w=innerWidth,h=innerHeight;cv.width=w*dpr;cv.height=h*dpr;const c=cv.getContext('2d');c.scale(dpr,dpr);
+  const P=CFG.pais&&typeof paisColores==='function'?paisColores():null,L=['#ffd23f','#ff5a4e','#5cc8ff','#7ee04a','#ff7ae0','#ffffff'],col=()=>P&&Math.random()<0.5?P[Math.floor(Math.random()*P.length)]:L[Math.floor(Math.random()*L.length)];
+  const sp=[],u=Math.min(w,h)/400;let t=0,next=0,last=performance.now();
+  const step=()=>{const now=performance.now(),dt=Math.min(0.05,(now-last)/1000);last=now;t+=dt;
+    if(t<seg&&t>=next){next=t+0.22+Math.random()*0.35;const x=w*(0.1+Math.random()*0.8);sp.push({x,y:h+10,px:x,py:h+10,vx:(Math.random()-0.5)*40*u,vy:-(h*(0.95+Math.random()*0.35)),ty:h*(0.08+Math.random()*0.3),rk:1,c:col(),life:3});}
+    c.clearRect(0,0,w,h);c.globalCompositeOperation='lighter';
+    for(let i=sp.length-1;i>=0;i--){const q=sp[i];q.px=q.x;q.py=q.y;
+      if(q.rk){q.vy+=h*0.9*dt;q.x+=q.vx*dt;q.y+=q.vy*dt;if(q.y<=q.ty||q.vy>-40){sp.splice(i,1);const n=90+Math.floor(Math.random()*50),v0=(230+Math.random()*130)*u,c2=Math.random()<0.4?col():q.c;
+          for(let j=0;j<n;j++){const a=Math.random()*Math.PI*2,v=v0*(0.55+Math.random()*0.45);sp.push({x:q.x,y:q.y,px:q.x,py:q.y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,c:j%3?q.c:c2,life:1.1+Math.random()*0.7,l0:1.8});}
+          sp.push({x:q.x,y:q.y,flash:1,life:0.18});continue;}}
+      else if(!q.flash){q.vy+=60*u*dt;const d=1-1.9*dt;q.vx*=d;q.vy*=d;q.x+=q.vx*dt;q.y+=q.vy*dt;}
+      q.life-=dt;if(q.life<=0){sp.splice(i,1);continue;}
+      if(q.flash){const g=c.createRadialGradient(q.x,q.y,0,q.x,q.y,90*u);g.addColorStop(0,'rgba(255,255,230,'+(q.life/0.18*0.8)+')');g.addColorStop(1,'rgba(255,255,230,0)');c.fillStyle=g;c.beginPath();c.arc(q.x,q.y,90*u,0,7);c.fill();continue;}
+      const al=q.rk?1:Math.min(1,q.life/0.6);c.globalAlpha=al;c.strokeStyle=q.c;c.lineWidth=(q.rk?2.6:2.6)*u;c.lineCap='round';c.beginPath();c.moveTo(q.px-(q.x-q.px)*(q.rk?3:2),q.py-(q.y-q.py)*(q.rk?3:2));c.lineTo(q.x,q.y);c.stroke();}
+    c.globalAlpha=1;c.globalCompositeOperation='source-over';
+    if(t<seg||sp.length)requestAnimationFrame(step);else cv.remove();};
+  requestAnimationFrame(step);
+}
 function fwCol(){const P=CFG.pais&&typeof paisColores==='function'?paisColores():null;const L=['#ffd23f','#ff5a4e','#5cc8ff','#7ee04a','#ff7ae0','#ffffff'];
   const h=P&&Math.random()<0.55?P[Math.floor(Math.random()*P.length)]:L[Math.floor(Math.random()*L.length)];const c=new THREE.Color(h);return[c.r,c.g,c.b];}
 function fuegos(seg){
@@ -3676,9 +3713,19 @@ function drawKickAid(){
 /* ---------- Árbitro y equipos en la mitad de la cancha ----------
    Como en una tanda real: los dos equipos esperan en la línea central y el árbitro junto al área.
    Se ven desde la cámara del arquero, en la presentación y en las repeticiones. */
-const SKINS=['#f4dcc8','#e6c2a4','#c99a78','#9c6f52','#74513b'],HAIRS=['#1b130d','#3a2314','#6b4423','#c49a5a','#111111'];
+const SKINS=['#f4dcc8','#e6c2a4','#c99a78','#9c6f52','#74513b'],HAIRS=['#1b130d','#3a2314','#6b4423','#c49a5a','#111111','#8a5a2b','#d6b06a','#9c3f22'];
 const EX_NUMS=[2,3,4,5,6,7,8,10,11];
-function exLook(i,side){return{boots:BOOTS[(i*3+side*2)%BOOTS.length],skin:SKINS[(i*3+side*2)%5],hair:HAIRS[(i*2+side*3)%5],head:[null,'leo','c28',null,'josh','c42','c01','leo','c28'][(i*2+side*3+(side?4:0))%9],hairVol:[1,1.13,1,1.22,1,1.08,1.16][(i*3+side*5)%7],band:(i*7+side*2)%9===4,beard:[0,0.5,0,0.9,0,0.45,0,0,0.8][(i*4+side*3)%9],mus:[0,0,0.8,0,0,0,0.7,0,0][(i*5+side)%9],build:0.93+((i*53+side*17)%10)/62,bald:(i*2+side)%5===3,
+/* Apellidos comunes por idioma (inventados para el juego, no son jugadores reales) */
+const APELL={es:['Rojas','Muñoz','Díaz','Soto','Pérez','Silva','Torres','Flores','Vargas','Reyes','Castro','Morales','Herrera','Romero','Navarro','Ríos'],
+  pt:['Silva','Santos','Souza','Lima','Costa','Pereira','Alves','Rocha','Gomes','Ribeiro','Martins','Araújo'],fr:['Martin','Bernard','Durand','Petit','Moreau','Laurent','Girard','Roux','Fournier','Bonnet'],
+  it:['Rossi','Russo','Ferrari','Esposito','Bianchi','Romano','Colombo','Ricci','Greco','Conti'],de:['Müller','Schmidt','Fischer','Weber','Becker','Wagner','Hoffmann','Koch','Richter','Klein'],
+  en:['Smith','Jones','Taylor','Brown','Walker','Wright','Harris','Clarke','Hughes','Ward'],nl:['De Jong','Bakker','Visser','Smit','Meijer','De Boer','Mulder','Bos','Vos','Peters'],
+  ja:['Sato','Suzuki','Takahashi','Tanaka','Watanabe','Ito','Kato','Yamamoto','Nakamura','Kobayashi']};
+const PAIS_LANG={brasil:'pt',portugal:'pt',francia:'fr',italia:'it',alemania:'de',inglaterra:'en',eeuu:'en',paisesbajos:'nl',japon:'ja'};
+function apellido(pais,num){const L=APELL[PAIS_LANG[pais]||'es'];return L[(num*7+teamSeed(pais)*3)%L.length];}
+/* sd (7.30): semilla del equipo, para que cada selección tenga jugadores distintos (antes todas repetían las mismas caras) */
+function teamSeed(k){let h=0;for(const ch of String(k||''))h=(h*31+ch.charCodeAt(0))%997;return h%9;}
+function exLook(i0,side,sd){const i=i0+(sd||0);return{boots:BOOTS[(i*3+side*2)%BOOTS.length],skin:SKINS[(i*3+side*2)%5],hair:HAIRS[(i*2+side*3+(sd||0))%HAIRS.length],head:[null,'leo','c28',null,'josh','c42','c01','leo','c28'][(i*2+side*3+(side?4:0))%9],hairVol:[1,1.13,1,1.22,1,1.08,1.16][(i*3+side*5)%7],band:(i*7+side*2)%9===4,beard:[0,0.5,0,0.9,0,0.45,0,0,0.8][(i*4+side*3)%9],mus:[0,0,0.8,0,0,0,0.7,0,0][(i*5+side)%9],build:0.93+((i*53+side*17)%10)/62,bald:(i*2+side)%5===3,
   cut:[0,3,0,1,2,0,4,3,0][(i*5+side*2)%9],tat:[[0,0],[1,0],[0,0],[1,1],[0,1],[0,0]][(i*3+side)%6],legTat:(i*7+side)%8===3?1:0,long:(i*4+side)%7===5};}
 /* Elige al pateador rival de este penal y saca del círculo central al compañero que tiene su número (es él quien fue a patear) */
 function rivPick(i){
@@ -3699,7 +3746,7 @@ function glBuildExtras(){
   if(!GL.charGLB)return;
   const grp=new THREE.Group(),kit=KITS[CFG.kit],r=curRival(),n=[9,9,6][GL.tier||0],nums=EX_NUMS;GL.team=[];
   for(const side of[0,1])for(let i=0;i<n;i++){
-    const m=makeReal({...exLook(i,side),...(side?rivKitP(r):usKitP()),num:nums[i],capt:i===0&&side===1,height:1.72+((i*37+side*11)%10)/38});m.userData.num=nums[i];
+    const m=makeReal({...exLook(i,side,side?teamSeed(r.pais||r.code):teamSeed(CFG.pais)),...(side?rivKitP(r):usKitP()),num:nums[i],name:apellido(side?r.pais:CFG.pais,nums[i]),capt:i===0&&side===1,height:1.72+((i*37+side*11)%10)/38});m.userData.num=nums[i];
     m.position.set((side?1:-1)*(0.9+i*0.7),0,52.5);m.rotation.y=Math.PI+(side?-0.08:0.08);
     m.traverse(q=>{if(q.isMesh)q.castShadow=false;});m.userData.side=side;m.userData.idx=i;m.userData.home=[m.position.x,m.position.z,m.rotation.y];m.userData.ph=i*0.31+side*0.17;grp.add(m);GL.team.push(m);}
   rivMark();
