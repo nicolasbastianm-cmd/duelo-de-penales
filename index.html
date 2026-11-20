@@ -906,7 +906,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){if(id!=='result'&&typeof copa3D==='function')try{copa3D(false);const f=$('fw2d');if(f)f.remove();}catch(e){}if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.33 · 20 nov 2026';
+const VERSION='7.34 · 20 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -1179,12 +1179,11 @@ $('ppSkip').addEventListener('click',()=>{CFG.paisAsk=true;saveCfg();renderHome(
 setTimeout(()=>{if(!$('home').hidden)try{paisAsk();}catch(e){}},0); /* el menú viene visible desde el HTML, sin pasar por show() */
 /* Uniforme completo (7.23): la camiseta «Selección» trae short, medias, vivos y diseño típicos de su país (sin escudos
    ni marcas); las demás camisetas usan el diseño que eligió el jugador y short blanco, como antes. Los rivales igual. */
-function socksOk(so,sh,shirt){return hexD(so,sh)>80?so:hexD(shirt,sh)>80?shirt:'#f6f6f2';} /* 7.33: las medias nunca del mismo color que el short */
-function usKitP(){const k=KITS[CFG.kit]||KITS.naranjo,sh=k.sh||'#f3f2ec';return{flag:CFG.kit==='pais'?CFG.pais:null,shirt:k.c,c2:k.c2||k.t,shorts:sh,socks:socksOk(k.so||k.c,sh,k.c),style:k.st||(DESIGNS[CFG.design]||DESIGNS.rayas).s,numColor:k.nc||k.t};}
+function usKitP(){const k=KITS[CFG.kit]||KITS.naranjo,sh=k.sh||'#f3f2ec';return{flag:CFG.kit==='pais'?CFG.pais:null,shirt:k.c,c2:k.c2||k.t,shorts:sh,socks:k.so||k.c,style:k.st||(DESIGNS[CFG.design]||DESIGNS.rayas).s,numColor:k.nc||k.t};}
 function hexD(a,b){const x=parseInt(a.slice(1),16),y=parseInt(b.slice(1),16);return Math.hypot((x>>16)-(y>>16),((x>>8)&255)-((y>>8)&255),(x&255)-(y&255));}
 function rivKitP(r){const P=r&&PAISES[r.pais],k=P?{flag:r.pais,shirt:r.color,c2:P.c2,shorts:P.sh,socks:P.so,style:P.st}:{shirt:r.color,c2:r.shorts,shorts:r.shorts,socks:'#f3f2ec',style:KIT_ST[r.code]||1};
   /* si viste casi igual que tu equipo, el rival sale con su segundo uniforme: camiseta del color de su short y al revés */
-  const us=(KITS[CFG.kit]||KITS.naranjo).c;if(hexD(k.shirt,us)<110){const sh=k.shorts;k.shorts=k.shirt;k.shirt=sh;k.socks=sh;k.c2=k.shorts;}k.socks=socksOk(k.socks,k.shorts,k.shirt);return k;}
+  const us=(KITS[CFG.kit]||KITS.naranjo).c;if(hexD(k.shirt,us)<110){const sh=k.shorts;k.shorts=k.shirt;k.shirt=sh;k.socks=sh;k.c2=k.shorts;}return k;}
 function usTagHTML(){return (CFG.pais&&PAISES[CFG.pais]?`<img class="flg" src="${bandera(CFG.pais,30,20)}" alt="">`:'')+'TÚ';}
 
 /* ---------- Vestuario y premios ---------- */
@@ -2139,13 +2138,13 @@ async function glLoad(){
       import('three/addons/postprocessing/OutputPass.js'),import('three/addons/objects/Sky.js')]);
     THREE=T;GL.mods={EffectComposer,RenderPass,UnrealBloomPass,ShaderPass,OutputPass,Sky};
     const r=new T.WebGLRenderer({canvas:$('gl'),antialias:false,powerPreference:'high-performance'});
-    r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=1.05;r.shadowMap.enabled=true;r.shadowMap.type=T.PCFSoftShadowMap;
+    r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=1.22;r.shadowMap.enabled=true;r.shadowMap.type=T.PCFSoftShadowMap;
     GL.r=r;GL.scene=new T.Scene();GL.cam=new T.PerspectiveCamera(30,1,0.5,6000);GL.camI=new T.PerspectiveCamera(46,1,0.5,6000);GL.camR=new T.PerspectiveCamera(40,1,0.1,6000);GL.camK=new T.PerspectiveCamera(50,1,0.1,6000);
     GL.tier=initialTier();
     glComposer();GL.ok=true;$('gl').hidden=false;glResize();renderRoleUI();loadChar();
   }catch(e){console.warn('3D no disponible, se usa 2D',e);GL.ok=false;GL.failed=true;renderRoleUI();}
 }
-const GRADE={uniforms:{tDiffuse:{value:null},time:{value:0},vig:{value:0.3},grain:{value:0.02},sat:{value:1.2},con:{value:1.1}},
+const GRADE={uniforms:{tDiffuse:{value:null},time:{value:0},vig:{value:0.16},grain:{value:0.02},sat:{value:1.2},con:{value:1.1}},
   vertexShader:'varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
   fragmentShader:`uniform sampler2D tDiffuse;uniform float time,vig,grain,sat,con;varying vec2 vUv;
   void main(){vec4 c=texture2D(tDiffuse,vUv);vec3 col=c.rgb;float l=dot(col,vec3(0.2126,0.7152,0.0722));col=mix(vec3(l),col,sat);
@@ -2509,7 +2508,7 @@ function glBuildStage(){
     const fogC=lluv?'#98a2aa':tarde?'#e9b48f':st==='final'?'#b7cde0':'#b4d0ea';sc.fog=new T.FogExp2(fogC,lluv?0.0042:0.0021);sc.background=null;
     if(lluv){grp.add(new T.HemisphereLight('#c9d3db','#3d5233',0.95));addLight(grp,[sun.x*40,sun.y*40,sun.z*40+6],'#e4eaf0',1.5,2048);}
     else if(tarde){grp.add(new T.HemisphereLight('#ffd6b8','#4a5a34',0.75));addLight(grp,[sun.x*40,Math.max(6,sun.y*40),sun.z*40+6],'#ffb47a',2.9,2048);}
-    else{grp.add(new T.HemisphereLight('#dceeff','#4f6e3a',0.9));addLight(grp,[sun.x*40,sun.y*40,sun.z*40+6],'#fff1dc',3.4,2048);}
+    else{grp.add(new T.HemisphereLight('#dceeff','#4f6e3a',1.25));addLight(grp,[sun.x*40,sun.y*40,sun.z*40+6],'#fff1dc',3.4,2048);}
     const ct=cloudTexture();
     for(let i=0;i<16;i++){const a=srand(i+40)*Math.PI*2,R=1400+srand(i+41)*900,s=new T.Sprite(new T.SpriteMaterial({map:ct,fog:false,depthWrite:false,transparent:true,opacity:lluv?0.95:0.85,color:lluv?'#8b949b':tarde?'#ffc29a':'#ffffff'}));
       s.scale.set(700+srand(i)*500,220+srand(i+1)*120,1);s.position.set(Math.cos(a)*R,180+srand(i+2)*260,Math.sin(a)*R);grp.add(s);}
@@ -3008,7 +3007,7 @@ const HEADS={leo:[0.991,1.002,0.985],josh:[1.303,1.174,1.239],c28:[0.372,0.204,0
    el juego sabe abrir: así no quedan como archivos sueltos que se puedan bajar aparte (términos de Adobe, sección 3.6).
    Lo arma build.py desde modelos/. RES_V es una huella del contenido (evita usar una copia vieja guardada). Si el paquete
    no está (como en la copia de Claude), los modelos salen de la versión en texto (.js). */
-const RES_V='899e8c24',VOZ_V={voz:'43fded78',voz_en:'fd9e1aab'};let PACK=null;
+const RES_V='354e5ae8',VOZ_V={voz:'43fded78',voz_en:'fd9e1aab'};let PACK=null;
 function packGet(){if(!PACK)PACK=datGet('recursos.dat',RES_V);return PACK;}
 /* Lee un paquete .dat (mismo formato para recursos y voces; las voces van sin revolver: semilla 0) */
 function datGet(file,v){
@@ -3083,6 +3082,10 @@ function kitMaterial(base,color,o={}){
      #endif
      if(kskin>0.5){ // manga corta: de ahí a la muñeca es el brazo del jugador, con su tono de piel y, si tiene, su tatuaje
        vec3 sk=ksk*(0.9+0.1*smoothstep(0.35,0.8,L));
+       { /* 7.34: el brazo es parte de la camiseta pintada color piel: se le da piel (poros, tono más cálido en codo y antebrazo, sombra hacia la axila) para que no parezca una manga */
+         vec3 pq=vBP*vec3(0.9);float pn=fract(sin(dot(floor(pq),vec3(12.9898,78.233,37.719)))*43758.5453);
+         float alo=smoothstep(ksl,0.45,ktx);sk*=0.97+0.06*pn;sk*=mix(vec3(0.9,0.86,0.84),vec3(1.04,0.98,0.96),alo);
+         sk*=0.82+0.18*smoothstep(-0.4,0.6,vBN.y+0.3);}
        float tw=vBind.x>0.5?kta.x:kta.y;
        if(tw>0.0){float u=ktx*52.0,v=vBind.y*46.0+vBind.z*9.0;
          float p=sin(u*1.6+sin(v*1.1)*1.9)*sin(v*1.9+cos(u*0.8)*1.6),q=sin(u*3.1-v*2.3);
@@ -3182,6 +3185,8 @@ const SKIN_BASE=[0.53,0.31,0.225]; // color medio de la piel del modelo (para el
 const BOOTS=['#16181c','#f4f4ef','#e6f23c','#ff4a3d','#2f7bff','#16181c','#ff8a1f'];
 const KIT_ST={ARG:2,BRA:1,ESP:1,MEX:1,URU:1,ITA:1,GER:1,FRA:1}; /* 2 = rayas (Argentina), 1 = lisa con vivos */
 function makeReal(o){
+  /* 7.34: los zapatos nunca del mismo color que las medias (Nicolás: medias blancas con zapatos blancos se ve mal) */
+  if(o.boots&&o.socks&&hexD(o.boots,o.socks)<110){const alt=BOOTS.find(b=>hexD(b,o.socks)>=110&&hexD(b,o.shorts||'#000000')>=60)||'#16181c';o=Object.assign({},o,{boots:alt});}
   const T=THREE,g=GL.charGLB,m=GL.SU.clone(g.scene),root=new T.Group(),inner=new T.Group();root.add(inner);inner.add(m);
   const f=(o.height||1.9)/1.785,bw=o.build||1;m.scale.set(0.01*f*bw,0.01*f,0.01*f*bw);
   let shirtN=null;const B={},hdK=o.head&&GL.heads&&GL.heads[o.head]?HEADS[o.head]:null;
@@ -3194,7 +3199,7 @@ function makeReal(o){
     if(!n.isMesh)return;n.castShadow=true;n.receiveShadow=true;n.frustumCulled=false;const part=(n.parent&&n.parent.name)||'';
     if(/Shirt/.test(part))shirtN=n,n.material=kitMaterial(n.material,o.shirt,{capt:o.capt,geo:n.geometry,style:o.style==null?1:o.style,c2:o.c2||o.numColor||contrast(o.shirt),sleeve:longS?9:0.236,skinC,tat:o.tat});
     else if(/Socks/.test(part))n.material=kitMaterial(n.material,o.socks,{geo:n.geometry,style:o.style===0?0:5,c2:o.c2||o.numColor||contrast(o.socks)});
-    else if(/Shoes/.test(part)&&o.boots)n.material=kitMaterial(n.material,o.boots);
+    else if(/Shoes/.test(part)&&o.boots)n.material=kitMaterial(n.material,o.boots,{sleeve:1e6}); /* 7.34: sin esto el zapato caía en la rama de «piel» del sombreador y salía blanco siempre */
     else if(/Shorts/.test(part))n.material=kitMaterial(n.material,o.shorts,o.style===0?{}:{geo:n.geometry,style:6,c2:o.shirt});
     else if(/Hair|Eyelash/.test(part)&&o.head&&GL.heads&&GL.heads[o.head]){n.visible=false;n.castShadow=false;}
     else if(/Hair/.test(part)&&(o.bald||o.cap||cut===1)){n.visible=false;n.castShadow=false;}
