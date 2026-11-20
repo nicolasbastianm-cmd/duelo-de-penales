@@ -906,7 +906,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){if(id!=='result'&&typeof copa3D==='function')try{copa3D(false);const f=$('fw2d');if(f)f.remove();}catch(e){}if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.35 · 20 nov 2026';
+const VERSION='7.36 · 20 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -3007,7 +3007,7 @@ const HEADS={leo:[0.991,1.002,0.985],josh:[1.303,1.174,1.239],c28:[0.372,0.204,0
    el juego sabe abrir: así no quedan como archivos sueltos que se puedan bajar aparte (términos de Adobe, sección 3.6).
    Lo arma build.py desde modelos/. RES_V es una huella del contenido (evita usar una copia vieja guardada). Si el paquete
    no está (como en la copia de Claude), los modelos salen de la versión en texto (.js). */
-const RES_V='4514eb38',VOZ_V={voz:'43fded78',voz_en:'fd9e1aab'};let PACK=null;
+const RES_V='354e5ae8',VOZ_V={voz:'43fded78',voz_en:'fd9e1aab'};let PACK=null;
 function packGet(){if(!PACK)PACK=datGet('recursos.dat',RES_V);return PACK;}
 /* Lee un paquete .dat (mismo formato para recursos y voces; las voces van sin revolver: semilla 0) */
 function datGet(file,v){
@@ -3048,21 +3048,20 @@ async function loadChar(){
    (brazos abiertos), normalizada a la caja de la prenda: x va de muñeca a muñeca, y del borde inferior al cuello.
    Estilos: 0 liso · 1 puños y cuello · 2 rayas · 3 franjas · 4 banda · 5 medias con vuelta. */
 function kitMaterial(base,color,o={}){
-  const m=base.clone(),T=THREE,bb=o.geo?(o.geo.boundingBox||(o.geo.computeBoundingBox(),o.geo.boundingBox)).clone():null;
+  const m=base.clone(),T=THREE,bb=o.geo?(o.geo.boundingBox||(o.geo.computeBoundingBox(),o.geo.boundingBox)):null;
   const sz=bb?bb.max.clone().sub(bb.min):new T.Vector3(1,1,1);
-  if(bb&&o.bx){bb.min.x=o.bx[0];sz.x=o.bx[1];} /* 7.35: la camiseta nueva no llega a la muñeca: el ancho de referencia es fijo */
-  m.userData.kit={value:new T.Color(color)};m.userData.kit2={value:new T.Color(o.c2||color)};m.userData.kst={value:bb?(o.style||0):0};m.userData.kcap={value:o.capt?1:0};m.userData.kcl={value:o.bx?1:0};
+  m.userData.kit={value:new T.Color(color)};m.userData.kit2={value:new T.Color(o.c2||color)};m.userData.kst={value:bb?(o.style||0):0};m.userData.kcap={value:o.capt?1:0};
   m.userData.ksl={value:o.sleeve||9};m.userData.ksk={value:o.skinC||new T.Color(1,1,1)};m.userData.kta={value:new T.Vector2(o.tat?o.tat[0]:0,o.tat?o.tat[1]:0)};
   m.userData.knT={value:null};m.userData.kfT={value:null};m.userData.knOn={value:0};m.userData.knM={value:1};m.userData.knS={value:1};
   for(const k of['knC','knU','knV','knN','kfC','kfU','kfV','kfN'])m.userData[k]={value:new T.Vector3()};
   m.userData.kb0={value:bb?bb.min.clone():new T.Vector3()};m.userData.kb1={value:new T.Vector3(1/(sz.x||1),1/(sz.y||1),1/(sz.z||1))};
-  m.onBeforeCompile=sh=>{for(const k of['kit','kit2','kst','kb0','kb1','kcap','kcl','ksl','ksk','kta','knT','kfT','knOn','knM','knS','knC','knU','knV','knN','kfC','kfU','kfV','kfN'])sh.uniforms[k]=m.userData[k];
+  m.onBeforeCompile=sh=>{for(const k of['kit','kit2','kst','kb0','kb1','kcap','ksl','ksk','kta','knT','kfT','knOn','knM','knS','knC','knU','knV','knN','kfC','kfU','kfV','kfN'])sh.uniforms[k]=m.userData[k];
     sh.vertexShader='uniform vec3 kb0,kb1;varying vec3 vBind,vBP,vBN;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vBind=(position-kb0)*kb1;vBP=position;vBN=normal;');
-    sh.fragmentShader='uniform vec3 kit,kit2,ksk,knC,knU,knV,knN,kfC,kfU,kfV,kfN;uniform float kst,kcl,kcap,ksl,knOn,knM,knS;uniform vec2 kta;uniform sampler2D knT,kfT;varying vec3 vBind,vBP,vBN;\n'+sh.fragmentShader.replace('#include <map_fragment>',
+    sh.fragmentShader='uniform vec3 kit,kit2,ksk,knC,knU,knV,knN,kfC,kfU,kfV,kfN;uniform float kst,kcap,ksl,knOn,knM,knS;uniform vec2 kta;uniform sampler2D knT,kfT;varying vec3 vBind,vBP,vBN;\n'+sh.fragmentShader.replace('#include <map_fragment>',
     `float km=0.0,kpat=0.0,ktx=abs(vBind.x-0.5),ktor=1.0-smoothstep(0.150,0.160,ktx);
      if(kst>6.5){ // arquero: antebrazos acolchados y paneles laterales en el tono oscuro, trama tono sobre tono en el pecho
        float fore=smoothstep(0.322,0.332,ktx),side=ktor*smoothstep(0.112,0.120,ktx)*(1.0-step(0.84,vBind.y));
-       km=max(max(fore,side),max(step(0.462,ktx),ktor*step(0.955,vBind.y)*(1.0-kcl*step(0.07,ktx))));
+       km=max(max(fore,side),max(step(0.462,ktx),ktor*step(0.955,vBind.y)));
        kpat=ktor*(1.0-side)*step(0.5,fract((vBind.y+ktx*1.5)*13.0))*0.10+fore*step(0.78,fract(ktx*64.0))*0.22
            +(1.0-ktor)*(1.0-fore)*(1.0-smoothstep(0.012,0.02,abs(fract(ktx*9.0+0.3)-0.5)))*0.0;}
      else if(kst>5.5)km=step(0.435,ktx);
@@ -3071,7 +3070,7 @@ function kitMaterial(base,color,o={}){
        if(kst>3.5)km=ktor*(1.0-smoothstep(0.085,0.095,abs((vBind.x-0.5)*2.6+(vBind.y-0.5)*0.9)));
        else if(kst>2.5)km=step(0.5,fract(vBind.y*4.0+0.15));
        else if(kst>1.5)km=ktor*step(0.5,fract((vBind.x-0.5)*22.0+0.25));
-       km=max(km,step(0.462,ktx));km=max(km,ktor*step(0.955,vBind.y)*(1.0-kcl*step(0.07,ktx)));}
+       km=max(km,step(0.462,ktx));km=max(km,ktor*step(0.955,vBind.y));}
      vec3 kcol=mix(kit,kit2,km)*(1.0-kpat);
      float kskin=step(ksl,ktx);kcol=mix(kcol,kit2,step(ksl-0.011,ktx)*(1.0-kskin)); // ribete donde termina la manga corta
      kcol=mix(kcol,vec3(1.0,0.82,0.12),kcap*step(vBind.x,0.5)*step(0.262,ktx)*step(ktx,0.292));
@@ -3141,10 +3140,10 @@ function headBeard(base,geo,beard,mus){
       diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(0.17,0.14,0.13)*(0.55+0.9*gr),clamp(sk*1.25,0.,1.));}`);};
   m.customProgramCacheKey=()=>'hbeard2';return m;
 }
-function skinMaterial(base,geo,o,box){
+function skinMaterial(base,geo,o){
   const m=base.clone(),T=THREE;if(o.skin)m.color.set(o.skin);const hd=o.head&&GL.heads&&GL.heads[o.head]?HEADS[o.head]:null;if(hd){m.color.setRGB(hd[0],hd[1],hd[2]);o=Object.assign({},o,{beard:0,mus:0,band:null});}
-  const bb=box?{min:new T.Vector3(...box[0])}:geo.boundingBox||(geo.computeBoundingBox(),geo.boundingBox),sz=box?new T.Vector3(...box[1]):bb.max.clone().sub(bb.min);
-  const U={sb0:{value:bb.min.clone()},sb1:{value:new T.Vector3(1/(sz.x||1),1/(sz.y||1),1/(sz.z||1))},sbe:{value:new T.Vector2(o.beard||0,o.mus||0)},sbd:{value:new T.Vector4(o.band?1:0,o.pants?1:0,hd?0.825:9,box?1:0)},spc:{value:new T.Color(o.pants?o.shorts:'#000000')},sgl:{value:new T.Color(o.glove||'#000000')},sgf:{value:new T.Vector2(o.glove?1:0,o.glove?85:0)},slt:{value:(o.skin||hd)?new T.Vector3(1,0.93,0.86):new T.Vector3(1,0.88,0.78)},ssc:{value:new T.Vector4(0,0,0,0)},slg:{value:o.legTat||0},sbc:{value:new T.Color(o.band===true?'#f4f4f0':(o.band||'#f4f4f0'))}};
+  const bb=geo.boundingBox||(geo.computeBoundingBox(),geo.boundingBox),sz=bb.max.clone().sub(bb.min);
+  const U={sb0:{value:bb.min.clone()},sb1:{value:new T.Vector3(1/(sz.x||1),1/(sz.y||1),1/(sz.z||1))},sbe:{value:new T.Vector2(o.beard||0,o.mus||0)},sbd:{value:new T.Vector4(o.band?1:0,o.pants?1:0,hd?0.825:9,0)},spc:{value:new T.Color(o.pants?o.shorts:'#000000')},sgl:{value:new T.Color(o.glove||'#000000')},sgf:{value:new T.Vector2(o.glove?1:0,o.glove?85:0)},slt:{value:(o.skin||hd)?new T.Vector3(1,0.93,0.86):new T.Vector3(1,0.88,0.78)},ssc:{value:new T.Vector4(0,0,0,0)},slg:{value:o.legTat||0},sbc:{value:new T.Color(o.band===true?'#f4f4f0':(o.band||'#f4f4f0'))}};
   if(o.scalp&&!hd){const hc=(o.skin?new T.Color(o.skin):new T.Color(1,1,1)).multiply(new T.Color().setRGB(SKIN_BASE[0],SKIN_BASE[1],SKIN_BASE[2]));U.ssc.value.set(hc.r,hc.g,hc.b,o.scalp);} // el cuero cabelludo del modelo viene pintado oscuro: se aclara hacia el tono de piel para que parezca pelo al ras
   m.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U);
     sh.vertexShader='uniform vec3 sb0,sb1;uniform vec2 sgf;varying vec3 vSk;varying float vSkN;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vSk=(position-sb0)*sb1;vSkN=objectNormal.y;if(sgf.x>0.5&&abs(vSk.x-0.5)>0.386)transformed+=normalize(objectNormal)*sgf.y;');
@@ -3164,8 +3163,7 @@ function skinMaterial(base,geo,o,box){
       float bnd=smoothstep(0.9280,0.9292,by)*smoothstep(0.9372,0.9360,by)*(1.0-smoothstep(0.07,0.08,ax))*sbd.x; // cintillo en la frente
       float pnt=smoothstep(0.364,0.356,by)*(1.0-smoothstep(0.13,0.15,ax))*sbd.y; // pantalón largo: la pierna entre el short y la media
       diffuseColor.rgb=mix(diffuseColor.rgb,sbc,bnd);
-      if(by<0.40)diffuseColor.rgb*=slt;
-      if(sbd.w>0.5)diffuseColor.rgb=mix(diffuse*vec3(0.53,0.31,0.225)*(0.97+0.06*gr),diffuseColor.rgb,smoothstep(0.826,0.842,by)); /* 7.35: cuello de la cara injertada */ // las piernas del modelo son más grises que la cara: se entibian
+      if(by<0.40)diffuseColor.rgb*=slt; // las piernas del modelo son más grises que la cara: se entibian
       if(ssc.a>0.0){ // pelo al ras: se pinta sobre el cuero cabelludo, con la línea del pelo más baja en la nuca que en la frente
         float hl=mix(0.872,0.953,smoothstep(0.47,0.66,vSk.z));
         float sc=smoothstep(hl-0.006,hl+0.016,by);
@@ -3183,45 +3181,6 @@ function skinMaterial(base,geo,o,box){
         diffuseColor.rgb=gc*clamp(0.62+Lg*0.75,0.7,1.08);}}`);};
   m.customProgramCacheKey=()=>'skin6';return m;
 }
-/* 7.35: cuerpo nuevo (Remy de Mixamo, con brazos y piernas de piel de verdad). Coordenadas de reposo en cm (pose T):
-   x hacia la izquierda del jugador, y hacia arriba. La cara es la del modelo anterior, injertada (P_Cara). */
-const PM={cara:[[-81.43,33.10,-9.32],[163.83,131.24,23.09]],cabeza:[0,-3.9,-1.5,0.92],alto:1.073,ancho:144.3,piel:[0.85,0.75,0.70]};
-function bodyMaterial(base,o,longS){
-  const m=base.clone(),T=THREE;if(o.skin)m.color.set(o.skin);const hd=o.head&&GL.heads&&GL.heads[o.head]?HEADS[o.head]:null;if(hd)m.color.setRGB(hd[0],hd[1],hd[2]);
-  m.color.multiply(new T.Color().setRGB(PM.piel[0],PM.piel[1],PM.piel[2]));
-  const ta=o.tat||[0,0],sty=o.style==null?1:o.style;
-  const U={bpc:{value:new T.Color(o.pants?o.shorts:'#000000')},bpn:{value:o.pants?1:0},bgl:{value:new T.Color(o.glove||'#000000')},bgf:{value:new T.Vector2(o.glove?1:0,o.glove?0.25:0)},
-    blg:{value:o.legTat||0},bta:{value:new T.Vector2(ta[0]||0,ta[1]||0)},bls:{value:longS?1:0},bk1:{value:new T.Color(o.shirt||'#ffffff')},bk2:{value:new T.Color(o.c2||o.shirt||'#ffffff')},bst:{value:sty},baw:{value:1/PM.ancho}};
-  m.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U);
-    sh.vertexShader='uniform vec2 bgf;varying vec3 vBp;varying float vBn;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vBp=position;vBn=objectNormal.y;if(bgf.x>0.5&&abs(position.x)>67.6)transformed+=normalize(objectNormal)*bgf.y;');
-    sh.fragmentShader='uniform vec3 bpc,bgl,bk1,bk2;uniform vec2 bgf,bta;uniform float bpn,blg,bls,bst,baw;varying vec3 vBp;varying float vBn;\n'+sh.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
-     {float ax=abs(vBp.x),y=vBp.y,ktx=ax*baw;float Lb=dot(diffuseColor.rgb,vec3(0.3333));
-      vec3 pq=vBp*5.0;float pn=fract(sin(dot(floor(pq),vec3(12.9898,78.233,37.719)))*43758.5453);
-      vec3 lq=vBp*0.22;float ln=fract(sin(dot(floor(lq),vec3(7.13,3.71,9.17)))*1753.5453);
-      diffuseColor.rgb*=0.975+0.05*pn;diffuseColor.rgb*=mix(vec3(1.0),vec3(1.03,0.985,0.975),ln*0.6);
-      float tw=vBp.x>0.0?bta.x:bta.y;
-      if(tw>0.0&&ax>35.5&&ax<64.0&&y>115.0){ /* tatuaje de manga en el brazo */
-        float u=ax*0.3604,v=(y-90.07)*0.727+(vBp.z+12.11)*0.346;
-        float p=sin(u*1.6+sin(v*1.1)*1.9)*sin(v*1.9+cos(u*0.8)*1.6),q=sin(u*3.1-v*2.3);
-        float ink=max(max(1.0-smoothstep(0.035,0.10,abs(p)),smoothstep(0.62,0.70,p)),(1.0-smoothstep(0.03,0.09,abs(q)))*step(p,-0.25)*0.85);
-        ink*=smoothstep(35.5,38.0,ax)*(1.0-smoothstep(62.0,64.0,ax));
-        diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(0.22,0.28,0.36),ink*0.85*tw);}
-      if(abs(blg)>0.5&&y>41.0&&y<54.0&&ax<25.0&&vBp.x*blg>0.0){ /* tatuaje en la pierna, entre la media y el short */
-        float u=y*1.05,v=vBp.x*1.07+vBp.z*1.6,p=sin(u*1.3+sin(v*1.2)*1.7)*sin(v*1.5+cos(u)*1.4);
-        float ink=max(1.0-smoothstep(0.04,0.11,abs(p)),smoothstep(0.62,0.70,p))*smoothstep(41.0,43.0,y)*(1.0-smoothstep(52.0,54.0,y));
-        diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(0.22,0.28,0.36),ink*0.85);}
-      if(bpn>0.5&&ax<25.0&&y<90.0)diffuseColor.rgb=bpc*clamp(0.55+Lb*0.9,0.6,1.1); /* pantalón largo del arquero */
-      if(bls>0.5&&ktx>0.222&&ax<67.0&&y>110.0){ /* manga larga: el brazo va del color de la camiseta */
-        float km=0.0;if(bst>6.5)km=smoothstep(0.322,0.332,ktx);else if(bst>0.5)km=step(0.445,ktx);
-        diffuseColor.rgb=mix(bk1,bk2,km)*clamp(0.62+Lb*0.75,0.7,1.08);}
-      if(bgf.x>0.5&&ax>67.6){ /* guantes de arquero: dorso del color del guante, palma de látex clara, correa oscura en la muñeca */
-        float palm=smoothstep(-0.05,-0.35,vBn);
-        vec3 gc=mix(bgl,vec3(0.93,0.93,0.90),palm*0.92);
-        gc*=1.0-(1.0-palm)*smoothstep(70.0,71.7,ax)*step(0.55,fract(vBp.z*0.3))*0.16;
-        gc=mix(gc,vec3(0.09,0.10,0.12),1.0-smoothstep(69.6,70.4,ax));
-        diffuseColor.rgb=gc*clamp(0.62+Lb*0.75,0.7,1.08);}}`);};
-  m.customProgramCacheKey=()=>'body1';return m;
-}
 const SKIN_BASE=[0.53,0.31,0.225]; // color medio de la piel del modelo (para el brazo de manga corta)
 const BOOTS=['#16181c','#f4f4ef','#e6f23c','#ff4a3d','#2f7bff','#16181c','#ff8a1f'];
 const KIT_ST={ARG:2,BRA:1,ESP:1,MEX:1,URU:1,ITA:1,GER:1,FRA:1}; /* 2 = rayas (Argentina), 1 = lisa con vivos */
@@ -3229,7 +3188,7 @@ function makeReal(o){
   /* 7.34: los zapatos nunca del mismo color que las medias (Nicolás: medias blancas con zapatos blancos se ve mal) */
   if(o.boots&&o.socks&&hexD(o.boots,o.socks)<110){const alt=BOOTS.find(b=>hexD(b,o.socks)>=110&&hexD(b,o.shorts||'#000000')>=60)||'#16181c';o=Object.assign({},o,{boots:alt});}
   const T=THREE,g=GL.charGLB,m=GL.SU.clone(g.scene),root=new T.Group(),inner=new T.Group();root.add(inner);inner.add(m);
-  const f=(o.height||1.9)/1.785*PM.alto,bw=o.build||1;m.scale.set(0.01*f*bw,0.01*f,0.01*f*bw);
+  const f=(o.height||1.9)/1.785,bw=o.build||1;m.scale.set(0.01*f*bw,0.01*f,0.01*f*bw);
   let shirtN=null;const B={},hdK=o.head&&GL.heads&&GL.heads[o.head]?HEADS[o.head]:null;
   // tono de piel del brazo (misma piel que la cara y las manos) para la manga corta
   const skinC=(hdK?new T.Color().setRGB(hdK[0],hdK[1],hdK[2]):o.skin?new T.Color(o.skin):new T.Color(1,1,1)).multiply(new T.Color().setRGB(SKIN_BASE[0],SKIN_BASE[1],SKIN_BASE[2]));
@@ -3237,13 +3196,12 @@ function makeReal(o){
   if(cut===1&&!hdK){o=Object.assign({},o,{scalp:0.42});}else if((cut===2||cut===3)&&!hdK){o=Object.assign({},o,{scalp:0.62});}
   m.traverse(n=>{
     if(n.isBone){for(const k of['Spine1','Spine2','Head','RightHand','LeftHand','Hips','Neck','LeftArm','LeftForeArm','RightArm','RightForeArm','LeftUpLeg','LeftLeg','LeftFoot','RightUpLeg','RightLeg','RightFoot','LeftToeBase','RightToeBase'])if(n.name.endsWith(k)&&!n.name.endsWith('Spine'+k))B[k]=B[k]||n;}
-    if(!n.isMesh)return;n.castShadow=true;n.receiveShadow=true;n.frustumCulled=false;const part=(n.name||'')+' '+((n.parent&&n.parent.name)||'');
-    if(/Shirt/.test(part))shirtN=n,n.material=kitMaterial(n.material,o.shirt,{capt:o.capt,geo:n.geometry,style:o.style==null?1:o.style,c2:o.c2||o.numColor||contrast(o.shirt),sleeve:0.236,skinC,bx:[-PM.ancho/2,PM.ancho]});
+    if(!n.isMesh)return;n.castShadow=true;n.receiveShadow=true;n.frustumCulled=false;const part=(n.parent&&n.parent.name)||'';
+    if(/Shirt/.test(part))shirtN=n,n.material=kitMaterial(n.material,o.shirt,{capt:o.capt,geo:n.geometry,style:o.style==null?1:o.style,c2:o.c2||o.numColor||contrast(o.shirt),sleeve:longS?9:0.236,skinC,tat:o.tat});
     else if(/Socks/.test(part))n.material=kitMaterial(n.material,o.socks,{geo:n.geometry,style:o.style===0?0:5,c2:o.c2||o.numColor||contrast(o.socks)});
     else if(/Shoes/.test(part)&&o.boots)n.material=kitMaterial(n.material,o.boots,{sleeve:1e6}); /* 7.34: sin esto el zapato caía en la rama de «piel» del sombreador y salía blanco siempre */
     else if(/Shorts/.test(part))n.material=kitMaterial(n.material,o.shorts,o.style===0?{}:{geo:n.geometry,style:6,c2:o.shirt});
-    else if(/Hair|Eyelash|Cara/.test(part)&&o.head&&GL.heads&&GL.heads[o.head]){n.visible=false;n.castShadow=false;}
-    else if(/Cara/.test(part)){n.material=skinMaterial(n.material,n.geometry,o,PM.cara);}
+    else if(/Hair|Eyelash/.test(part)&&o.head&&GL.heads&&GL.heads[o.head]){n.visible=false;n.castShadow=false;}
     else if(/Hair/.test(part)&&(o.bald||o.cap||cut===1)){n.visible=false;n.castShadow=false;}
     else if(/Hair/.test(part)){n.material=n.material.clone();if(o.hair)n.material.color.set(o.hair);
       if(cut===2||cut===3){const g=n.geometry,bb=g.boundingBox||(g.computeBoundingBox(),g.boundingBox),sz=bb.max.clone().sub(bb.min),mt=n.material; // cresta o degradado: se recorta el pelo de los lados
@@ -3252,7 +3210,7 @@ function makeReal(o){
           sh.fragmentShader='uniform float hct;varying vec3 vH;\n'+sh.fragmentShader.replace('#include <map_fragment>','if(hct<2.5?abs(vH.x-0.575)>0.14:vH.y<0.52)discard;\n#include <map_fragment>');};mt.customProgramCacheKey=()=>'hairc'+cut;}
       else if(o.hairVol&&o.hairVol!==1){const g=n.geometry,bb=g.boundingBox||(g.computeBoundingBox(),g.boundingBox),U={hc:{value:bb.getCenter(new T.Vector3())},hv:{value:o.hairVol}},mt=n.material; // peinado con más volumen
         mt.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U);sh.vertexShader='uniform vec3 hc;uniform float hv;\n'+sh.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n transformed=hc+(transformed-hc)*vec3(hv,hv*1.06,hv);');};mt.customProgramCacheKey=()=>'hair1';}}
-    else if(/Body/.test(part)){n.material=bodyMaterial(n.material,o,longS);}
+    else if(/Body/.test(part)){n.material=skinMaterial(n.material,n.geometry,o);}
     if(n.material.isMeshStandardMaterial){n.material.envMapIntensity=GL.envI||0.6;addRim(n.material);
       for(const k of['map','normalMap']){const tx=n.material[k];if(tx&&tx.anisotropy<4){tx.anisotropy=Math.min(8,GL.r.capabilities.getMaxAnisotropy());tx.needsUpdate=true;}}}});
   /* 7.32: contextura atlética (antes parecían maniquíes): brazos, muslos y pantorrillas más gruesos. Se escala cada hueso
@@ -3272,7 +3230,7 @@ function makeReal(o){
       U.knT.value=tB;U.kfT.value=tF;U.knOn.value=1;root.userData.knM=U.knM;}
     else{const mk=t=>new T.Mesh(new T.PlaneGeometry(30,30),new T.MeshStandardMaterial({map:t,transparent:true,roughness:0.85,polygonOffset:true,polygonOffsetFactor:-4,depthWrite:false}));
       const p=mk(tB);p.position.set(0,-4,-15.5);p.rotation.y=Math.PI;B.Spine2.add(p);root.userData.plate=p;const fp=mk(tF);fp.scale.setScalar(0.3);fp.position.set(6.5,1,o.chest||14.2);B.Spine2.add(fp);}}
-  if(o.head&&GL.heads&&GL.heads[o.head]&&B.Head){const hg=GL.heads[o.head].clone(true);hg.position.set(PM.cabeza[0],PM.cabeza[1],PM.cabeza[2]);hg.rotation.set(0,0,0);hg.scale.setScalar(PM.cabeza[3]);if(o.cap)hg.traverse(q=>{if(q.userData.hair)q.visible=false;});
+  if(o.head&&GL.heads&&GL.heads[o.head]&&B.Head){const hg=GL.heads[o.head].clone(true);hg.position.set(0,0,0);hg.rotation.set(0,0,0);hg.scale.setScalar(1);if(o.cap)hg.traverse(q=>{if(q.userData.hair)q.visible=false;});
     if(o.beard>0||o.mus>0)hg.traverse(q=>{if(q.isMesh&&!q.userData.hair)q.material=headBeard(q.material,q.geometry,o.beard||0,o.mus||0);});B.Head.add(hg);}
   if(cut===4&&B.Head&&!o.cap){const bun=mesh(new T.SphereGeometry(3.9,14,10),M(o.hair||'#1b130d',{roughness:0.95}));bun.position.set(0,17.5,-7.5);bun.scale.set(1,0.9,1);B.Head.add(bun);} // moño
   if(o.cap&&B.Head){const cm=M(o.cap,{roughness:0.85}),r=11.3,dome=mesh(new T.SphereGeometry(r,18,10,0,Math.PI*2,0,Math.PI*0.5),cm);dome.position.set(0,14.5,5.5);dome.scale.set(0.86,0.74,1.06);B.Head.add(dome);
@@ -4478,7 +4436,7 @@ function crowdPhoto(){
         if(f===0){aimBone(B.LeftArm,B.LeftForeArm,V(U,-1,L,0.2,F,0.05),1);aimBone(B.LeftForeArm,B.LeftHand,V(U,-1,F,0.25,L,0.05),1);aimBone(B.RightArm,B.RightForeArm,V(U,-1,R,0.2,F,0.05),1);aimBone(B.RightForeArm,B.RightHand,V(U,-1,F,0.25,R,0.05),1);}
         else{aimBone(B.LeftArm,B.LeftForeArm,V(U,1,L,o,F,0.15),1);aimBone(B.LeftForeArm,B.LeftHand,V(U,1,L,v%2?0.25:-0.1,F,0.1),1);aimBone(B.RightArm,B.RightForeArm,V(U,1,R,o,F,0.15),1);aimBone(B.RightForeArm,B.RightHand,V(U,1,R,v%2?0.25:-0.1,F,0.1),1);}
         for(const[t,isMask]of[[rt,false],[rm,true]]){
-          const saved=[];if(isMask)m.traverse(n=>{if(n.isMesh){saved.push([n,n.material]);n.material=/Shirt/.test((n.name||'')+' '+((n.parent&&n.parent.name)||''))?white:black;}});
+          const saved=[];if(isMask)m.traverse(n=>{if(n.isMesh){saved.push([n,n.material]);n.material=/Shirt/.test((n.parent&&n.parent.name)||'')?white:black;}});
           t.viewport.set(v*CW,(1-f)*CH,CW,CH);t.scissor.set(v*CW,(1-f)*CH,CW,CH);r.setRenderTarget(t);r.render(sc,cam);
           for(const[n,mt]of saved)n.material=mt;}
       }

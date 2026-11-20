@@ -1,7 +1,7 @@
 /* El Arquerito: guarda los archivos del juego para jugar sin internet.
    La página principal busca primero la versión nueva en internet (sin usar la copia guardada por el navegador); el resto (modelo, sonidos, motor 3D, letras) sale de la memoria. */
 const CACHE='penales-v13';
-const BASE=['./','index.html','recursos.dat?v=4514eb38','manifest.webmanifest','icono-192.png','icono-512.png','apple-touch-icon.png',
+const BASE=['./','index.html','recursos.dat?v=354e5ae8','manifest.webmanifest','icono-192.png','icono-512.png','apple-touch-icon.png',
   'sonido_amb.mp3','sonido_gol.mp3','sonido_atajada.mp3','sonido_entrada.mp3','sonido_alivio.mp3','sonido_uy.mp3','sonido_lamento.mp3','sonido_pifia.mp3','sonido_latido.mp3',
   'sonido_amb2.mp3','sonido_gol2.mp3','sonido_gol3.mp3','sonido_atajada2.mp3','sonido_atajada3.mp3','sonido_entrada2.mp3'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(BASE)).then(()=>self.skipWaiting()));});
