@@ -906,7 +906,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){if(id!=='result'&&typeof copa3D==='function')try{copa3D(false);const f=$('fw2d');if(f)f.remove();}catch(e){}if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.37 · 20 nov 2026';
+const VERSION='7.38 · 20 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -3235,7 +3235,7 @@ function makeReal(o){
   if(cut===4&&B.Head&&!o.cap){const bun=mesh(new T.SphereGeometry(3.9,14,10),M(o.hair||'#1b130d',{roughness:0.95}));bun.position.set(0,17.5,-7.5);bun.scale.set(1,0.9,1);B.Head.add(bun);} // moño
   if(o.cap&&B.Head){const cm=M(o.cap,{roughness:0.85}),r=11.3,dome=mesh(new T.SphereGeometry(r,18,10,0,Math.PI*2,0,Math.PI*0.5),cm);dome.position.set(0,14.5,5.5);dome.scale.set(0.86,0.74,1.06);B.Head.add(dome);
     const vis=mesh(new T.CylinderGeometry(r*0.9,r*0.9,0.8,18),cm);vis.position.set(0,14.8,5.5+r*1.06*1.2);vis.scale.set(0.8,1,0.6);vis.rotation.x=0.16;B.Head.add(vis);}
-  if(o.glove)for(const h of[B.RightHand,B.LeftHand])if(h)h.scale.setScalar(1.32); // los guantes de arquero son bastante más grandes que la mano
+  if(o.glove)for(const h of[B.RightHand,B.LeftHand])if(h)h.scale.setScalar(1.12); // 7.38: guantes algo más grandes que la mano (con 1,32 se veían desproporcionados)
   if(!GL.blobMat){const c=cnv(64,64),x=c.getContext('2d'),g=x.createRadialGradient(32,32,2,32,32,32);g.addColorStop(0,'rgba(0,0,0,.62)');g.addColorStop(0.55,'rgba(0,0,0,.28)');g.addColorStop(1,'rgba(0,0,0,0)');x.fillStyle=g;x.fillRect(0,0,64,64);
     GL.blobMat=new T.MeshBasicMaterial({map:tex(c),transparent:true,depthWrite:false,toneMapped:false,color:0x000000});GL.blobGeo=new T.PlaneGeometry(1,1);}
   {const sh=new T.Mesh(GL.blobGeo,GL.blobMat);sh.rotation.x=-Math.PI/2;sh.scale.set(1.05*f,0.8*f,1);sh.position.y=0.02;sh.renderOrder=2;
