@@ -906,7 +906,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){if(id!=='result'&&typeof copa3D==='function')try{copa3D(false);const f=$('fw2d');if(f)f.remove();}catch(e){}if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.39 · 20 nov 2026';
+const VERSION='7.40 · 20 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -2229,7 +2229,7 @@ function initialTier(){
      no dan abasto, el juego baja solo y lo recuerda para la próxima vez. */
   const nav=navigator,ua=nav.userAgent||'',apple=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&nav.maxTouchPoints>1);
   const weak=!apple&&((nav.hardwareConcurrency&&nav.hardwareConcurrency<=4)||(nav.deviceMemory&&nav.deviceMemory<=3)),phone=matchMedia('(pointer: coarse)').matches;
-  const base=weak?2:phone?1:0,mem=parseInt(lsGet('penales-nivel54','-1'),10);
+  const base=weak?2:phone&&!apple?1:0,mem=parseInt(lsGet('penales-nivel54','-1'),10); /* 7.40: los iPhone parten en alta (medido 20-11: 29 c/s, 8,6 ms); si no dan abasto, baja sola */
   GL.tier0=base;return mem>base?Math.min(2,mem):base;
 }
 function glResize(){
