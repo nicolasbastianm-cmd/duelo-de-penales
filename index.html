@@ -81,6 +81,8 @@ canvas{display:block;position:absolute;inset:0;width:100%;height:100%;touch-acti
 .card .small{font-size:14px;opacity:.88;line-height:1.35}
 .big{font-family:var(--display);font-size:54px;color:var(--chalk);line-height:1;font-variant-numeric:tabular-nums}
 /* 7.27: el marcador entra con un salto y las estrellas aparecen una a una */
+#rCopa{display:block;position:static;inset:auto;width:130px;height:130px;margin:-6px auto -8px;touch-action:auto}
+#rCopa[hidden]{display:none}
 .big.pop{animation:marcador .55s cubic-bezier(.3,1.5,.5,1) both}
 @keyframes marcador{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
 .est{display:inline-block;font-style:normal;animation:estrella .5s cubic-bezier(.3,1.7,.5,1) both}
@@ -462,6 +464,7 @@ button:focus-visible{outline:3px solid var(--chalk);outline-offset:3px}
 
     <div class="overlay" id="result" hidden>
       <div class="card">
+        <canvas id="rCopa" width="150" height="150" hidden aria-hidden="true"></canvas>
         <h2 id="rTitle">¡Fin del partido!</h2>
         <p id="rSub"></p>
         <div class="big" id="rBig">0</div>
@@ -500,7 +503,7 @@ const EN={
 'Calidad gráfica':'Graphics quality','Automática':'Automatic','Se ajusta sola':'Adjusts itself','Alta':'High','Media':'Medium','Baja':'Low','Más fluida':'Smoother','Listo':'Done','Idioma':'Language',
 'Rayas':'Stripes','Franjas':'Hoops','Banda':'Sash','Lisa con vivos':'Plain with trim','Clásico':'Classic','Degradado':'Fade','Rapado':'Buzz cut','Cresta':'Mohawk','Moño':'Bun',
 'Sin barba':'No beard','Corta':'Short','Tupida':'Full','Bigote':'Moustache','Sin tatuajes':'No tattoos','Un brazo':'One arm','Dos brazos':'Both arms','Brazos y pierna':'Arms and leg',
-'Estadio':'Stadium','Noche':'Night','La final':'The final','Barrio':'Street','Estadio de noche':'Night stadium','Atardecer':'Sunset','Estadio al atardecer':'Sunset stadium','Estadio de la final':'Final stadium','Cancha del barrio':'Street pitch',
+'Estadio':'Stadium','Noche':'Night','La final':'The final','Barrio':'Street','Estadio de noche':'Night stadium','Atardecer':'Sunset','Estadio al atardecer':'Sunset stadium','Lluvia':'Rain','Estadio con lluvia':'Rainy stadium','Estadio de la final':'Final stadium','Cancha del barrio':'Street pitch',
 'Naranja':'Orange','Roja':'Red','Celeste':'Sky blue','Morada':'Purple','Rosada':'Pink','Negra':'Black','Dorada':'Gold','Verde':'Green','Azul':'Blue','Blanca':'White','Amarillos':'Yellow','Blancos':'White','Verdes':'Green','Rojos':'Red','Azules':'Blue','Negros':'Black','Rosados':'Pink','Dorados':'Gold',
 'Camiseta naranja':'Orange shirt','Camiseta roja':'Red shirt','Camiseta celeste':'Sky-blue shirt','Camiseta morada':'Purple shirt','Camiseta rosada':'Pink shirt','Camiseta negra':'Black shirt','Camiseta dorada':'Gold shirt','Camiseta verde':'Green shirt',
 'Ya tienes todos los premios por atajadas.':'You already have every prize for saves.','Gana un torneo para la camiseta dorada y el estadio de la final.':'Win a tournament for the gold shirt and the final stadium.',
@@ -697,6 +700,7 @@ const GLOVES={
 const STAGES={
   estadio:{n:'Estadio',p:'Estadio',vol:0.04},
   atardecer:{n:'Atardecer',p:'Estadio al atardecer',vol:0.045,need:{saves:20}},
+  lluvia:{n:'Lluvia',p:'Estadio con lluvia',vol:0.04,need:{saves:30}},
   noche:{n:'Noche',p:'Estadio de noche',vol:0.045,need:{saves:40}},
   final:{n:'La final',p:'Estadio de la final',vol:0.07,need:{trophy:1}},
   barrio:{n:'Barrio',p:'Cancha del barrio',vol:0.025}};
@@ -900,10 +904,10 @@ function hud(){
   lifeEls.forEach((el,i)=>el.classList.toggle('lost',i>=S.lives));
 }
 const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo','album','howto','paisPick'];
-function show(id){if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
+function show(id){if(id!=='result'&&typeof copa3D==='function')try{copa3D(false);}catch(e){}if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.27 · 19 nov 2026';
+const VERSION='7.28 · 19 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -1557,7 +1561,7 @@ function endMatch(w){
       tempSave();medalScan();extra+=medalNote();
       $('rTitle').textContent='¡CAMPEONES!';$('rSub').textContent=`Ganaste la final a ${r.team}.`;
       $('rNote').textContent=nt+extra;showPrizes(newPrizes());
-      confetti(140);setTimeout(sfx.fanfare,600);
+      confetti(140);setTimeout(sfx.fanfare,600);fuegos(TEMP.copa===0?12:8);setTimeout(()=>copa3D(true),80);
       sobreBtns([{t:'Ver la vitrina',f:()=>{goHome();renderVit();show('vitrina');}},{t:'Volver al menú',f:goHome}]);
     }
   }else{
@@ -1678,13 +1682,14 @@ function softShadow(cx,cy,rx,ry,ang,a){
   const g=ctx.createRadialGradient(0,0,0,0,0,1);g.addColorStop(0,`rgba(0,0,0,${a})`);g.addColorStop(0.55,`rgba(0,0,0,${a*0.65})`);g.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,1,0,Math.PI*2);ctx.fill();ctx.restore();
 }
-const SUN={estadio:[[0.3,0.55,0.28]],barrio:[[0.3,0.55,0.3]],final:[[0.3,0.55,0.28]],atardecer:[[0.22,0.95,0.3]],noche:[[-0.4,0.42,0.17],[0.4,0.42,0.17]]};
+const SUN={estadio:[[0.3,0.55,0.28]],barrio:[[0.3,0.55,0.3]],final:[[0.3,0.55,0.28]],atardecer:[[0.22,0.95,0.3]],lluvia:[[0.12,0.4,0.14]],noche:[[-0.4,0.42,0.17],[0.4,0.42,0.17]]};
 
 /* ---------- Fondo y cancha precalculados (se rehacen al cambiar tamaño o cancha) ---------- */
 const GRASS={estadio:{a:[64,146,72],b:[53,129,61],haze:[150,170,180],dirt:[132,113,82],hz:0.35},barrio:{a:[78,142,62],b:[66,127,54],haze:[176,201,192],dirt:[138,116,80],hz:0.5},
   noche:{a:[54,122,64],b:[45,107,55],haze:[28,44,66],dirt:[104,92,66],hz:0.55},
   final:{a:[64,146,72],b:[53,129,61],haze:[150,170,180],dirt:[132,113,82],hz:0.35},
-  atardecer:{a:[70,140,66],b:[58,124,56],haze:[214,170,140],dirt:[138,112,80],hz:0.4}};
+  atardecer:{a:[70,140,66],b:[58,124,56],haze:[214,170,140],dirt:[138,112,80],hz:0.4},
+  lluvia:{a:[56,128,64],b:[47,114,55],haze:[150,160,168],dirt:[110,96,72],hz:0.55}};
 function hills(c,base,amp,color,seed){c.fillStyle=color;c.beginPath();c.moveTo(0,G.hz);
   for(let x=0;x<=W+8;x+=8){c.lineTo(x,base-amp*(0.5+0.3*Math.sin(x/W*6+seed)+0.2*Math.sin(x/W*17+seed*3)));}c.lineTo(W,G.hz);c.closePath();c.fill();}
 function skyBarrio(c){
@@ -1755,7 +1760,7 @@ function bake(){
   const key=[CFG.stage,W,H,dpr,curRival().code,CFG.kit,G.fontsOk].join('|');if(G.bakeKey===key)return;G.bakeKey=key;
   const fc=G.fc||(G.fc=document.createElement('canvas'));fc.width=cv.width;fc.height=cv.height;
   const c=fc.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);const st=CFG.stage,pal=GRASS[st];
-  if(st==='noche')skyNoche(c);else if(st==='final'||st==='estadio'||st==='atardecer')skyFinal(c);else skyBarrio(c);
+  if(st==='noche')skyNoche(c);else if(st==='final'||st==='estadio'||st==='atardecer'||st==='lluvia')skyFinal(c);else skyBarrio(c);
   // pasto: franjas de corte cada 5,5 m, textura, desgaste en el área chica y el punto penal, bruma a lo lejos
   const gw=Math.ceil(W),gh=Math.ceil(H-G.hz),tc=document.createElement('canvas');tc.width=gw;tc.height=gh;
   const tx=tc.getContext('2d'),img=tx.createImageData(gw,gh),px=img.data,pxm=W*0.55*G.mx;
@@ -2241,7 +2246,7 @@ function glApplyTier(){
   if(GL.lights)GL.lights.forEach(L=>{if(!L.castShadow)return;const s=GL.tier===0?L.userData.size:GL.tier===1?1024:512;if(L.shadow.mapSize.x!==s){L.shadow.mapSize.set(s,s);if(L.shadow.map){L.shadow.map.dispose();L.shadow.map=null;}}});
 }
 const V3=(xm,hm,dm)=>new THREE.Vector3(-xm,hm,dm);
-const activeCam=()=>GL.replayOn?GL.camR:GL.introOn?GL.camI:GL.celOn&&GL.camC?GL.camC:GL.kview?GL.camK:GL.cam;
+const activeCam=()=>GL.replayOn?GL.camR:(GL.introOn||GL.menuOn)?GL.camI:GL.celOn&&GL.camC?GL.camC:GL.kview?GL.camK:GL.cam;
 function glProject(v){const p=v.clone().project(activeCam()),wf=GL.wf||W;return{x:(p.x+1)/2*wf-(GL.ox||0),y:(1-p.y)/2*H};}
 function ballWorld(p){
   const s=Math.max(0.05,(p.gy-G.hz)/(G.lineY-G.hz)),d=(1/s-1)/2.2;
@@ -2475,10 +2480,13 @@ function glBuildStage(){
     sc.environment=pm.fromScene(es,0.04).texture;GL.envI=0.5;
   }else{
     const sky=new GL.mods.Sky();sky.scale.setScalar(4500);const u=sky.material.uniforms;
-    const tarde=st==='atardecer'; /* 7.27: sol bajo frente a la cámara de atajar, cielo naranja, luz cálida y sombras largas */
+    const tarde=st==='atardecer',lluv=st==='lluvia'; /* 7.27: sol bajo frente a la cámara de atajar, cielo naranja, luz cálida y sombras largas */
     u.turbidity.value=tarde?7:st==='final'?4:st==='estadio'?2.0:2.6;u.rayleigh.value=tarde?3.2:2.4;u.mieCoefficient.value=tarde?0.012:0.004;u.mieDirectionalG.value=tarde?0.93:0.82;
     const sun=(tarde?new T.Vector3(0.38,0.085,0.92):st==='barrio'?new T.Vector3(0.42,0.5,-0.76):new T.Vector3(0.42,0.62,-0.66)).normalize();u.sunPosition.value.copy(sun);
-    if(!tarde)grp.add(sky);
+    if(lluv){/* cielo nublado pintado */const cv=document.createElement('canvas');cv.width=4;cv.height=512;const cx=cv.getContext('2d'),gr=cx.createLinearGradient(0,0,0,512);
+      gr.addColorStop(0,'#5d6670');gr.addColorStop(0.4,'#8a949c');gr.addColorStop(0.5,'#a9b2b8');gr.addColorStop(1,'#77807a');cx.fillStyle=gr;cx.fillRect(0,0,4,512);const tx=new T.CanvasTexture(cv);tx.colorSpace=T.SRGBColorSpace;
+      const dome=new T.Mesh(new T.CylinderGeometry(3000,3000,4000,48,1,true),new T.MeshBasicMaterial({map:tx,side:T.BackSide,fog:false,depthWrite:false}));dome.renderOrder=-1;grp.add(dome);}
+    else if(!tarde)grp.add(sky);
     else{/* cielo de atardecer pintado (el cielo físico salía casi blanco con el sol tan bajo) y el sol como un brillo */
       const cv=document.createElement('canvas');cv.width=4;cv.height=512;const cx=cv.getContext('2d'),gr=cx.createLinearGradient(0,0,0,512);
       gr.addColorStop(0,'#1f2d5c');gr.addColorStop(0.25,'#4b4a86');gr.addColorStop(0.40,'#b0607a');gr.addColorStop(0.46,'#ec8357');gr.addColorStop(0.495,'#ffc067');gr.addColorStop(0.5,'#ffd98a');gr.addColorStop(0.52,'#d99a72');gr.addColorStop(1,'#8a6a5a');
@@ -2488,14 +2496,19 @@ function glBuildStage(){
       sol.position.copy(sun).multiplyScalar(2600);sol.position.y=Math.max(sol.position.y,140);sol.scale.set(900,900,1);grp.add(sol);}
     const es=new T.Scene(),sk2=new GL.mods.Sky();sk2.scale.setScalar(4500);Object.keys(u).forEach(k=>{if(sk2.material.uniforms[k])sk2.material.uniforms[k].value=u[k].value;});es.add(sk2);
     sc.environment=pm.fromScene(es,0).texture;GL.envI=0.6;
-    const fogC=tarde?'#e9b48f':st==='final'?'#b7cde0':'#b4d0ea';sc.fog=new T.FogExp2(fogC,0.0021);sc.background=null;
-    if(tarde){grp.add(new T.HemisphereLight('#ffd6b8','#4a5a34',0.75));addLight(grp,[sun.x*40,Math.max(6,sun.y*40),sun.z*40+6],'#ffb47a',2.9,2048);}
+    const fogC=lluv?'#98a2aa':tarde?'#e9b48f':st==='final'?'#b7cde0':'#b4d0ea';sc.fog=new T.FogExp2(fogC,lluv?0.0042:0.0021);sc.background=null;
+    if(lluv){grp.add(new T.HemisphereLight('#c9d3db','#3d5233',0.95));addLight(grp,[sun.x*40,sun.y*40,sun.z*40+6],'#e4eaf0',1.5,2048);}
+    else if(tarde){grp.add(new T.HemisphereLight('#ffd6b8','#4a5a34',0.75));addLight(grp,[sun.x*40,Math.max(6,sun.y*40),sun.z*40+6],'#ffb47a',2.9,2048);}
     else{grp.add(new T.HemisphereLight('#dceeff','#4f6e3a',0.9));addLight(grp,[sun.x*40,sun.y*40,sun.z*40+6],'#fff1dc',3.4,2048);}
     const ct=cloudTexture();
-    for(let i=0;i<16;i++){const a=srand(i+40)*Math.PI*2,R=1400+srand(i+41)*900,s=new T.Sprite(new T.SpriteMaterial({map:ct,fog:false,depthWrite:false,transparent:true,opacity:0.85,color:tarde?'#ffc29a':'#ffffff'}));
+    for(let i=0;i<16;i++){const a=srand(i+40)*Math.PI*2,R=1400+srand(i+41)*900,s=new T.Sprite(new T.SpriteMaterial({map:ct,fog:false,depthWrite:false,transparent:true,opacity:lluv?0.95:0.85,color:lluv?'#8b949b':tarde?'#ffc29a':'#ffffff'}));
       s.scale.set(700+srand(i)*500,220+srand(i+1)*120,1);s.position.set(Math.cos(a)*R,180+srand(i+2)*260,Math.sin(a)*R);grp.add(s);}
   }
   pm.dispose();
+  GL.rain=null;if(st==='lluvia'){const n=[2600,1700,900][GL.tier||0],a=new Float32Array(n*6);
+    for(let i=0;i<n;i++){const x=(Math.random()*2-1)*46,y=Math.random()*30,z=-26+Math.random()*146;a.set([x,y+1.1,z,x+0.1,y,z],i*6);}
+    const g=new T.BufferGeometry(),pos=new T.BufferAttribute(a,3);g.setAttribute('position',pos);
+    const m=new T.LineSegments(g,new T.LineBasicMaterial({color:'#eef3f8',transparent:true,opacity:0.7,depthWrite:false,fog:false}));m.frustumCulled=false;m.userData.ly=0;m.layers.set(0);grp.add(m);GL.rain={m,pos,n};}
   const ground=new T.Mesh(new T.PlaneGeometry(4000,4000),M(night?'#2c6233':st==='final'?'#3d8038':'#4a8238',{roughness:1,depthWrite:false}));ground.rotation.x=-Math.PI/2;ground.position.y=-0.02;ground.renderOrder=-0.5;grp.add(ground); /* el suelo de afuera queda 2 cm bajo la cancha: si escribe profundidad, con poca precisión se pelean y la cancha parpadea lisa y sin líneas. Se dibuja sin profundidad justo después del cielo (-1) y antes que todo lo demás, que queda encima */
   const pitch=new T.Mesh(new T.PlaneGeometry(90,120),grassMaterial(pitchTexture(st==='estadio'?'final':st)));pitch.rotation.x=-Math.PI/2;pitch.position.set(0,0,45);pitch.receiveShadow=true;grp.add(pitch);
   const gp=night?['#3e8a45','#337a3a']:st==='final'||st==='estadio'?['#4e9c47','#3f873b']:['#5b9a44','#4a8639'];
@@ -2721,6 +2734,9 @@ function glSync(dt){
     if(S.introT<E){const t=S.introT;c.position.set(-17.2+0.5*t,1.15+0.1*t,49.9);c.lookAt(-30.5+2.3*t,1.25,52.5);}
     else{const u=smooth(0,1,clamp((S.introT-E)/3.5,0,1)),a=-1.0+u*2.0,Rr=56-22*u;
       c.position.set(Math.sin(a)*Rr,17-9*u,46-Math.cos(a)*Rr);c.lookAt(0,5-4*u,52-46*u);}}
+  /* 7.28: en el menú la cámara da una vuelta lenta por el estadio (antes quedaba quieta en la vista de atajar) */
+  GL.menuOn=S.mode==='home'&&!reduce&&['home','locker','shop','vitrina','album','duo','paisPick','voces'].some(x=>{const e=$(x);return e&&!e.hidden;});
+  if(GL.menuOn){const c=GL.camI,a=S.time*0.045;c.position.set(Math.sin(a)*27,9.5+Math.sin(a*0.8)*2.5,52-Math.cos(a)*46);c.lookAt(Math.sin(a+0.6)*6,2,52);}
   GL.replayOn=!!RP;if(RP)replayCam();
   crowdPhotoApply();celCam();
   glFeet();GL.rp.camera=activeCam();GL.rp.split=GL.tier<2&&(GL.rp.camera===GL.cam||GL.rp.camera===GL.camC)&&CFG.tv!==false; // fondo fuera de foco solo al atajar (la tribuna está lejos) y en los primeros planos; al patear y en la repetición el público está cerca y se ve nítido
@@ -2728,7 +2744,7 @@ function glSync(dt){
   GL.meK.visible=GL.rivS.visible=!GL.kview;GL.meS.visible=GL.rivK.visible=GL.kview;if(GL.wkUs&&!GL.entOn){GL.wkUs.visible=GL.kview;GL.wkThem.visible=!GL.kview;}
   const real=GL.meK.userData.real;
   if(GL.kview){if(real)poseKickReal(dt);else poseKickScene();}else if(real){poseKeeperReal(dt);poseRivalReal(dt);}else{poseKeeperMe();poseRivalStriker();}
-  placeBall();rippleNet();confettiStep(dt);flaresStep(dt);flashesStep(dt);poseExtras(dt);
+  placeBall();rippleNet();confettiStep(dt);flaresStep(dt);flashesStep(dt);poseExtras(dt);fuegosStep(dt);lluviaStep(dt);
   if(GL.crowdMesh){const ck=CFG.kit+'|'+CFG.pais+'|'+curRival().code+'|'+CFG.name+'|'+(G.fontsOk||0);if(GL.crowdKey!==ck){GL.crowdKey=ck;recolorCrowd();recolorFlags();drawBanners();}
     const tense=playing()&&((S.turn==='save'&&S.phase==='runup')||(S.turn==='kick'&&(S.phase==='aim'||S.phase==='krun')));
     const tg=(S.joy||0)>0?Math.min(1.2,0.3+S.joy):(tense?0:0.05);GL.crowdU.excite.value+=(tg-GL.crowdU.excite.value)*Math.min(1,dt*5);GL.crowdU.time.value=S.time;GL.crowdU.hideZ.value=GL.rp.camera===GL.cam?-9.3:-1e5;}
@@ -3550,6 +3566,59 @@ function flaresInit(grp,spots){
     GL.flares.push({core,puffs,base:core.position.clone(),ph:Math.random()*6});}
 }
 /* Destellos de cámaras de fotos en las tribunas cuando la hinchada celebra */
+/* ---------- Fuegos artificiales al ganar la copa (7.28) ----------
+   Cohetes que suben desde las dos tribunas de los arcos (así se ven con cualquier cámara) y estallan en chispas con
+   los colores del país del jugador y otros brillantes. Un solo grupo de puntos, sin sonido propio. */
+/* Copa dorada en 3D en la pantalla de campeón (7.28): un dibujo 3D aparte, pequeño, que gira; se libera al salir */
+function copa3D(on){
+  const cv=$('rCopa');if(!cv)return;
+  if(!on){if(GL.copa){cancelAnimationFrame(GL.copa.raf);try{GL.copa.r.dispose();GL.copa.r.forceContextLoss();}catch(e){}GL.copa=null;}cv.hidden=true;return;}
+  if(!GL.ok||!THREE||GL.copa)return;const T=THREE;let r;try{r=new T.WebGLRenderer({canvas:cv,alpha:true,antialias:true});}catch(e){return;}
+  cv.hidden=false;r.setPixelRatio(Math.min(2,window.devicePixelRatio||1));r.setSize(130,130,false);r.toneMapping=T.ACESFilmicToneMapping;r.toneMappingExposure=1.15;r.outputColorSpace=T.SRGBColorSpace;
+  const sc=new T.Scene(),cam=new T.PerspectiveCamera(30,1,0.1,50);cam.position.set(0,1.05,5.2);cam.lookAt(0,0.92,0);
+  const es=new T.Scene();es.background=new T.Color('#1c2433');const lm=new T.MeshBasicMaterial({color:'#ffffff'});lm.color.setScalar(5);
+  for(const[x,y,z]of[[-3,2,2],[3,3,1],[0,4,-3],[2,-1,3],[-2,-2,-2]]){const b=new T.Mesh(new T.BoxGeometry(1.6,1.6,1.6),lm);b.position.set(x,y,z);es.add(b);}
+  const pm=new T.PMREMGenerator(r);sc.environment=pm.fromScene(es,0.02).texture;pm.dispose();
+  const gold=new T.MeshStandardMaterial({color:'#f5c451',metalness:1,roughness:0.2}),g=new T.Group();
+  const prof=[[0,0.02],[0.5,0.02],[0.42,0.14],[0.2,0.3],[0.13,0.62],[0.2,0.86],[0.5,1.0],[0.68,1.35],[0.74,1.8],[0.8,1.86],[0.72,1.9],[0.64,1.5],[0.44,1.16],[0.12,0.98],[0,0.98]].map(q=>new T.Vector2(q[0],q[1]));
+  g.add(new T.Mesh(new T.LatheGeometry(prof,56),gold));
+  for(const sx of[-1,1]){const h=new T.Mesh(new T.TorusGeometry(0.3,0.055,12,28,Math.PI),gold);h.position.set(sx*0.74,1.42,0);h.rotation.z=-sx*Math.PI/2;g.add(h);}
+  const base=new T.Mesh(new T.CylinderGeometry(0.62,0.7,0.34,48),new T.MeshStandardMaterial({color:'#16202e',metalness:0.4,roughness:0.4}));base.position.y=-0.15;g.add(base);
+  const band=new T.Mesh(new T.CylinderGeometry(0.705,0.705,0.06,48),gold);band.position.y=-0.15;g.add(band);
+  sc.add(g);const L=new T.DirectionalLight('#ffffff',2.2);L.position.set(2,4,5);sc.add(L);sc.add(new T.AmbientLight('#ffffff',0.3));
+  const t0=performance.now();GL.copa={r,raf:0};
+  const loop=()=>{if(!GL.copa)return;const t=(performance.now()-t0)/1000,k=Math.min(1,t/0.6);g.rotation.y=t*1.1;g.position.y=Math.sin(t*2.2)*0.05;g.scale.setScalar(0.25+0.75*(1-Math.pow(1-k,3)));r.render(sc,cam);GL.copa.raf=requestAnimationFrame(loop);};loop();
+}
+function fwCol(){const P=CFG.pais&&typeof paisColores==='function'?paisColores():null;const L=['#ffd23f','#ff5a4e','#5cc8ff','#7ee04a','#ff7ae0','#ffffff'];
+  const h=P&&Math.random()<0.55?P[Math.floor(Math.random()*P.length)]:L[Math.floor(Math.random()*L.length)];const c=new THREE.Color(h);return[c.r,c.g,c.b];}
+function fuegos(seg){
+  if(!GL.ok||reduce||!GL.scene)return;const T=THREE;
+  if(!GL.fwPts){const N=GL.tier===2?700:1500,g=new T.BufferGeometry();g.setAttribute('position',new T.BufferAttribute(new Float32Array(N*3),3));g.setAttribute('color',new T.BufferAttribute(new Float32Array(N*3),3));
+    const m=new T.PointsMaterial({size:2.6,map:glowTexture(),vertexColors:true,transparent:true,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,fog:false});
+    GL.fwPts=new T.Points(g,m);GL.fwPts.frustumCulled=false;GL.fwPts.userData.ly=0;GL.fwPts.layers.set(0);GL.fwN=N;}
+  GL.fwP=[];if(GL.fwPts.parent!==GL.scene)GL.scene.add(GL.fwPts);GL.fw={t:0,dur:seg,next:0.15};}
+function fuegosStep(dt){
+  const F=GL.fw;if(!F||!GL.fwPts)return;F.t+=dt;const P=GL.fwP;
+  if(F.t<F.dur&&F.t>=F.next){F.next=F.t+0.2+Math.random()*0.3;const cm=activeCam(),dv=GL.fwV||(GL.fwV=new THREE.Vector3());cm.getWorldDirection(dv); /* en el extremo hacia donde mira la cámara y a más de 25 m de ella */
+    let end=dv.z>0;const zl=end?86:0;if(Math.abs(cm.position.z-zl)<25&&Math.abs(cm.position.x)<30)end=!end;
+    for(let rr=0;rr<2;rr++)P.push({x:(Math.random()*2-1)*24,y:4,z:(end?82:-4)+Math.random()*8,vx:(Math.random()-0.5)*3,vy:11+Math.random()*4,vz:(end?-1:1)*Math.random()*3,life:9,rk:1,c:fwCol()});}
+  for(let i=P.length-1;i>=0;i--){const q=P[i];
+    if(q.rk){q.vy-=12*dt;}else{q.vy-=4*dt;const d=1-1.3*dt;q.vx*=d;q.vy*=d;q.vz*=d;}
+    q.x+=q.vx*dt;q.y+=q.vy*dt;q.z+=q.vz*dt;q.life-=dt;
+    if(q.rk&&q.vy<3){P.splice(i,1);const n=60+Math.floor(Math.random()*35),sp=8+Math.random()*4;
+      for(let j=0;j<n&&P.length<GL.fwN;j++){const u=Math.random()*2-1,a=Math.random()*Math.PI*2,r=Math.sqrt(1-u*u),v=sp*(0.8+Math.random()*0.2);
+        P.push({x:q.x,y:q.y,z:q.z,vx:r*Math.cos(a)*v,vy:u*v,vz:r*Math.sin(a)*v,life:1.3+Math.random()*0.9,c:q.c});}continue;}
+    if(q.life<=0)P.splice(i,1);}
+  const pa=GL.fwPts.geometry.attributes.position,ca=GL.fwPts.geometry.attributes.color,A=pa.array,C=ca.array;
+  for(let i=0;i<GL.fwN;i++){const q=P[i];if(q){A[i*3]=q.x;A[i*3+1]=q.y;A[i*3+2]=q.z;const k=q.rk?1.2:Math.min(1,q.life/0.7)*1.25;C[i*3]=q.c[0]*k;C[i*3+1]=q.c[1]*k;C[i*3+2]=q.c[2]*k;}else{A[i*3+1]=-999;}}
+  pa.needsUpdate=ca.needsUpdate=true;if(F.t>F.dur&&!P.length){GL.fw=null;GL.scene.remove(GL.fwPts);}
+}
+/* ---------- Lluvia (7.28): gotas en líneas que caen sobre la cancha; menos gotas en calidad baja ---------- */
+function lluviaStep(dt){
+  const R=GL.rain;if(!R||!R.m.parent)return;const A=R.pos.array,n=R.n,dy=21*dt,dx=1.6*dt;
+  for(let i=0;i<n;i++){const k=i*6;A[k]+=dx;A[k+3]+=dx;A[k+1]-=dy;A[k+4]-=dy;if(A[k+4]<0){const y=26+Math.random()*4,x=(Math.random()*2-1)*46;A[k]=x;A[k+3]=x+0.1;A[k+1]=y+1.1;A[k+4]=y;}}
+  R.pos.needsUpdate=true;
+}
 function flashesStep(dt){
   if(!GL.crowdData||!GL.crowdData.length||GL.tier===2)return;
   if(!GL.fl){const gt=glowTexture();GL.fl=Array.from({length:12},()=>{const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:gt,color:new THREE.Color(3,3,3.2),blending:THREE.AdditiveBlending,depthWrite:false,transparent:true,toneMapped:false}));sp.visible=false;sp.userData.life=0;GL.scene.add(sp);return sp;});}
