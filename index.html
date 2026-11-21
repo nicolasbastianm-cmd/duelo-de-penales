@@ -906,7 +906,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){if(id!=='result'&&typeof copa3D==='function')try{copa3D(false);const f=$('fw2d');if(f)f.remove();}catch(e){}if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.41 · 20 nov 2026';
+const VERSION='7.42 · 21 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -1335,10 +1335,11 @@ function resolve(){
   if(REC){REC.worthy=out==='save'?'atajada':(out==='post'||out==='bar')?'palo':false;REC.key=out==='save'&&wasPress;}
   if(out==='save'){S.celeb={who:'me',t:S.time+(k.dive?0.95:0.55)};S.celStyle=pickCel(CEL_A);S.celSide=Math.random()<0.5?-1:1;if(k.dive)confettiBurst(350);}else if(out==='goal')S.celeb={who:'rivS',t:S.time};
   if(out==='save'){
-    if(GL.ok&&!k.dive&&S.mode!=='tut'){b.state='held';b.holdT=0.95;Object.assign(b,{x:p.x,y:p.y,r:p.r,vx:0,vy:0,life:1});} // atajada de pie: la embolsa
+    const zc=catchZone(),embolsa=GL.ok&&S.mode!=='tut'&&(!k.dive||(k.dive.dir&&Math.abs(p.x-zc.c)<=zc.hw*0.6)); /* 7.42: si se tira al lado correcto y la pelota le llega a las manos, la atrapa en el aire */
+    if(embolsa){b.state='held';b.holdT=k.dive?1.3:0.95;Object.assign(b,{x:p.x,y:p.y,r:p.r,vx:0,vy:0,life:1});} // atajada de pie: la embolsa
     else{const dv=k.dive&&k.dive.dir?k.dive.dir:(Math.sign(p.x-k.x)||1);b.state='free';Object.assign(b,{x:p.x,y:p.y,r:p.r,vx:k.dive?dv*rand(150,300)*u:(p.x-k.x)*5+rand(-60,60),vy:-rand(k.dive?120:260,k.dive?260:420)*u,life:1,dz:0});}
     k.saveT=0.6;S.freeze=reduce?0:(k.dive?0.2:0.12);S.shake=reduce?0:(k.dive?0.3:0.18);S.cheer=1.2;{const fp=fxPoint(p);burst(fp.x,fp.y,30,[C.sun,C.chalk,'#7ee04a'],300*u);impacto(fp.x,fp.y,'255,226,120',!!k.dive);}if(k.dive)try{sfx.land();}catch(e){}
-    say(k.dive?'¡QUÉ ESTIRADA!':'¡ATAJADA!',C.sun);sfx.save();ambReact('cheer');buzz(30);
+    say(k.dive?(embolsa?'¡La atrapó!':'¡QUÉ ESTIRADA!'):'¡ATAJADA!',C.sun);sfx.save();ambReact('cheer');buzz(30);
   }else if(out==='post'||out==='bar'){
     const s=b.txf*W<W/2?-1:1;
     b.state='free';Object.assign(b,{x:p.x,y:p.y,r:p.r,vx:(out==='bar'?rand(-80,80):s*rand(150,260))*u,vy:(out==='bar'?rand(120,220):-rand(200,320))*u,life:1});
