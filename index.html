@@ -906,7 +906,7 @@ const OVERLAYS=['home','locker','intro','result','voces','shop','vitrina','duo',
 function show(id){if(id!=='result'&&typeof copa3D==='function')try{copa3D(false);const f=$('fw2d');if(f)f.remove();}catch(e){}if(id==='home'&&typeof paisAsk==='function'){let r=false;try{r=paisAsk();}catch(e){}if(r)return;}OVERLAYS.forEach(o=>{$(o).hidden=o!==id;});if(id==='home')fitHome();if(typeof musScene==='function')try{musScene(id);}catch(e){}}
 function resetKeeper(){Object.assign(S.keeper,{x:W/2,target:W/2,vx:0,dive:null,rec:0,saveT:0,lastDir:0,endT:null,celT0:null});S.kDir=0;}
 /* Versión visible en el menú: sirve para saber qué versión tiene cada teléfono */
-const VERSION='7.42 · 21 nov 2026';
+const VERSION='7.43 · 21 nov 2026';
 /* Globos del menú: estrellas para la tienda y sobres sin abrir en el álbum */
 function homeBadges(){$('shopBdg').textContent='★ '+balance();const a=$('albBdg');a.hidden=!(ALB.packs>0);a.textContent=String(ALB.packs);}
 function renderHome(){$('ver').textContent='Versión '+VERSION;homeBadges();
@@ -2721,7 +2721,7 @@ function placeBall(){
   if(b.state==='spot'){o.position.copy(V3(0,R3,G.dSpot/G.m));o.rotation.set(0.4,0.7,0);return;}
   if(b.state==='flight'||b.state==='goal'){const p=ballPos(b,b.u);o.position.copy(ballWorld(p));o.rotation.set(-b.spin*1.6,b.spin*0.4,0);
     if(b.state==='flight'){const q=glProject(o.position);GL.trail.push({x:q.x,y:q.y,r:R3*GL.f/(o.position.z+GL.Z0)});if(GL.trail.length>16)GL.trail.shift();}return;}
-  if(b.state==='held'&&GL.meK&&GL.meK.userData.real){const hm=handsMid(GL.meK);o.position.set(hm.x,Math.max(R3,hm.y),hm.z+0.14);return;}
+  if(b.state==='held'&&GL.meK&&GL.meK.userData.real){const hm=catchPoint(GL.meK,R3);o.position.set(hm.x,Math.max(R3,hm.y),hm.z);return;}
   if(b.state==='free'){o.visible=b.life>0;const xm=(b.x-W/2)/GL.pxm,hm=Math.max(0,(G.lineY-b.y)/G.hpm)+R3;
     o.position.copy(V3(xm,hm,b.dz||0));o.rotation.x=-b.spin*1.6;}
 }
@@ -3278,6 +3278,14 @@ function keeperReady(m,w,ph){
   return Math.abs(Math.sin(S.time*6.5+ph))*0.035*w;
 }
 function handsMid(model){const B=model.userData.B,a=new THREE.Vector3(),b=new THREE.Vector3();B.RightHand.getWorldPosition(a);B.LeftHand.getWorldPosition(b);return a.add(b).multiplyScalar(0.5);}
+/* 7.43: punto donde queda la pelota atrapada. Antes era el punto medio de las muñecas, y con el arquero estirado la pelota
+   quedaba sobre la cabeza o el pecho (Nicolás: «el balón atraviesa al arquero»). Ahora va entre las palmas (muñeca + 9 cm hacia
+   los dedos) y se adelanta un radio de pelota hacia afuera del pecho, para que los guantes la abracen por fuera. */
+function catchPoint(model,R){const B=model.userData.B;if(!B.RightForeArm||!B.LeftForeArm||!B.Spine2)return handsMid(model);
+  const V=THREE.Vector3,palm=(h,f)=>{const a=h.getWorldPosition(new V()),e=f.getWorldPosition(new V());return a.add(a.clone().sub(e).normalize().multiplyScalar(0.09));};
+  const pr=palm(B.RightHand,B.RightForeArm),pl=palm(B.LeftHand,B.LeftForeArm),c=B.Spine2.getWorldPosition(new V());
+  const ld=pr.distanceTo(c)>pl.distanceTo(c)?pr:pl,w=Math.min(1,Math.max(0,(pr.distanceTo(pl)-0.25)/0.25)),m=pr.clone().add(pl).multiplyScalar(0.5).lerp(ld,w); /* manos separadas: se va de a poco a la mano de adelante (sin saltos) */
+  return m.clone().add(m.clone().sub(c).normalize().multiplyScalar(R*0.9));}
 function kickRoot(f){return{x:TOE[0]*f,z:11.15+TOE[2]*f};} // con el jugador mirando al arco (giro de 180°)
 function poseKeeperReal(dt){
   const k=S.keeper,m=GL.meK,xm=(k.x-W/2)/GL.pxm,T=diveT(),endH=S.plan?S.plan.endH/G.hpm:1;
@@ -3379,7 +3387,7 @@ function poseKickReal(dt){
   drive(gk,name,t,dt,mir);gk.position.set(x,lift,0.3);gk.rotation.set(0,0,0);
   {const tg=(name==='idle'||name==='ss1'||name==='ss2')&&k&&(S.phase==='aim'||S.phase==='krun')?(S.phase==='krun'?1:0.55):0;
     GL.rkRdy=(GL.rkRdy||0)+(tg-(GL.rkRdy||0))*Math.min(1,dt*5);gk.position.y+=keeperReady(gk,GL.rkRdy,1.7);}
-  if(k&&k.res==='catch'){const h=handsMid(gk);k.b.x=h.x;k.b.y=h.y;k.b.z=h.z+0.12;}
+  if(k&&k.res==='catch'){const h=catchPoint(gk,0.15);k.b.x=h.x;k.b.y=h.y;k.b.z=h.z;}
   // pateador propio
   const me=GL.meS,f=me.userData.f,R=kickRoot(f),A=me.userData.acts;
   if(k&&S.phase==='aim'&&S.mode==='tour'&&k.t<PRE_T&&prePose(me,R,k.t/PRE_T,dt,[R.x+0.33*f,R.z-0.81*f]))return; // acomoda la pelota mientras apuntas
